@@ -9,7 +9,17 @@ const ClientsPage = () => {
     name: '',
     office_name: '',
     phone: '',
-    extra_phone: '',
+    additional_phone: '',
+    address: ''
+  });
+  const [editingId, setEditingId] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    category: 'Individual Client',
+    name: '',
+    office_name: '',
+    phone: '',
+    additional_phone: '',
     address: ''
   });
   const [loading, setLoading] = useState(false);
@@ -40,6 +50,68 @@ const ClientsPage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleEdit = (client) => {
+    setEditingId(client.id);
+    setEditFormData({
+      category: client.category,
+      name: client.name,
+      office_name: client.office_name || '',
+      phone: client.phone,
+      additional_phone: client.additional_phone || '',
+      address: client.address || ''
+    });
+    setShowEditModal(true);
+    setValidated(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setShowEditModal(false);
+    setEditFormData({
+      category: 'Individual Client',
+      name: '',
+      office_name: '',
+      phone: '',
+      additional_phone: '',
+      address: ''
+    });
+    setValidated(false);
+  };
+
+  const handleEditChange = (e) => {
+    setEditFormData({ ...editFormData, [e.target.name]: e.target.value });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+
+    if (form.checkValidity() === false) {
+      e.stopPropagation();
+      setValidated(true);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await updateClient(editingId, editFormData);
+      showSuccess('تم التحديث!', 'تم تحديث بيانات العميل بنجاح');
+      handleCancelEdit();
+      fetchClients();
+    } catch (error) {
+      const data = error.response?.data;
+      let errorMsg = 'حدث خطأ أثناء تحديث البيانات.';
+      if (data?.errors) {
+        errorMsg = Object.values(data.errors).flat().join('\n');
+      } else if (data?.message) {
+        errorMsg = data.message;
+      }
+      showError('خطأ!', errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -54,16 +126,15 @@ const ClientsPage = () => {
     try {
       await createClient(formData);
       showSuccess('تمت الإضافة!', 'تم إضافة العميل بنجاح');
-      setFormData({ 
-        category: 'Individual Client', 
-        name: '', 
-        office_name: '', 
-        phone: '', 
-        extra_phone: '', 
-        address: '' 
+      setFormData({
+        category: 'Individual Client',
+        name: '',
+        office_name: '',
+        phone: '',
+        additional_phone: '',
+        address: ''
       });
       setValidated(false);
-      setCurrentPage(1);
       fetchClients();
     } catch (error) {
       showError('خطأ!', 'حدث خطأ أثناء إضافة العميل.');
@@ -149,9 +220,9 @@ const ClientsPage = () => {
                 <label>رقم هاتف إضافي</label>
                 <input
                   type="text"
-                  name="extra_phone"
+                  name="additional_phone"
                   className="form-control"
-                  value={formData.extra_phone}
+                  value={formData.additional_phone}
                   onChange={handleChange}
                 />
               </div>
@@ -199,11 +270,19 @@ const ClientsPage = () => {
                       <td>{client.phone}</td>
                       <td>{client.address}</td>
                       <td>
-                        <button 
-                          onClick={() => handleDelete(client.id)}
-                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontWeight: 'bold' }}
+                        <button
+                          onClick={() => handleEdit(client)}
+                          style={{ background: 'rgba(99, 102, 241, 0.1)', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '8px', borderRadius: '8px', marginLeft: '8px' }}
+                          title="تعديل"
                         >
-                          حذف
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(client.id)}
+                          style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '8px', borderRadius: '8px' }}
+                          title="حذف"
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                         </button>
                       </td>
                     </tr>
@@ -219,16 +298,16 @@ const ClientsPage = () => {
 
             {totalPages > 1 && (
               <div className="pagination">
-                <button 
-                  className="page-btn" 
+                <button
+                  className="page-btn"
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
                 >
                   السابق
                 </button>
                 <span className="page-info">صفحة {currentPage} من {totalPages}</span>
-                <button 
-                  className="page-btn" 
+                <button
+                  className="page-btn"
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
                 >
@@ -239,6 +318,92 @@ const ClientsPage = () => {
           </div>
         </div>
       </div>
+
+      {showEditModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>تعديل بيانات العميل</h3>
+              <button className="modal-close" onClick={handleCancelEdit}>&times;</button>
+            </div>
+            <form onSubmit={handleEditSubmit} noValidate className={validated ? 'was-validated' : ''}>
+              <div className="form-group">
+                <label>التصنيف</label>
+                <select
+                  name="category"
+                  className="form-control"
+                  value={editFormData.category}
+                  onChange={handleEditChange}
+                  required
+                >
+                  <option value="Individual Client">عميل فردي</option>
+                  <option value="Service Office">مكتب خدمات</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>الاسم بالكامل</label>
+                <input
+                  type="text"
+                  name="name"
+                  className="form-control"
+                  value={editFormData.name}
+                  onChange={handleEditChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>اسم المكتب (اختياري)</label>
+                <input
+                  type="text"
+                  name="office_name"
+                  className="form-control"
+                  value={editFormData.office_name}
+                  onChange={handleEditChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>رقم الهاتف</label>
+                <input
+                  type="text"
+                  name="phone"
+                  className="form-control"
+                  value={editFormData.phone}
+                  onChange={handleEditChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>رقم هاتف إضافي</label>
+                <input
+                  type="text"
+                  name="additional_phone"
+                  className="form-control"
+                  value={editFormData.additional_phone}
+                  onChange={handleEditChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>العنوان</label>
+                <input
+                  type="text"
+                  name="address"
+                  className="form-control"
+                  value={editFormData.address}
+                  onChange={handleEditChange}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                <button type="submit" className="btn-primary" disabled={loading} style={{ flex: 1 }}>
+                  {loading ? 'جاري التحديث...' : 'حفظ التغييرات'}
+                </button>
+                <button type="button" className="page-btn" onClick={handleCancelEdit} style={{ flex: 1 }}>
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
