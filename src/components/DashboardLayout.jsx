@@ -5,12 +5,15 @@ import SaudiOfficesPage from '../pages/SaudiOfficesPage';
 import ExternalOfficesPage from '../pages/ExternalOfficesPage';
 import OrdersPage from '../pages/OrdersPage';
 import EmployeesPage from '../pages/EmployeesPage';
+import DashboardPage from '../pages/DashboardPage';
 
 const DashboardLayout = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState('clients');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'dashboard':
+        return <DashboardPage />;
       case 'clients':
         return <ClientsPage />;
       case 'saudi-offices':
