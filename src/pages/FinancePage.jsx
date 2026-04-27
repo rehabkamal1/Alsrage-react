@@ -1,60 +1,71 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button } from "react-bootstrap";
 import {
-  getExternalOffices,
-  createExternalOffice,
-  updateExternalOffice,
-  deleteExternalOffice,
+  getTransactions,
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
+  getFinanceSummary,
+  getOrders,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
-import ExternalOfficeFormModal from "../components/ExternalOffice/ExternalOfficeFormModal";
-import ExternalOfficeTable from "../components/ExternalOffice/ExternalOfficeTable";
-import ExternalOfficeSearchBar from "../components/ExternalOffice/ExternalOfficeSearchBar";
+import FinanceFormModal from "../components/Finance/FinanceFormModal";
+import FinanceTable from "../components/Finance/FinanceTable";
+import FinanceSummaryCards from "../components/Finance/FinanceSummaryCards";
+import FinanceSearchBar from "../components/Finance/FinanceSearchBar";
 import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
 
-const ExternalOfficesPage = () => {
-  const [offices, setOffices] = useState([]);
-  const [filteredOffices, setFilteredOffices] = useState([]);
+const FinancePage = () => {
+  const [transactions, setTransactions] = useState([]);
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingOffice, setEditingOffice] = useState(null);
+  const [editingTransaction, setEditingTransaction] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [submitError, setSubmitError] = useState(null);
   const itemsPerPage = 8;
 
   useEffect(() => {
-    fetchOffices();
+    fetchAllData();
   }, []);
 
   useEffect(() => {
     if (searchQuery.trim()) {
-      const filtered = offices.filter((office) => {
-        const nameMatch = office.name
+      const filtered = transactions.filter((item) => {
+        const orderIdMatch = item.order_number
+          ?.toString()
+          .includes(searchQuery);
+        const clientNameMatch = item.client_name
           ?.toLowerCase()
           .includes(searchQuery.toLowerCase());
-        const countryMatch = office.country
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase());
-        return nameMatch || countryMatch;
+        return orderIdMatch || clientNameMatch;
       });
-      setFilteredOffices(filtered);
+      setFilteredTransactions(filtered);
     } else {
-      setFilteredOffices(offices);
+      setFilteredTransactions(transactions);
     }
     setCurrentPage(1);
-  }, [searchQuery, offices]);
+  }, [searchQuery, transactions]);
 
-  const fetchOffices = async () => {
+  const fetchAllData = async () => {
     setInitialLoading(true);
     try {
-      const response = await getExternalOffices();
-      setOffices(response.data.data || []);
-      setFilteredOffices(response.data.data || []);
+      const [transactionsRes, summaryRes, ordersRes] = await Promise.all([
+        getTransactions(),
+        getFinanceSummary(),
+        getOrders(),
+      ]);
+      setTransactions(transactionsRes.data.data || []);
+      setFilteredTransactions(transactionsRes.data.data || []);
+      setSummary(summaryRes.data.data);
+      setOrders(ordersRes.data.data || []);
     } catch (error) {
-      console.error("Error fetching offices:", error);
+      console.error("Error fetching data:", error);
     } finally {
       setInitialLoading(false);
     }
@@ -66,17 +77,17 @@ const ExternalOfficesPage = () => {
 
   const handleClearSearch = () => {
     setSearchQuery("");
-    setFilteredOffices(offices);
+    setFilteredTransactions(transactions);
   };
 
-  const handleAddOffice = () => {
-    setEditingOffice(null);
+  const handleAddTransaction = () => {
+    setEditingTransaction(null);
     setSubmitError(null);
     setShowModal(true);
   };
 
-  const handleEditOffice = (office) => {
-    setEditingOffice(office);
+  const handleEditTransaction = (transaction) => {
+    setEditingTransaction(transaction);
     setSubmitError(null);
     setShowModal(true);
   };
@@ -85,16 +96,16 @@ const ExternalOfficesPage = () => {
     setLoading(true);
     setSubmitError(null);
     try {
-      if (editingOffice) {
-        await updateExternalOffice(editingOffice.id, formData);
-        showSuccess("تم التحديث!", "تم تحديث بيانات المكتب بنجاح");
+      if (editingTransaction) {
+        await updateTransaction(editingTransaction.id, formData);
+        showSuccess("تم التحديث!", "تم تحديث الحوالة بنجاح");
       } else {
-        await createExternalOffice(formData);
-        showSuccess("تمت الإضافة!", "تم إضافة المكتب الخارجي بنجاح");
+        await createTransaction(formData);
+        showSuccess("تمت الإضافة!", "تم إضافة الحوالة بنجاح");
       }
       setShowModal(false);
-      setEditingOffice(null);
-      fetchOffices();
+      setEditingTransaction(null);
+      fetchAllData();
     } catch (error) {
       setSubmitError(error.response?.data);
       showError(
@@ -106,17 +117,17 @@ const ExternalOfficesPage = () => {
     }
   };
 
-  const handleDeleteOffice = async (id) => {
+  const handleDeleteTransaction = async (id) => {
     const result = await showConfirm(
       "هل أنت متأكد؟",
-      "سيتم حذف المكتب الخارجي نهائياً",
+      "سيتم حذف الحوالة نهائياً",
     );
     if (result.isConfirmed) {
       setLoading(true);
       try {
-        await deleteExternalOffice(id);
-        showSuccess("تم الحذف", "تم حذف المكتب الخارجي بنجاح");
-        fetchOffices();
+        await deleteTransaction(id);
+        showSuccess("تم الحذف", "تم حذف الحوالة بنجاح");
+        fetchAllData();
       } catch (error) {
         showError("خطأ", "حدث خطأ أثناء الحذف");
       } finally {
@@ -125,9 +136,9 @@ const ExternalOfficesPage = () => {
     }
   };
 
-  const totalPages = Math.ceil(filteredOffices.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedOffices = filteredOffices.slice(
+  const displayedTransactions = filteredTransactions.slice(
     startIndex,
     startIndex + itemsPerPage,
   );
@@ -143,14 +154,14 @@ const ExternalOfficesPage = () => {
       >
         <Container fluid>
           <div className="d-flex justify-content-between align-items-center mb-4">
-            <h1 className="h3 mb-0 fw-bold">المكاتب الخارجية</h1>
+            <h1 className="h3 mb-0 fw-bold">الحسابات والحوالات</h1>
             <Button variant="dark" disabled>
-              + مكتب جديد
+              + حوالة جديدة
             </Button>
           </div>
           <Card className="shadow-sm border-0 rounded-4">
             <Card.Body className="p-0">
-              <TableSkeleton rows={5} columns={5} />
+              <TableSkeleton rows={5} columns={10} />
             </Card.Body>
           </Card>
         </Container>
@@ -168,13 +179,15 @@ const ExternalOfficesPage = () => {
     >
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1 className="h3 mb-0 fw-bold">المكاتب الخارجية</h1>
-          <Button variant="dark" onClick={handleAddOffice}>
-            + مكتب جديد
+          <h1 className="h3 mb-0 fw-bold">الحسابات والحوالات</h1>
+          <Button variant="dark" onClick={handleAddTransaction}>
+            + حوالة جديدة
           </Button>
         </div>
 
-        <ExternalOfficeSearchBar
+        {summary && <FinanceSummaryCards summary={summary} />}
+
+        <FinanceSearchBar
           searchQuery={searchQuery}
           onSearch={handleSearch}
           onClear={handleClearSearch}
@@ -185,14 +198,14 @@ const ExternalOfficesPage = () => {
           <Card.Body className="p-0">
             {loading ? (
               <div className="text-center py-5">
-                <TableSkeleton rows={3} columns={5} />
+                <TableSkeleton rows={3} columns={10} />
               </div>
             ) : (
               <>
-                <ExternalOfficeTable
-                  offices={displayedOffices}
-                  onEdit={handleEditOffice}
-                  onDelete={handleDeleteOffice}
+                <FinanceTable
+                  transactions={displayedTransactions}
+                  onEdit={handleEditTransaction}
+                  onDelete={handleDeleteTransaction}
                 />
                 {totalPages > 1 && (
                   <PaginationComponent
@@ -207,21 +220,22 @@ const ExternalOfficesPage = () => {
         </Card>
       </Container>
 
-      <ExternalOfficeFormModal
+      <FinanceFormModal
         show={showModal}
         onHide={() => {
           setShowModal(false);
-          setEditingOffice(null);
+          setEditingTransaction(null);
           setSubmitError(null);
         }}
         onSubmit={handleSubmit}
-        initialData={editingOffice}
+        initialData={editingTransaction}
+        orders={orders}
         loading={loading}
-        isEdit={!!editingOffice}
+        isEdit={!!editingTransaction}
         error={submitError}
       />
     </div>
   );
 };
 
-export default ExternalOfficesPage;
+export default FinancePage;
