@@ -28,19 +28,23 @@ const SaudiOfficeFormModal = ({
       setFormData({
         name: initialData.name || "",
         destination: initialData.destination || "",
+        city: initialData.city || "",
         responsible_employee: initialData.responsible_employee || "",
         mobile: initialData.mobile || "",
         phone: initialData.phone || "",
         address: initialData.address || "",
+        notes: initialData.notes || "",
       });
     } else {
       setFormData({
         name: "",
         destination: "",
+        city: "",
         responsible_employee: "",
         mobile: "",
         phone: "",
         address: "",
+        notes: "",
       });
     }
     setValidated(false);
@@ -119,6 +123,46 @@ const SaudiOfficeFormModal = ({
           </Row>
 
           <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  جهة الوصول <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="destination"
+                  value={formData.destination}
+                  onChange={handleChange}
+                  required
+                  isInvalid={!!getFieldError("destination")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("destination") || "يرجى إدخال جهة الوصول"}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  المدينة
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  isInvalid={!!getFieldError("city")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("city")}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
             <Col md={12}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
@@ -185,28 +229,6 @@ const SaudiOfficeFormModal = ({
             <Col md={12}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
-                  جهة الوصول <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  name="destination"
-                  value={formData.destination}
-                  onChange={handleChange}
-                  required
-                  isInvalid={!!getFieldError("destination")}
-                  className="rounded-3"
-                />
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("destination") || "يرجى إدخال جهة الوصول"}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
-
-          <Row>
-            <Col md={12}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold small text-secondary">
                   العنوان
                 </Form.Label>
                 <Form.Control
@@ -219,6 +241,28 @@ const SaudiOfficeFormModal = ({
                 />
                 <Form.Control.Feedback type="invalid">
                   {getFieldError("address")}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  ملاحظات
+                </Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={2}
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleChange}
+                  isInvalid={!!getFieldError("notes")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("notes")}
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>

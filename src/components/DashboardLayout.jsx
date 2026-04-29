@@ -4,6 +4,7 @@ import ClientsPage from "../pages/ClientsPage";
 import SaudiOfficesPage from "../pages/SaudiOfficesPage";
 import ExternalOfficesPage from "../pages/ExternalOfficesPage";
 import OrdersPage from "../pages/OrdersPage";
+import CompletedOrdersPage from "../pages/CompletedOrdersPage";
 import EmployeesPage from "../pages/EmployeesPage";
 import DashboardPage from "../pages/DashboardPage";
 import TrackingPage from "../pages/TrackingPage";
@@ -28,6 +29,8 @@ const DashboardLayout = ({ user, onLogout }) => {
         return <EmployeesPage />;
       case "orders":
         return <OrdersPage />;
+      case "completed-orders":
+        return <CompletedOrdersPage />;
       case "tracking":
         return <TrackingPage />;
       case "finance":

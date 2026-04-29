@@ -8,9 +8,11 @@ const ExternalOfficeTable = ({ offices, onEdit, onDelete }) => {
         <thead className="table-light">
           <tr>
             <th>#</th>
-            <th>اسم المكتب</th>
             <th>الدولة</th>
-            <th>الموظفون والأرقام</th>
+            <th>اسم المكتب</th>
+            <th>اسم الموظف</th>
+            <th>الأرقام</th>
+            <th>ملاحظات</th>
             <th>الإجراءات</th>
           </tr>
         </thead>
@@ -19,21 +21,33 @@ const ExternalOfficeTable = ({ offices, onEdit, onDelete }) => {
             offices.map((office, index) => (
               <tr key={office.id}>
                 <td>{index + 1}</td>
-                <td className="fw-semibold">{office.name}</td>
-                <td>{office.country}</td>
+                <td className="fw-bold text-primary">{office.country || "-"}</td>
+                <td className="fw-semibold text-dark">{office.name}</td>
                 <td>
-                  {office.contacts &&
+                  {office.contacts && office.contacts.length > 0 ? (
                     office.contacts.map((contact, idx) => (
                       <div key={idx} className="mb-1">
-                        <Badge bg="light" text="dark" className="me-1">
-                          {contact.name}
+                        <Badge bg="light" text="dark">
+                          {contact.name || "-"}
                         </Badge>
-                        <span dir="ltr" className="small">
-                          {contact.phone}
-                        </span>
                       </div>
-                    ))}
+                    ))
+                  ) : (
+                    "-"
+                  )}
                 </td>
+                <td dir="ltr">
+                  {office.contacts && office.contacts.length > 0 ? (
+                    office.contacts.map((contact, idx) => (
+                      <div key={idx} className="mb-1 small">
+                        {contact.phone || "-"}
+                      </div>
+                    ))
+                  ) : (
+                    "-"
+                  )}
+                </td>
+                <td>{office.notes || "-"}</td>
                 <td>
                   <Button
                     variant="link"

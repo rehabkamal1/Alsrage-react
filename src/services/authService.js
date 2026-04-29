@@ -14,7 +14,7 @@ const ADMIN_ACCOUNTS = [
     role: "admin",
   },
   // Add more admins here if needed:
-  // { id: 2, name: "Admin Two", email: "admin2@alsrage.com", password: "SecurePass!", role: "admin" },
+  { id: 2, name: "Admin Two", email: "admin2@alsrage.com", password: "admin@1234", role: "admin" },
 ];
 
 // ─────────────────────────────────────────────

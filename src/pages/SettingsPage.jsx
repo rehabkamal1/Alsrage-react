@@ -7,6 +7,7 @@ import api, {
   deletePaymentMethod,
   deleteBankName,
   deleteMarketingStatus,
+  deleteOrderStatus,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import TableSkeleton from "../components/common/TableSkeleton";
@@ -19,6 +20,7 @@ const SettingsPage = () => {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [bankNames, setBankNames] = useState([]);
   const [marketingStatuses, setMarketingStatuses] = useState([]);
+  const [orderStatuses, setOrderStatuses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -36,6 +38,7 @@ const SettingsPage = () => {
         paymentRes,
         bankRes,
         marketingRes,
+        orderRes,
       ] = await Promise.all([
         api.get("/settings/priority-levels"),
         api.get("/settings/passport-statuses"),
@@ -43,6 +46,7 @@ const SettingsPage = () => {
         api.get("/settings/payment-methods"),
         api.get("/settings/bank-names"),
         api.get("/settings/marketing-statuses"),
+        api.get("/settings/order-statuses"),
       ]);
       setPriorityLevels(
         priorityRes.data.data.map((item) => ({ ...item, isNew: false })),
@@ -61,6 +65,9 @@ const SettingsPage = () => {
       );
       setMarketingStatuses(
         marketingRes.data.data.map((item) => ({ ...item, isNew: false })),
+      );
+      setOrderStatuses(
+        orderRes.data.data.map((item) => ({ ...item, isNew: false })),
       );
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -380,6 +387,37 @@ const SettingsPage = () => {
               }
               saving={saving}
               emptyMessage="لا توجد حالات تسويق"
+            />
+          </Col>
+          <Col md={6}>
+            <SettingsCard
+              title="حالات الطلبات"
+              items={orderStatuses}
+              onAdd={() => addItem(setOrderStatuses)}
+              onUpdate={(idx, field, val) =>
+                updateItem(setOrderStatuses, idx, field, val)
+              }
+              onDelete={(id, isNew, idx) =>
+                deleteItem(
+                  id,
+                  isNew,
+                  idx,
+                  orderStatuses,
+                  setOrderStatuses,
+                  deleteOrderStatus,
+                  "حالات الطلبات",
+                )
+              }
+              onSave={() =>
+                saveItems(
+                  orderStatuses,
+                  "/settings/order-statuses",
+                  "statuses",
+                  "تم حفظ حالات الطلبات بنجاح",
+                )
+              }
+              saving={saving}
+              emptyMessage="لا توجد حالات طلبات"
             />
           </Col>
         </Row>

@@ -12,6 +12,7 @@ import ExternalOfficeTable from "../components/ExternalOffice/ExternalOfficeTabl
 import ExternalOfficeSearchBar from "../components/ExternalOffice/ExternalOfficeSearchBar";
 import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
+import { exportToExcel } from "../utils/excelHelper";
 
 const ExternalOfficesPage = () => {
   const [offices, setOffices] = useState([]);
@@ -125,6 +126,25 @@ const ExternalOfficesPage = () => {
     }
   };
 
+  const handleExport = () => {
+    const columns = [
+      { header: "الدولة", key: "country" },
+      { header: "اسم المكتب", key: "name" },
+      {
+        header: "أسماء الموظفين",
+        format: (office) =>
+          office.contacts?.map((c) => c.name).join("، ") || "-",
+      },
+      {
+        header: "أرقام التواصل",
+        format: (office) =>
+          office.contacts?.map((c) => c.phone).join("، ") || "-",
+      },
+      { header: "ملاحظات", key: "notes" },
+    ];
+    exportToExcel(filteredOffices, columns, "المكاتب_الخارجية.xlsx");
+  };
+
   const totalPages = Math.ceil(filteredOffices.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const displayedOffices = filteredOffices.slice(
@@ -169,9 +189,19 @@ const ExternalOfficesPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">المكاتب الخارجية</h1>
-          <Button variant="dark" onClick={handleAddOffice}>
-            + مكتب جديد
-          </Button>
+          <div>
+            <Button
+              variant="outline-success"
+              onClick={handleExport}
+              className="me-2"
+              disabled={filteredOffices.length === 0}
+            >
+              📊 تصدير إكسيل
+            </Button>
+            <Button variant="dark" onClick={handleAddOffice}>
+              + مكتب جديد
+            </Button>
+          </div>
         </div>
 
         <ExternalOfficeSearchBar

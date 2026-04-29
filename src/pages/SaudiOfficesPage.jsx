@@ -12,6 +12,7 @@ import SaudiOfficeTable from "../components/SaudiOffice/SaudiOfficeTable";
 import SaudiOfficeSearchBar from "../components/SaudiOffice/SaudiOfficeSearchBar";
 import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
+import { exportToExcel } from "../utils/excelHelper";
 
 const SaudiOfficesPage = () => {
   const [offices, setOffices] = useState([]);
@@ -128,6 +129,20 @@ const SaudiOfficesPage = () => {
     }
   };
 
+  const handleExport = () => {
+    const columns = [
+      { header: "اسم المكتب", key: "name" },
+      { header: "جهة الوصول", key: "destination" },
+      { header: "المدينة", key: "city" },
+      { header: "الموظف المسؤول", key: "responsible_employee" },
+      { header: "رقم الجوال", key: "mobile" },
+      { header: "رقم الهاتف", key: "phone" },
+      { header: "العنوان", key: "address" },
+      { header: "ملاحظات", key: "notes" },
+    ];
+    exportToExcel(filteredOffices, columns, "المكاتب_السعودية.xlsx");
+  };
+
   const totalPages = Math.ceil(filteredOffices.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const displayedOffices = filteredOffices.slice(
@@ -172,9 +187,19 @@ const SaudiOfficesPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">المكاتب السعودية</h1>
-          <Button variant="dark" onClick={handleAddOffice}>
-            + مكتب جديد
-          </Button>
+          <div>
+            <Button
+              variant="outline-success"
+              onClick={handleExport}
+              className="me-2"
+              disabled={filteredOffices.length === 0}
+            >
+              📊 تصدير إكسيل
+            </Button>
+            <Button variant="dark" onClick={handleAddOffice}>
+              + مكتب جديد
+            </Button>
+          </div>
         </div>
 
         <SaudiOfficeSearchBar

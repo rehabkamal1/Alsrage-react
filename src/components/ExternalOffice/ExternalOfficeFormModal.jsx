@@ -29,12 +29,14 @@ const ExternalOfficeFormModal = ({
           initialData.contacts && initialData.contacts.length > 0
             ? [...initialData.contacts]
             : [{ name: "", phone: "" }],
+        notes: initialData.notes || "",
       });
     } else {
       setFormData({
         name: "",
         country: "",
         contacts: [{ name: "", phone: "" }],
+        notes: "",
       });
     }
     setValidated(false);
@@ -119,28 +121,6 @@ const ExternalOfficeFormModal = ({
             <Col md={12}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
-                  اسم المكتب <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  isInvalid={!!getFieldError("name")}
-                  className="rounded-3"
-                />
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("name") || "يرجى إدخال اسم المكتب"}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
-
-          <Row>
-            <Col md={12}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold small text-secondary">
                   الدولة <span className="text-danger">*</span>
                 </Form.Label>
                 <Form.Control
@@ -154,6 +134,28 @@ const ExternalOfficeFormModal = ({
                 />
                 <Form.Control.Feedback type="invalid">
                   {getFieldError("country") || "يرجى إدخال الدولة"}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  اسم المكتب <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  isInvalid={!!getFieldError("name")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("name") || "يرجى إدخال اسم المكتب"}
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
@@ -231,6 +233,28 @@ const ExternalOfficeFormModal = ({
               + إضافة موظف آخر
             </Button>
           </div>
+
+          <Row>
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  ملاحظات
+                </Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={2}
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleChange}
+                  isInvalid={!!getFieldError("notes")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("notes")}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
         </Modal.Body>
 
         <Modal.Footer className="border-0 pb-4 px-4">

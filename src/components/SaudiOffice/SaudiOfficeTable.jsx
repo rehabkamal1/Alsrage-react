@@ -8,10 +8,11 @@ const SaudiOfficeTable = ({ offices, onEdit, onDelete }) => {
         <thead className="table-light">
           <tr>
             <th>#</th>
-            <th>اسم المكتب</th>
+            <th>اسم المكتب / جهة الوصول</th>
+            <th>المدينة</th>
             <th>الموظف المسؤول</th>
             <th>رقم الجوال</th>
-            <th>جهة الوصول</th>
+            <th>ملاحظات</th>
             <th>العنوان</th>
             <th>الإجراءات</th>
           </tr>
@@ -21,10 +22,16 @@ const SaudiOfficeTable = ({ offices, onEdit, onDelete }) => {
             offices.map((office, index) => (
               <tr key={office.id}>
                 <td>{index + 1}</td>
-                <td className="fw-semibold">{office.name}</td>
-                <td>{office.responsible_employee}</td>
-                <td dir="ltr">{office.mobile}</td>
-                <td>{office.destination}</td>
+                <td>
+                  <div className="fw-semibold">{office.name}</div>
+                  {office.destination && (
+                    <div className="text-muted small">{office.destination}</div>
+                  )}
+                </td>
+                <td>{office.city || "-"}</td>
+                <td>{office.responsible_employee || "-"}</td>
+                <td dir="ltr">{office.mobile || "-"}</td>
+                <td>{office.notes || "-"}</td>
                 <td>{office.address || "-"}</td>
                 <td>
                   <Button

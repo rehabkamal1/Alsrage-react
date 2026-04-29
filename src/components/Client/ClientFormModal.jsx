@@ -1,17 +1,7 @@
 import React, { useState, useEffect } from "react";
-import {
-  Modal,
-  Button,
-  Form,
-  Row,
-  Col,
-  Tab,
-  Tabs,
-  Image,
-} from "react-bootstrap";
+import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import "../../styles/FormModal.css";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+import { getEmployees } from "../../services/apiService";
 
 const ClientFormModal = ({
   show,
@@ -22,102 +12,64 @@ const ClientFormModal = ({
   isEdit,
 }) => {
   const [formData, setFormData] = useState({
-    category: "Individual Client",
+    client_type: "عميل فردي",
     name: "",
-    visa_holder_name: "",
-    passport_number: "",
-    national_id: "",
-    office_name: "",
+    employee_id: "",
     phone: "",
     additional_phone: "",
+    city: "",
     address: "",
-    passport_image: null,
-    visa_image: null,
-    id_image: null,
   });
 
-  const [previewImages, setPreviewImages] = useState({
-    passport_image: null,
-    visa_image: null,
-    id_image: null,
-  });
-
+  const [employees, setEmployees] = useState([]);
+  const [employeeSearch, setEmployeeSearch] = useState("");
   const [validated, setValidated] = useState(false);
-  const [activeTab, setActiveTab] = useState("basic");
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await getEmployees({ per_page: 200, sort_by: "name", sort_dir: "asc" });
+      const list = response.data?.data || response.data || [];
+      setEmployees(list);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+    }
+  };
 
   useEffect(() => {
     if (initialData) {
+      const selectedEmployeeName = initialData.employee?.name || "";
       setFormData({
-        category: initialData.category || "Individual Client",
+        client_type: initialData.client_type || "عميل فردي",
         name: initialData.name || "",
-        visa_holder_name: initialData.name || "",
-        passport_number: initialData.passport_number || "",
-        national_id: initialData.national_id || "",
-        office_name: initialData.office_name || "",
+        employee_id: initialData.employee_id || "",
         phone: initialData.phone || "",
         additional_phone: initialData.additional_phone || "",
+        city: initialData.city || "",
         address: initialData.address || "",
-        passport_image: null,
-        visa_image: null,
-        id_image: null,
       });
-      setPreviewImages({
-        passport_image: initialData.passport_image || null,
-        visa_image: initialData.visa_image || null,
-        id_image: initialData.id_image || null,
-      });
+      setEmployeeSearch(selectedEmployeeName);
     } else {
       setFormData({
-        category: "Individual Client",
+        client_type: "عميل فردي",
         name: "",
-        visa_holder_name: "",
-        passport_number: "",
-        national_id: "",
-        office_name: "",
+        employee_id: "",
         phone: "",
         additional_phone: "",
+        city: "",
         address: "",
-        passport_image: null,
-        visa_image: null,
-        id_image: null,
       });
-      setPreviewImages({
-        passport_image: null,
-        visa_image: null,
-        id_image: null,
-      });
+      setEmployeeSearch("");
     }
     setValidated(false);
-    setActiveTab("basic");
   }, [initialData, show]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => {
-      const newData = { ...prev, [name]: value };
-      if (name === "name") {
-        newData.visa_holder_name = value;
-      }
-      return newData;
-    });
-  };
-
-  const handleFileChange = (e) => {
-    const { name, files } = e.target;
-    const file = files[0];
-    if (file) {
-      setFormData((prev) => ({ ...prev, [name]: file }));
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewImages((prev) => ({ ...prev, [name]: reader.result }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveImage = (imageName) => {
-    setFormData((prev) => ({ ...prev, [imageName]: null }));
-    setPreviewImages((prev) => ({ ...prev, [imageName]: null }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e) => {
@@ -129,36 +81,12 @@ const ClientFormModal = ({
       return;
     }
 
-    const submitData = new FormData();
-    submitData.append("name", formData.name);
-    submitData.append("visa_holder_name", formData.visa_holder_name);
-    submitData.append("category", formData.category);
-    submitData.append("office_name", formData.office_name || "");
-    submitData.append("phone", formData.phone);
-    submitData.append("additional_phone", formData.additional_phone || "");
-    submitData.append("address", formData.address || "");
-    submitData.append("passport_number", formData.passport_number || "");
-    submitData.append("national_id", formData.national_id || "");
-
-    if (formData.passport_image && formData.passport_image instanceof File) {
-      submitData.append("passport_image", formData.passport_image);
-    }
-    if (formData.visa_image && formData.visa_image instanceof File) {
-      submitData.append("visa_image", formData.visa_image);
-    }
-    if (formData.id_image && formData.id_image instanceof File) {
-      submitData.append("id_image", formData.id_image);
-    }
-
-    onSubmit(submitData);
-  };
-
-  const getImageUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith("data:image")) return url;
-    if (url.startsWith("http")) return url;
-    if (url.startsWith("/storage")) return `${API_URL}${url}`;
-    return `${API_URL}/storage/${url.replace(/^\/?storage\//, "")}`;
+    const selectedEmployee = employees.find((emp) => emp.name === employeeSearch);
+    const payload = {
+      ...formData,
+      employee_id: selectedEmployee?.id || formData.employee_id,
+    };
+    onSubmit(payload);
   };
 
   return (
@@ -178,272 +106,154 @@ const ClientFormModal = ({
 
       <Form onSubmit={handleSubmit} noValidate validated={validated}>
         <Modal.Body className="px-4">
-          <Tabs
-            activeKey={activeTab}
-            onSelect={(k) => setActiveTab(k)}
-            className="mb-4 custom-tabs"
-            fill
-          >
-            <Tab eventKey="basic" title="المعلومات الأساسية">
-              <div className="mt-3">
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold small text-secondary">
-                        التصنيف <span className="text-danger">*</span>
-                      </Form.Label>
-                      <Form.Select
-                        name="category"
-                        value={formData.category}
-                        onChange={handleChange}
-                        required
-                        className="rounded-3"
-                      >
-                        <option value="Individual Client">👤 عميل فردي</option>
-                        <option value="Service Office">🏢 مكتب خدمات</option>
-                      </Form.Select>
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold small text-secondary">
-                        الاسم بالكامل (صاحب التأشيرة){" "}
-                        <span className="text-danger">*</span>
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        required
-                        placeholder="أدخل الاسم الكامل (هو نفسه صاحب التأشيرة)"
-                        className="rounded-3"
-                      />
-                      <Form.Control.Feedback type="invalid">
-                        يرجى إدخال اسم العميل
-                      </Form.Control.Feedback>
-                    </Form.Group>
-                  </Col>
-                </Row>
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  نوع العميل <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Select
+                  name="client_type"
+                  value={formData.client_type}
+                  onChange={handleChange}
+                  required
+                  className="rounded-3"
+                >
+                  <option value="عميل فردي">👤 عميل فردي</option>
+                  <option value="مكتب خدمات">🏢 مكتب خدمات</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  الاسم بالكامل <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  placeholder="الاسم بالكامل"
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  يرجى إدخال اسم العميل
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
 
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold small text-secondary">
-                        رقم الهاتف <span className="text-danger">*</span>
-                      </Form.Label>
-                      <Form.Control
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        required
-                        placeholder="رقم الهاتف الأساسي"
-                        className="rounded-3"
-                      />
-                      <Form.Control.Feedback type="invalid">
-                        يرجى إدخال رقم الهاتف
-                      </Form.Control.Feedback>
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold small text-secondary">
-                        رقم هاتف إضافي
-                      </Form.Label>
-                      <Form.Control
-                        type="tel"
-                        name="additional_phone"
-                        value={formData.additional_phone}
-                        onChange={handleChange}
-                        placeholder="رقم هاتف إضافي"
-                        className="rounded-3"
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  اسم الموظف <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  list="employees-options"
+                  value={employeeSearch}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEmployeeSearch(value);
+                    const matched = employees.find((emp) => emp.name === value);
+                    setFormData((prev) => ({
+                      ...prev,
+                      employee_id: matched ? matched.id : "",
+                    }));
+                  }}
+                  required
+                  placeholder="اكتب اسم الموظف..."
+                  className="rounded-3"
+                />
+                <datalist id="employees-options">
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.name} />
+                  ))}
+                </datalist>
+                <Form.Control.Feedback type="invalid">
+                  يرجى اختيار الموظف
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  المدينة <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  required
+                  placeholder="المدينة"
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  يرجى إدخال المدينة
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
 
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold small text-secondary">
-                        اسم المكتب
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="office_name"
-                        value={formData.office_name}
-                        onChange={handleChange}
-                        placeholder="اسم المكتب"
-                        className="rounded-3"
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold small text-secondary">
-                        العنوان
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        placeholder="العنوان"
-                        className="rounded-3"
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-              </div>
-            </Tab>
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  رقم الهاتف <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                  placeholder="رقم الهاتف الأساسي"
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  يرجى إدخال رقم الهاتف
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  رقم هاتف إضافي
+                </Form.Label>
+                <Form.Control
+                  type="tel"
+                  name="additional_phone"
+                  value={formData.additional_phone}
+                  onChange={handleChange}
+                  placeholder="رقم هاتف إضافي"
+                  className="rounded-3"
+                />
+              </Form.Group>
+            </Col>
+          </Row>
 
-            <Tab eventKey="visa" title="معلومات التأشيرة">
-              <div className="mt-3">
-                <div className="bg-light p-3 rounded-3 mb-3">
-                  <small className="text-muted">
-                    ℹ️ المعلومات التالية مرتبطة بالعميل
-                  </small>
-                </div>
-
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold small text-secondary">
-                        رقم الجواز
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="passport_number"
-                        value={formData.passport_number}
-                        onChange={handleChange}
-                        placeholder="رقم الجواز"
-                        className="rounded-3"
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold small text-secondary">
-                        رقم الهوية
-                      </Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="national_id"
-                        value={formData.national_id}
-                        onChange={handleChange}
-                        placeholder="رقم الهوية"
-                        className="rounded-3"
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-              </div>
-            </Tab>
-
-            <Tab eventKey="images" title="الصور والمرفقات">
-              <div className="mt-3">
-                <Row>
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold small text-secondary">
-                        صورة الجواز
-                      </Form.Label>
-                      <Form.Control
-                        type="file"
-                        name="passport_image"
-                        accept="image/jpeg,image/png,image/jpg"
-                        onChange={handleFileChange}
-                        className="rounded-3"
-                      />
-                      {previewImages.passport_image && (
-                        <div className="mt-2 text-center position-relative">
-                          <Image
-                            src={getImageUrl(previewImages.passport_image)}
-                            thumbnail
-                            style={{ maxHeight: "100px" }}
-                          />
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            className="position-absolute top-0 start-0"
-                            onClick={() => handleRemoveImage("passport_image")}
-                            style={{ borderRadius: "50%", padding: "2px 6px" }}
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      )}
-                    </Form.Group>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold small text-secondary">
-                        صورة التأشيرة
-                      </Form.Label>
-                      <Form.Control
-                        type="file"
-                        name="visa_image"
-                        accept="image/jpeg,image/png,image/jpg"
-                        onChange={handleFileChange}
-                        className="rounded-3"
-                      />
-                      {previewImages.visa_image && (
-                        <div className="mt-2 text-center position-relative">
-                          <Image
-                            src={getImageUrl(previewImages.visa_image)}
-                            thumbnail
-                            style={{ maxHeight: "100px" }}
-                          />
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            className="position-absolute top-0 start-0"
-                            onClick={() => handleRemoveImage("visa_image")}
-                            style={{ borderRadius: "50%", padding: "2px 6px" }}
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      )}
-                    </Form.Group>
-                  </Col>
-                  <Col md={4}>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-semibold small text-secondary">
-                        صورة الهوية
-                      </Form.Label>
-                      <Form.Control
-                        type="file"
-                        name="id_image"
-                        accept="image/jpeg,image/png,image/jpg"
-                        onChange={handleFileChange}
-                        className="rounded-3"
-                      />
-                      {previewImages.id_image && (
-                        <div className="mt-2 text-center position-relative">
-                          <Image
-                            src={getImageUrl(previewImages.id_image)}
-                            thumbnail
-                            style={{ maxHeight: "100px" }}
-                          />
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            className="position-absolute top-0 start-0"
-                            onClick={() => handleRemoveImage("id_image")}
-                            style={{ borderRadius: "50%", padding: "2px 6px" }}
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      )}
-                    </Form.Group>
-                  </Col>
-                </Row>
-              </div>
-            </Tab>
-          </Tabs>
+          <Row>
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  العنوان
+                </Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={2}
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  placeholder="العنوان"
+                  className="rounded-3"
+                />
+              </Form.Group>
+            </Col>
+          </Row>
         </Modal.Body>
 
         <Modal.Footer className="border-0 pb-4 px-4">

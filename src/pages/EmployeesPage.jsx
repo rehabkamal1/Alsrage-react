@@ -12,62 +12,65 @@ import EmployeeTable from "../components/Employee/EmployeeTable";
 import EmployeeSearchBar from "../components/Employee/EmployeeSearchBar";
 import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
+import { exportToExcel } from "../utils/excelHelper";
 
 const EmployeesPage = () => {
   const [employees, setEmployees] = useState([]);
-  const [filteredEmployees, setFilteredEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [filters, setFilters] = useState({
+    sort_by: "created_at",
+    sort_dir: "desc",
+  });
   const [submitError, setSubmitError] = useState(null);
   const itemsPerPage = 8;
 
   useEffect(() => {
     fetchEmployees();
-  }, []);
-
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      const filtered = employees.filter((emp) => {
-        const nameMatch = emp.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase());
-        const phoneMatch = emp.phone?.includes(searchQuery);
-        const positionMatch = emp.position
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase());
-        return nameMatch || phoneMatch || positionMatch;
-      });
-      setFilteredEmployees(filtered);
-    } else {
-      setFilteredEmployees(employees);
-    }
-    setCurrentPage(1);
-  }, [searchQuery, employees]);
+  }, [currentPage, searchQuery, filters]);
 
   const fetchEmployees = async () => {
-    setInitialLoading(true);
+    if (initialLoading) {
+      setInitialLoading(true);
+    } else {
+      setLoading(true);
+    }
     try {
-      const response = await getEmployees();
-      setEmployees(response.data || []);
-      setFilteredEmployees(response.data || []);
+      const response = await getEmployees({
+        page: currentPage,
+        per_page: itemsPerPage,
+        search: searchQuery || undefined,
+        sort_by: filters.sort_by,
+        sort_dir: filters.sort_dir,
+      });
+      setEmployees(response.data?.data || []);
+      setTotalPages(response.data?.last_page || 1);
     } catch (error) {
       console.error("Error fetching employees:", error);
     } finally {
+      setLoading(false);
       setInitialLoading(false);
     }
   };
 
   const handleSearch = (query) => {
     setSearchQuery(query);
+    setCurrentPage(1);
   };
 
   const handleClearSearch = () => {
     setSearchQuery("");
-    setFilteredEmployees(employees);
+    setCurrentPage(1);
+  };
+
+  const handleFilterChange = (field, value) => {
+    setFilters((prev) => ({ ...prev, [field]: value }));
+    setCurrentPage(1);
   };
 
   const handleAddEmployee = () => {
@@ -126,12 +129,17 @@ const EmployeesPage = () => {
     }
   };
 
-  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedEmployees = filteredEmployees.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  );
+  const handleExport = () => {
+    const columns = [
+      { header: "الاسم", key: "name" },
+      { header: "رقم الجوال", key: "phone" },
+      { header: "المنصب", key: "position" },
+      { header: "رقم الهوية", key: "id_number" },
+      { header: "البريد الإلكتروني", key: "email" },
+      { header: "العنوان", key: "address" },
+    ];
+    exportToExcel(employees, columns, "الموظفين.xlsx");
+  };
 
   if (initialLoading) {
     return (
@@ -170,15 +178,27 @@ const EmployeesPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">الموظفين</h1>
-          <Button variant="dark" onClick={handleAddEmployee}>
-            + موظف جديد
-          </Button>
+          <div>
+            <Button
+              variant="outline-success"
+              onClick={handleExport}
+              className="me-2"
+              disabled={employees.length === 0}
+            >
+              📊 تصدير إكسيل
+            </Button>
+            <Button variant="dark" onClick={handleAddEmployee}>
+              + موظف جديد
+            </Button>
+          </div>
         </div>
 
         <EmployeeSearchBar
           searchQuery={searchQuery}
           onSearch={handleSearch}
           onClear={handleClearSearch}
+          filters={filters}
+          onFilterChange={handleFilterChange}
           loading={loading}
         />
 
@@ -191,7 +211,7 @@ const EmployeesPage = () => {
             ) : (
               <>
                 <EmployeeTable
-                  employees={displayedEmployees}
+                  employees={employees}
                   onEdit={handleEditEmployee}
                   onDelete={handleDeleteEmployee}
                 />

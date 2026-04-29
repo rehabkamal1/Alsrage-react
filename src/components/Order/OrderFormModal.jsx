@@ -21,7 +21,7 @@ const OrderFormModal = ({
   clients = [],
   saudiOffices = [],
   externalOffices = [],
-  employees = [],
+  statusOptions = [],
   searchClients,
   quickCreateClient,
   loading,
@@ -33,16 +33,14 @@ const OrderFormModal = ({
     visa_holder_name: "",
     saudi_office_id: "",
     external_office_id: "",
-    employee_id: "",
     visa_number: "",
+    id_number: "",
     musaned_contract_number: "",
-    authentication_contract_number: "",
-    external_agent_number: "",
     contract_date: "",
-    passport_date: "",
     total_price: "",
     musaned_paid: "",
-    status: "pending",
+    status: "",
+    notes: "",
     visa_image: null,
     contract_image: null,
   });
@@ -63,6 +61,9 @@ const OrderFormModal = ({
   const [newClientPhone, setNewClientPhone] = useState("");
   const [quickCreateLoading, setQuickCreateLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [saudiOfficeSearch, setSaudiOfficeSearch] = useState("");
+  const [externalOfficeSearch, setExternalOfficeSearch] = useState("");
+  const [attachmentRows, setAttachmentRows] = useState([{ title: "", file: null }]);
 
   useEffect(() => {
     if (initialData) {
@@ -74,17 +75,14 @@ const OrderFormModal = ({
           "",
         saudi_office_id: initialData.saudi_office_id || "",
         external_office_id: initialData.external_office_id || "",
-        employee_id: initialData.employee_id || "",
         visa_number: initialData.visa_number || "",
+        id_number: initialData.id_number || "",
         musaned_contract_number: initialData.musaned_contract_number || "",
-        authentication_contract_number:
-          initialData.authentication_contract_number || "",
-        external_agent_number: initialData.external_agent_number || "",
         contract_date: initialData.contract_date || "",
-        passport_date: initialData.passport_date || "",
         total_price: initialData.total_price || "",
         musaned_paid: initialData.musaned_paid || "",
-        status: initialData.status || "pending",
+        status: initialData.status || "",
+        notes: initialData.notes || "",
         visa_image: null,
         contract_image: null,
       });
@@ -97,22 +95,24 @@ const OrderFormModal = ({
           `${initialData.client.name} (${initialData.client.phone})`,
         );
       }
+      setSaudiOfficeSearch(initialData.saudiOffice?.name || initialData.saudi_office?.name || "");
+      setExternalOfficeSearch(
+        initialData.externalOffice?.name || initialData.external_office?.name || "",
+      );
     } else {
       setFormData({
         client_id: "",
         visa_holder_name: "",
         saudi_office_id: "",
         external_office_id: "",
-        employee_id: "",
         visa_number: "",
+        id_number: "",
         musaned_contract_number: "",
-        authentication_contract_number: "",
-        external_agent_number: "",
         contract_date: "",
-        passport_date: "",
         total_price: "",
         musaned_paid: "",
-        status: "pending",
+        status: "",
+        notes: "",
         visa_image: null,
         contract_image: null,
       });
@@ -121,7 +121,10 @@ const OrderFormModal = ({
         contract_image: null,
       });
       setSearchQuery("");
+      setSaudiOfficeSearch("");
+      setExternalOfficeSearch("");
     }
+    setAttachmentRows([{ title: "", file: null }]);
     setValidated(false);
     setFieldErrors({});
     setActiveTab("basic");
@@ -248,8 +251,28 @@ const OrderFormModal = ({
       }
     });
     submitData.append("price_difference", priceDifference);
+    attachmentRows.forEach((item, idx) => {
+      if (item.file) {
+        submitData.append(`attachment_files[${idx}]`, item.file);
+        submitData.append(`attachment_titles[${idx}]`, item.title || `attachment-${idx + 1}`);
+      }
+    });
 
     onSubmit(submitData);
+  };
+
+  const updateAttachmentRow = (index, field, value) => {
+    setAttachmentRows((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
+    );
+  };
+
+  const addAttachmentRow = () => {
+    setAttachmentRows((prev) => [...prev, { title: "", file: null }]);
+  };
+
+  const removeAttachmentRow = (index) => {
+    setAttachmentRows((prev) => prev.filter((_, i) => i !== index));
   };
 
   const getImageUrl = (url) => {
@@ -404,6 +427,27 @@ const OrderFormModal = ({
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
+                          رقم الهوية
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="id_number"
+                          value={formData.id_number}
+                          onChange={handleChange}
+                          isInvalid={!!getFieldError("id_number")}
+                          className="rounded-3"
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {getFieldError("id_number")}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={12}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
                           رقم عقد مساند
                         </Form.Label>
                         <Form.Control
@@ -425,63 +469,30 @@ const OrderFormModal = ({
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                          رقم عقد التوثيق
-                        </Form.Label>
-                        <Form.Control
-                          type="text"
-                          name="authentication_contract_number"
-                          value={formData.authentication_contract_number}
-                          onChange={handleChange}
-                          isInvalid={
-                            !!getFieldError("authentication_contract_number")
-                          }
-                          className="rounded-3"
-                        />
-                        <Form.Control.Feedback type="invalid">
-                          {getFieldError("authentication_contract_number")}
-                        </Form.Control.Feedback>
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="fw-semibold small text-secondary">
-                          رقم الوكيل الخارجي
-                        </Form.Label>
-                        <Form.Control
-                          type="text"
-                          name="external_agent_number"
-                          value={formData.external_agent_number}
-                          onChange={handleChange}
-                          isInvalid={!!getFieldError("external_agent_number")}
-                          className="rounded-3"
-                        />
-                        <Form.Control.Feedback type="invalid">
-                          {getFieldError("external_agent_number")}
-                        </Form.Control.Feedback>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="fw-semibold small text-secondary">
                           المكتب السعودي
                         </Form.Label>
-                        <Form.Select
-                          name="saudi_office_id"
-                          value={formData.saudi_office_id}
-                          onChange={handleChange}
+                        <Form.Control
+                          type="text"
+                          list="saudi-offices-options"
+                          value={saudiOfficeSearch}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setSaudiOfficeSearch(value);
+                            const matched = saudiOffices.find((office) => office.name === value);
+                            setFormData((prev) => ({
+                              ...prev,
+                              saudi_office_id: matched ? matched.id : "",
+                            }));
+                          }}
+                          placeholder="اكتب اسم المكتب السعودي..."
                           isInvalid={!!getFieldError("saudi_office_id")}
                           className="rounded-3"
-                        >
-                          <option value="">-- اختر --</option>
+                        />
+                        <datalist id="saudi-offices-options">
                           {saudiOffices.map((office) => (
-                            <option key={office.id} value={office.id}>
-                              {office.name}
-                            </option>
+                            <option key={office.id} value={office.name} />
                           ))}
-                        </Form.Select>
+                        </datalist>
                         <Form.Control.Feedback type="invalid">
                           {getFieldError("saudi_office_id")}
                         </Form.Control.Feedback>
@@ -492,20 +503,28 @@ const OrderFormModal = ({
                         <Form.Label className="fw-semibold small text-secondary">
                           المكتب الخارجي
                         </Form.Label>
-                        <Form.Select
-                          name="external_office_id"
-                          value={formData.external_office_id}
-                          onChange={handleChange}
+                        <Form.Control
+                          type="text"
+                          list="external-offices-options"
+                          value={externalOfficeSearch}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setExternalOfficeSearch(value);
+                            const matched = externalOffices.find((office) => office.name === value);
+                            setFormData((prev) => ({
+                              ...prev,
+                              external_office_id: matched ? matched.id : "",
+                            }));
+                          }}
+                          placeholder="اكتب اسم المكتب الخارجي..."
                           isInvalid={!!getFieldError("external_office_id")}
                           className="rounded-3"
-                        >
-                          <option value="">-- اختر --</option>
+                        />
+                        <datalist id="external-offices-options">
                           {externalOffices.map((office) => (
-                            <option key={office.id} value={office.id}>
-                              {office.name}
-                            </option>
+                            <option key={office.id} value={office.name} />
                           ))}
-                        </Form.Select>
+                        </datalist>
                         <Form.Control.Feedback type="invalid">
                           {getFieldError("external_office_id")}
                         </Form.Control.Feedback>
@@ -514,30 +533,6 @@ const OrderFormModal = ({
                   </Row>
 
                   <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="fw-semibold small text-secondary">
-                          المندوب
-                        </Form.Label>
-                        <Form.Select
-                          name="employee_id"
-                          value={formData.employee_id}
-                          onChange={handleChange}
-                          isInvalid={!!getFieldError("employee_id")}
-                          className="rounded-3"
-                        >
-                          <option value="">-- اختر --</option>
-                          {employees.map((emp) => (
-                            <option key={emp.id} value={emp.id}>
-                              {emp.name}
-                            </option>
-                          ))}
-                        </Form.Select>
-                        <Form.Control.Feedback type="invalid">
-                          {getFieldError("employee_id")}
-                        </Form.Control.Feedback>
-                      </Form.Group>
-                    </Col>
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
@@ -556,27 +551,6 @@ const OrderFormModal = ({
                         </Form.Control.Feedback>
                       </Form.Group>
                     </Col>
-                  </Row>
-
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="fw-semibold small text-secondary">
-                          تاريخ الجواز
-                        </Form.Label>
-                        <Form.Control
-                          type="date"
-                          name="passport_date"
-                          value={formData.passport_date}
-                          onChange={handleChange}
-                          isInvalid={!!getFieldError("passport_date")}
-                          className="rounded-3"
-                        />
-                        <Form.Control.Feedback type="invalid">
-                          {getFieldError("passport_date")}
-                        </Form.Control.Feedback>
-                      </Form.Group>
-                    </Col>
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
@@ -589,10 +563,12 @@ const OrderFormModal = ({
                           isInvalid={!!getFieldError("status")}
                           className="rounded-3"
                         >
-                          <option value="pending">قيد الانتظار</option>
-                          <option value="in_progress">قيد التنفيذ</option>
-                          <option value="completed">مكتمل</option>
-                          <option value="cancelled">ملغي</option>
+                          <option value="">-- اختر --</option>
+                          {statusOptions.map((status) => (
+                            <option key={status.key || status.id} value={status.key}>
+                              {status.label}
+                            </option>
+                          ))}
                         </Form.Select>
                         <Form.Control.Feedback type="invalid">
                           {getFieldError("status")}
@@ -600,6 +576,24 @@ const OrderFormModal = ({
                       </Form.Group>
                     </Col>
                   </Row>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold small text-secondary">
+                      الملاحظات
+                    </Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={2}
+                      name="notes"
+                      value={formData.notes}
+                      onChange={handleChange}
+                      isInvalid={!!getFieldError("notes")}
+                      className="rounded-3"
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      {getFieldError("notes")}
+                    </Form.Control.Feedback>
+                  </Form.Group>
                 </div>
               </Tab>
 
@@ -651,7 +645,7 @@ const OrderFormModal = ({
                       className={`p-3 rounded-3 ${priceDifference >= 0 ? "bg-success bg-opacity-10" : "bg-danger bg-opacity-10"}`}
                     >
                       <div className="d-flex justify-content-between align-items-center">
-                        <span className="fw-semibold">الفرق:</span>
+                        <span className="fw-semibold">الرصيد المتبقي:</span>
                         <span
                           className={`fs-4 fw-bold ${priceDifference >= 0 ? "text-success" : "text-danger"}`}
                         >
@@ -739,6 +733,52 @@ const OrderFormModal = ({
                       </Form.Group>
                     </Col>
                   </Row>
+                  <hr />
+                  <div className="mb-2 fw-semibold">مرفقات إضافية (سحب وإفلات مع عنوان)</div>
+                  {attachmentRows.map((row, index) => (
+                    <Row key={`attachment-${index}`} className="align-items-end mb-2">
+                      <Col md={5}>
+                        <Form.Group>
+                          <Form.Label className="small text-secondary">عنوان الصورة</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={row.title}
+                            onChange={(e) =>
+                              updateAttachmentRow(index, "title", e.target.value)
+                            }
+                            placeholder="مثال: صورة الجواز"
+                            className="rounded-3"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={5}>
+                        <Form.Group>
+                          <Form.Label className="small text-secondary">الملف</Form.Label>
+                          <Form.Control
+                            type="file"
+                            accept="image/jpeg,image/png,image/jpg,image/gif"
+                            className="rounded-3"
+                            onChange={(e) =>
+                              updateAttachmentRow(index, "file", e.target.files?.[0] || null)
+                            }
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={2}>
+                        <Button
+                          variant="outline-danger"
+                          className="w-100"
+                          disabled={attachmentRows.length === 1}
+                          onClick={() => removeAttachmentRow(index)}
+                        >
+                          حذف
+                        </Button>
+                      </Col>
+                    </Row>
+                  ))}
+                  <Button variant="outline-primary" onClick={addAttachmentRow}>
+                    + إضافة مرفق
+                  </Button>
                 </div>
               </Tab>
             </Tabs>
