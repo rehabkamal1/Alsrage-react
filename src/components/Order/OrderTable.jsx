@@ -27,7 +27,7 @@ const OrderTable = ({ orders, onEdit, onDelete }) => {
             <th>رقم التأشيرة</th>
             <th>رقم عقد مساند</th>
             <th>إجمالي السعر</th>
-            <th>الفرق</th>
+            <th>الرصيد المتبقي</th>
             <th>الحالة</th>
             <th>التاريخ</th>
             <th>الإجراءات</th>

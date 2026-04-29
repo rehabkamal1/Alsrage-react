@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 
+const AVAILABLE_PERMISSIONS = [
+  { id: "view_orders", label: "عرض الطلبات" },
+  { id: "create_orders", label: "إنشاء طلبات" },
+  { id: "edit_orders", label: "تعديل الطلبات" },
+  { id: "delete_orders", label: "حذف الطلبات" },
+  { id: "view_clients", label: "عرض العملاء" },
+  { id: "create_clients", label: "إنشاء عملاء" },
+  { id: "edit_clients", label: "تعديل العملاء" },
+  { id: "delete_clients", label: "حذف العملاء" },
+  { id: "view_reports", label: "عرض التقارير" },
+  { id: "manage_employees", label: "إدارة الموظفين" },
+];
+
 const EmployeeFormModal = ({
   show,
   onHide,
@@ -13,8 +26,11 @@ const EmployeeFormModal = ({
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
+    username: "",
+    password: "",
     position: "",
     office_name: "",
+    permissions: [],
   });
 
   const [validated, setValidated] = useState(false);
@@ -25,15 +41,21 @@ const EmployeeFormModal = ({
       setFormData({
         name: initialData.name || "",
         phone: initialData.phone || "",
+        username: initialData.username || "",
+        password: "",
         position: initialData.position || "",
         office_name: initialData.office_name || "",
+        permissions: initialData.permissions || [],
       });
     } else {
       setFormData({
         name: "",
         phone: "",
+        username: "",
+        password: "",
         position: "",
         office_name: "",
+        permissions: [],
       });
     }
     setValidated(false);
@@ -52,6 +74,15 @@ const EmployeeFormModal = ({
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
     }
+  };
+
+  const handlePermissionChange = (permissionId) => {
+    setFormData((prev) => {
+      const permissions = prev.permissions.includes(permissionId)
+        ? prev.permissions.filter((p) => p !== permissionId)
+        : [...prev.permissions, permissionId];
+      return { ...prev, permissions };
+    });
   };
 
   const handleSubmit = (e) => {
@@ -77,7 +108,7 @@ const EmployeeFormModal = ({
       show={show}
       onHide={onHide}
       centered
-      size="md"
+      size="lg"
       dir="rtl"
       backdrop="static"
     >
@@ -90,7 +121,7 @@ const EmployeeFormModal = ({
       <Form onSubmit={handleSubmit} noValidate validated={validated}>
         <Modal.Body className="px-4">
           <Row>
-            <Col md={12}>
+            <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
                   اسم الموظف <span className="text-danger">*</span>
@@ -110,10 +141,7 @@ const EmployeeFormModal = ({
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
-          </Row>
-
-          <Row>
-            <Col md={12}>
+            <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
                   رقم الهاتف <span className="text-danger">*</span>
@@ -136,7 +164,50 @@ const EmployeeFormModal = ({
           </Row>
 
           <Row>
-            <Col md={12}>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  اسم المستخدم <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  required
+                  placeholder="اسم المستخدم"
+                  isInvalid={!!getFieldError("username")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("username") || "يرجى إدخال اسم المستخدم"}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  كلمة المرور {!isEdit && <span className="text-danger">*</span>}
+                </Form.Label>
+                <Form.Control
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required={!isEdit}
+                  placeholder={isEdit ? "اترك فارغاً لعدم التغيير" : "أدخل كلمة المرور"}
+                  isInvalid={!!getFieldError("password")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("password") || "يرجى إدخال كلمة المرور"}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
                   المسمى الوظيفي
@@ -155,10 +226,7 @@ const EmployeeFormModal = ({
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
-          </Row>
-
-          <Row>
-            <Col md={12}>
+            <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
                   المكتب التابع له
@@ -178,6 +246,27 @@ const EmployeeFormModal = ({
               </Form.Group>
             </Col>
           </Row>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary d-block mb-2">
+              الصلاحيات
+            </Form.Label>
+            <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+              <Row>
+                {AVAILABLE_PERMISSIONS.map((permission) => (
+                  <Col md={6} key={permission.id} className="mb-2">
+                    <Form.Check
+                      type="checkbox"
+                      id={permission.id}
+                      label={permission.label}
+                      checked={formData.permissions.includes(permission.id)}
+                      onChange={() => handlePermissionChange(permission.id)}
+                    />
+                  </Col>
+                ))}
+              </Row>
+            </div>
+          </Form.Group>
         </Modal.Body>
 
         <Modal.Footer className="border-0 pb-4 px-4">

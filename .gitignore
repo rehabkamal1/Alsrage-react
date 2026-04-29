@@ -34,6 +34,7 @@ dist-ssr
 # Build outputs
 build
 dist
+node_modules
 
 # Coverage
 coverage

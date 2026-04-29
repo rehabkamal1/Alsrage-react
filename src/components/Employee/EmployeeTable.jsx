@@ -1,7 +1,15 @@
 import React from "react";
-import { Table, Button } from "react-bootstrap";
+import { Table, Button, Badge } from "react-bootstrap";
 
 const EmployeeTable = ({ employees, onEdit, onDelete }) => {
+  const formatPermissions = (permissions) => {
+    if (!permissions || permissions.length === 0) {
+      return "-";
+    }
+    // Show count of permissions
+    return `${permissions.length} صلاحيات`;
+  };
+
   return (
     <div className="table-responsive">
       <Table hover className="mb-0 align-middle">
@@ -9,9 +17,10 @@ const EmployeeTable = ({ employees, onEdit, onDelete }) => {
           <tr>
             <th>#</th>
             <th>الاسم</th>
+            <th>اسم المستخدم</th>
             <th>رقم الهاتف</th>
             <th>المسمى الوظيفي</th>
-            <th>المكتب</th>
+            <th>الصلاحيات</th>
             <th>الإجراءات</th>
           </tr>
         </thead>
@@ -21,9 +30,16 @@ const EmployeeTable = ({ employees, onEdit, onDelete }) => {
               <tr key={employee.id}>
                 <td>{index + 1}</td>
                 <td className="fw-semibold">{employee.name}</td>
+                <td>
+                  <Badge bg="light" text="dark">
+                    {employee.username}
+                  </Badge>
+                </td>
                 <td dir="ltr">{employee.phone}</td>
                 <td>{employee.position || "-"}</td>
-                <td>{employee.office_name || "-"}</td>
+                <td>
+                  {formatPermissions(employee.permissions)}
+                </td>
                 <td>
                   <Button
                     variant="link"
@@ -78,7 +94,7 @@ const EmployeeTable = ({ employees, onEdit, onDelete }) => {
             ))}
           {(!employees || employees.length === 0) && (
             <tr>
-              <td colSpan="6" className="text-center py-5 text-muted">
+              <td colSpan="7" className="text-center py-5 text-muted">
                 لا يوجد موظفين مضافين بعد
               </td>
             </tr>

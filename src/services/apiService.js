@@ -26,7 +26,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export const getClients = () => api.get("/clients");
+export const getClients = (params = {}) => api.get("/clients", { params });
 export const createClient = (data) => api.post("/clients", data);
 export const updateClient = (id, data) =>
   api.post(`/clients/${id}?_method=PUT`, data);
@@ -49,13 +49,13 @@ export const updateExternalOffice = (id, data) =>
 export const deleteExternalOffice = (id) =>
   api.delete(`/external-offices/${id}`);
 
-export const getOrders = () => api.get("/orders");
+export const getOrders = (params = {}) => api.get("/orders", { params });
 export const getOrder = (id) => api.get(`/orders/${id}`);
 export const createOrder = (data) => api.post("/orders", data);
 export const updateOrder = (id, data) => api.put(`/orders/${id}`, data);
 export const deleteOrder = (id) => api.delete(`/orders/${id}`);
 
-export const getEmployees = () => api.get("/employees");
+export const getEmployees = (params = {}) => api.get("/employees", { params });
 export const createEmployee = (data) => api.post("/employees", data);
 export const updateEmployee = (id, data) => api.put(`/employees/${id}`, data);
 export const deleteEmployee = (id) => api.delete(`/employees/${id}`);
@@ -90,6 +90,7 @@ export const getSettingsPaymentMethods = () =>
 export const getSettingsBankNames = () => api.get("/settings/bank-names");
 export const getSettingsMarketingStatuses = () =>
   api.get("/settings/marketing-statuses");
+export const getSettingsOrderStatuses = () => api.get("/settings/order-statuses");
 
 export const updateSettingsPriorityLevels = (data) =>
   api.post("/settings/priority-levels", data);
@@ -103,6 +104,8 @@ export const updateSettingsBankNames = (data) =>
   api.post("/settings/bank-names", data);
 export const updateSettingsMarketingStatuses = (data) =>
   api.post("/settings/marketing-statuses", data);
+export const updateSettingsOrderStatuses = (data) =>
+  api.post("/settings/order-statuses", data);
 
 export const deletePriorityLevel = (id) =>
   api.delete(`/settings/priority-levels/${id}`);
@@ -115,6 +118,7 @@ export const deletePaymentMethod = (id) =>
 export const deleteBankName = (id) => api.delete(`/settings/bank-names/${id}`);
 export const deleteMarketingStatus = (id) =>
   api.delete(`/settings/marketing-statuses/${id}`);
+export const deleteOrderStatus = (id) => api.delete(`/settings/order-statuses/${id}`);
 
 export const getMarketingLeads = (params) =>
   api.get("/marketing-leads", { params });

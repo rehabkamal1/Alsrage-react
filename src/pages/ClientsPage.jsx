@@ -5,7 +5,6 @@ import {
   createClient,
   updateClient,
   deleteClient,
-  searchClients,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import ClientFormModal from "../components/Client/ClientFormModal";
@@ -14,67 +13,67 @@ import ClientSearchBar from "../components/Client/ClientSearchBar";
 import PaginationComponent from "../components/common/Pagination";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import TableSkeleton from "../components/common/TableSkeleton";
+import { exportToExcel } from "../utils/excelHelper";
 
 const ClientsPage = () => {
   const [clients, setClients] = useState([]);
-  const [filteredClients, setFilteredClients] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [filters, setFilters] = useState({
+    client_type: "",
+    sort_by: "created_at",
+    sort_dir: "desc",
+  });
   const itemsPerPage = 8;
 
   useEffect(() => {
     fetchClients();
-  }, []);
-
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      const filtered = clients.filter(
-        (client) =>
-          client.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          client.phone?.includes(searchQuery),
-      );
-      setFilteredClients(filtered);
-    } else {
-      setFilteredClients(clients);
-    }
-    setCurrentPage(1);
-  }, [searchQuery, clients]);
+  }, [currentPage, searchQuery, filters]);
 
   const fetchClients = async () => {
-    setInitialLoading(true);
+    if (initialLoading) {
+      setInitialLoading(true);
+    } else {
+      setLoading(true);
+    }
     try {
-      const response = await getClients();
-      setClients(response.data.data);
-      setFilteredClients(response.data.data);
+      const params = {
+        page: currentPage,
+        per_page: itemsPerPage,
+        search: searchQuery || undefined,
+        client_type: filters.client_type || undefined,
+        sort_by: filters.sort_by,
+        sort_dir: filters.sort_dir,
+      };
+      const response = await getClients(params);
+      setClients(response.data.data || []);
+      setTotalPages(response.data.meta?.last_page || 1);
     } catch (error) {
       console.error("Error fetching clients:", error);
     } finally {
+      setLoading(false);
       setInitialLoading(false);
     }
   };
 
-  const handleSearch = async (query) => {
+  const handleSearch = (query) => {
     setSearchQuery(query);
-    if (query.length >= 2) {
-      setLoading(true);
-      try {
-        const response = await searchClients(query);
-        setFilteredClients(response.data.data);
-      } catch (error) {
-        console.error("Search error:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
+    setCurrentPage(1);
   };
 
   const handleClearSearch = () => {
     setSearchQuery("");
-    setFilteredClients(clients);
+    setCurrentPage(1);
+  };
+
+  const handleFilterChange = (field, value) => {
+    setFilters((prev) => ({ ...prev, [field]: value }));
+    setCurrentPage(1);
   };
 
   const handleAddClient = () => {
@@ -133,12 +132,18 @@ const ClientsPage = () => {
     }
   };
 
-  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedClients = filteredClients.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  );
+  const handleExport = () => {
+    const columns = [
+      { header: "نوع العميل", key: "client_type" },
+      { header: "الاسم بالكامل", key: "name" },
+      { header: "اسم الموظف", format: (client) => client.employee?.name || "-" },
+      { header: "رقم الهاتف", key: "phone" },
+      { header: "رقم هاتف إضافي", key: "additional_phone" },
+      { header: "المدينة", key: "city" },
+      { header: "العنوان", key: "address" },
+    ];
+    exportToExcel(clients, columns, "العملاء.xlsx");
+  };
 
   return (
     <div
@@ -151,15 +156,27 @@ const ClientsPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">العملاء</h1>
-          <Button variant="dark" onClick={handleAddClient}>
-            + عميل جديد
-          </Button>
+          <div>
+            <Button
+              variant="outline-success"
+              onClick={handleExport}
+              className="me-2"
+              disabled={clients.length === 0}
+            >
+              📊 تصدير إكسيل
+            </Button>
+            <Button variant="dark" onClick={handleAddClient}>
+              + عميل جديد
+            </Button>
+          </div>
         </div>
 
         <ClientSearchBar
           searchQuery={searchQuery}
           onSearch={handleSearch}
           onClear={handleClearSearch}
+          filters={filters}
+          onFilterChange={handleFilterChange}
           loading={loading}
         />
 
@@ -170,7 +187,7 @@ const ClientsPage = () => {
             ) : (
               <>
                 <ClientTable
-                  clients={displayedClients}
+                  clients={clients}
                   onEdit={handleEditClient}
                   onDelete={handleDeleteClient}
                 />

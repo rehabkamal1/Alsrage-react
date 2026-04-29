@@ -9,10 +9,10 @@ const ClientTable = ({ clients, onEdit, onDelete }) => {
           <tr>
             <th className="rounded-end">التصنيف</th>
             <th>الاسم</th>
-            <th>اسم المكتب</th>
+            <th>اسم الموظف</th>
             <th>رقم الهاتف</th>
-            <th>رقم الهوية</th>
-            <th>رقم الجواز</th>
+            <th>هاتف إضافي</th>
+            <th>المدينة</th>
             <th>العنوان</th>
             <th className="rounded-start">الإجراءات</th>
           </tr>
@@ -22,18 +22,18 @@ const ClientTable = ({ clients, onEdit, onDelete }) => {
             <tr key={client.id}>
               <td>
                 <span
-                  className={`badge ${client.category === "Service Office" ? "bg-warning rounded-pill px-3 py-2" : "bg-success rounded-pill px-3 py-2"}`}
+                  className={`badge ${client.client_type === "مكتب خدمات" ? "bg-warning rounded-pill px-3 py-2" : "bg-success rounded-pill px-3 py-2"}`}
                 >
-                  {client.category === "Service Office"
+                  {client.client_type === "مكتب خدمات"
                     ? "مكتب خدمات"
                     : "عميل فردي"}
                 </span>
               </td>
               <td className="fw-semibold">{client.name}</td>
-              <td>{client.office_name || "-"}</td>
+              <td>{client.employee?.name || "-"}</td>
               <td>{client.phone}</td>
-              <td>{client.national_id || "-"}</td>
-              <td>{client.passport_number || "-"}</td>
+              <td>{client.additional_phone || "-"}</td>
+              <td>{client.city || "-"}</td>
               <td>{client.address || "-"}</td>
               <td>
                 <Button

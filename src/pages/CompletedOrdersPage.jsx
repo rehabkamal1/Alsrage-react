@@ -9,7 +9,6 @@ import {
   getSaudiOffices,
   getExternalOffices,
   getEmployees,
-  getSettingsOrderStatuses,
   searchClients,
   quickCreateClient,
 } from "../services/apiService";
@@ -21,88 +20,90 @@ import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 
-const OrdersPage = () => {
+const CompletedOrdersPage = () => {
   const [orders, setOrders] = useState([]);
+  const [filteredOrders, setFilteredOrders] = useState([]);
   const [clients, setClients] = useState([]);
   const [saudiOffices, setSaudiOffices] = useState([]);
   const [externalOffices, setExternalOffices] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [orderStatuses, setOrderStatuses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [filters, setFilters] = useState({
-    status: "",
-    sort_by: "id",
-    sort_dir: "desc",
-  });
   const [submitError, setSubmitError] = useState(null);
   const itemsPerPage = 8;
 
   useEffect(() => {
     fetchAllData();
-  }, [currentPage, searchQuery, filters]);
+  }, []);
+
+  useEffect(() => {
+    // Filter completed orders first
+    const completedOrders = orders.filter(
+      (order) => order.status === "مكتمل" || order.status === "completed"
+    );
+
+    // Then apply search filter
+    if (searchQuery.trim()) {
+      const filtered = completedOrders.filter((order) => {
+        const orderIdMatch = order.id?.toString().includes(searchQuery);
+        const clientNameMatch = order.client?.name
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase());
+        const clientPhoneMatch = order.client?.phone?.includes(searchQuery);
+        const visaNumberMatch = order.visa_number
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase());
+        const contractNumberMatch = order.musaned_contract_number
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase());
+        return (
+          orderIdMatch ||
+          clientNameMatch ||
+          clientPhoneMatch ||
+          visaNumberMatch ||
+          contractNumberMatch
+        );
+      });
+      setFilteredOrders(filtered);
+    } else {
+      setFilteredOrders(completedOrders);
+    }
+    setCurrentPage(1);
+  }, [searchQuery, orders]);
 
   const fetchAllData = async () => {
-    if (initialLoading) {
-      setInitialLoading(true);
-    } else {
-      setLoading(true);
-    }
+    setInitialLoading(true);
     try {
-      const [ordersRes, clientsRes, saudiRes, externalRes, employeesRes, orderStatusesRes] = await Promise.all([
-        getOrders({
-          page: currentPage,
-          per_page: itemsPerPage,
-          search: searchQuery || undefined,
-          status: filters.status || undefined,
-          sort_by: filters.sort_by,
-          sort_dir: filters.sort_dir,
-        }),
-        getClients({ per_page: 200, sort_by: "name", sort_dir: "asc" }),
-        getSaudiOffices(),
-        getExternalOffices(),
-        getEmployees({ per_page: 200, sort_by: "name", sort_dir: "asc" }),
-        getSettingsOrderStatuses(),
-      ]);
+      const [ordersRes, clientsRes, saudiRes, externalRes, employeesRes] =
+        await Promise.all([
+          getOrders(),
+          getClients(),
+          getSaudiOffices(),
+          getExternalOffices(),
+          getEmployees(),
+        ]);
       setOrders(ordersRes.data?.data || []);
-      setTotalPages(ordersRes.data?.meta?.last_page || 1);
       setClients(clientsRes.data?.data || []);
       setSaudiOffices(saudiRes.data?.data || []);
       setExternalOffices(externalRes.data?.data || []);
-      setEmployees(employeesRes.data?.data || employeesRes.data || []);
-      setOrderStatuses(orderStatusesRes.data?.data || []);
+      setEmployees(employeesRes.data?.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
-      setLoading(false);
       setInitialLoading(false);
     }
   };
 
   const handleSearch = (query) => {
     setSearchQuery(query);
-    setCurrentPage(1);
   };
 
   const handleClearSearch = () => {
     setSearchQuery("");
-    setCurrentPage(1);
-  };
-
-  const handleFilterChange = (field, value) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-    setCurrentPage(1);
-  };
-
-  const handleAddOrder = () => {
-    setEditingOrder(null);
-    setSubmitError(null);
-    setShowModal(true);
   };
 
   const handleEditOrder = (order) => {
@@ -118,9 +119,6 @@ const OrdersPage = () => {
       if (editingOrder) {
         await updateOrder(editingOrder.id, formData);
         showSuccess("تم التحديث!", "تم تحديث الطلب بنجاح");
-      } else {
-        await createOrder(formData);
-        showSuccess("تمت الإضافة!", "تم إضافة الطلب بنجاح");
       }
       setShowModal(false);
       setEditingOrder(null);
@@ -155,8 +153,14 @@ const OrdersPage = () => {
       { header: "رقم الطلب", key: "id" },
       { header: "العميل", format: (order) => order.client?.name || "-" },
       { header: "رقم مساند", key: "musaned_contract_number" },
-      { header: "المكتب السعودي", format: (order) => order.saudiOffice?.name || "-" },
-      { header: "المكتب الخارجي", format: (order) => order.externalOffice?.name || "-" },
+      {
+        header: "المكتب السعودي",
+        format: (order) => order.saudiOffice?.name || "-",
+      },
+      {
+        header: "المكتب الخارجي",
+        format: (order) => order.externalOffice?.name || "-",
+      },
       { header: "المهنة", key: "profession" },
       { header: "الجنسية", key: "nationality" },
       { header: "الديانة", key: "religion" },
@@ -168,8 +172,15 @@ const OrdersPage = () => {
       { header: "الإجمالي", key: "total" },
       { header: "الحالة", key: "status" },
     ];
-    exportToExcel(orders, columns, "الطلبات.xlsx");
+    exportToExcel(filteredOrders, columns, "الطلبات_المكتملة.xlsx");
   };
+
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const displayedOrders = filteredOrders.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   if (initialLoading) {
     return (
@@ -182,10 +193,7 @@ const OrdersPage = () => {
       >
         <Container fluid>
           <div className="d-flex justify-content-between align-items-center mb-4">
-            <h1 className="h3 mb-0 fw-bold">الطلبات</h1>
-            <Button variant="dark" disabled>
-              + طلب جديد
-            </Button>
+            <h1 className="h3 mb-0 fw-bold">الطلبات المكتملة</h1>
           </div>
           <Card className="shadow-sm border-0 rounded-4">
             <Card.Body className="p-0">
@@ -207,29 +215,22 @@ const OrdersPage = () => {
     >
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1 className="h3 mb-0 fw-bold">الطلبات</h1>
-          <div>
-            <Button
-              variant="outline-success"
-              onClick={handleExport}
-              className="me-2"
-              disabled={orders.length === 0}
-            >
-              📊 تصدير إكسيل
-            </Button>
-            <Button variant="dark" onClick={handleAddOrder}>
-              + طلب جديد
-            </Button>
-          </div>
+          <h1 className="h3 mb-0 fw-bold">
+            الطلبات المكتملة ({filteredOrders.length})
+          </h1>
+          <Button
+            variant="outline-success"
+            onClick={handleExport}
+            disabled={filteredOrders.length === 0}
+          >
+            📊 تصدير إكسيل
+          </Button>
         </div>
 
         <OrderSearchBar
           searchQuery={searchQuery}
           onSearch={handleSearch}
           onClear={handleClearSearch}
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          statusOptions={orderStatuses}
           loading={loading}
         />
 
@@ -239,10 +240,14 @@ const OrdersPage = () => {
               <div className="text-center py-5">
                 <TableSkeleton rows={3} columns={8} />
               </div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="text-center py-5 text-muted">
+                <p>لا توجد طلبات مكتملة</p>
+              </div>
             ) : (
               <>
                 <OrderTable
-                  orders={orders}
+                  orders={displayedOrders}
                   onEdit={handleEditOrder}
                   onDelete={handleDeleteOrder}
                 />
@@ -272,7 +277,6 @@ const OrdersPage = () => {
         saudiOffices={saudiOffices}
         externalOffices={externalOffices}
         employees={employees}
-        statusOptions={orderStatuses}
         searchClients={searchClients}
         quickCreateClient={quickCreateClient}
         loading={loading}
@@ -283,4 +287,4 @@ const OrdersPage = () => {
   );
 };
 
-export default OrdersPage;
+export default CompletedOrdersPage;
