@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
+import Select from "react-select";
 import "../../styles/FormModal.css";
 
 const FinanceFormModal = ({
@@ -126,17 +127,19 @@ const FinanceFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   نوع المعاملة <span className="text-danger">*</span>
                 </Form.Label>
-                <Form.Select
-                  name="type"
-                  value={formData.type}
-                  onChange={handleChange}
-                  required
-                  isInvalid={!!getFieldError("type")}
-                  className="rounded-3"
-                >
-                  <option value="receipt">📥 مقبوضات (من العميل)</option>
-                  <option value="payment">📤 مصروفات</option>
-                </Form.Select>
+                <Select
+                  options={[
+                    { value: "receipt", label: "📥 مقبوضات (من العميل)" },
+                    { value: "payment", label: "📤 مصروفات" },
+                  ]}
+                  value={
+                    formData.type === "receipt"
+                      ? { value: "receipt", label: "📥 مقبوضات (من العميل)" }
+                      : { value: "payment", label: "📤 مصروفات" }
+                  }
+                  onChange={(opt) => setFormData(prev => ({ ...prev, type: opt ? opt.value : "receipt" }))}
+                  isRtl
+                />
                 <Form.Control.Feedback type="invalid">
                   {getFieldError("type")}
                 </Form.Control.Feedback>
@@ -170,24 +173,16 @@ const FinanceFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   رقم الطلب <span className="text-danger">*</span>
                 </Form.Label>
-                <Form.Select
-                  name="order_id"
-                  value={formData.order_id}
-                  onChange={handleChange}
-                  required
-                  isInvalid={!!getFieldError("order_id")}
-                  className="rounded-3"
-                >
-                  <option value="">-- اختر طلباً --</option>
-                  {orders?.map((order) => (
-                    <option key={order.id} value={order.id}>
-                      #{order.id} - {order.client?.visa_holder_name} -{" "}
-                      {order.visa_number || ""}
-                    </option>
-                  ))}
-                </Form.Select>
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("order_id")}
+                <Select
+                  options={orders?.map(o => ({ value: o.id, label: `#${o.id} - ${o.client?.visa_holder_name} - ${o.visa_number || ""}` })) || []}
+                  value={orders?.find(o => o.id === parseInt(formData.order_id)) ? { value: formData.order_id, label: `#${formData.order_id} - ${orders.find(o => o.id === parseInt(formData.order_id)).client?.visa_holder_name} - ${orders.find(o => o.id === parseInt(formData.order_id)).visa_number || ""}` } : null}
+                  onChange={(opt) => setFormData(prev => ({ ...prev, order_id: opt ? opt.value : "" }))}
+                  placeholder="-- اختر طلباً --"
+                  isClearable
+                  isRtl
+                />
+                <Form.Control.Feedback type="invalid" style={{ display: validated && !formData.order_id ? 'block' : 'none' }}>
+                  يرجى اختيار الطلب
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
@@ -218,23 +213,17 @@ const FinanceFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   طريقة الدفع
                 </Form.Label>
-                <Form.Select
-                  name="payment_method"
-                  value={formData.payment_method}
-                  onChange={handleChange}
-                  isInvalid={!!getFieldError("payment_method")}
-                  className="rounded-3"
-                >
-                  <option value="">-- اختر --</option>
-                  {paymentMethods.map((method) => (
-                    <option key={method.value} value={method.value}>
-                      {method.label}
-                    </option>
-                  ))}
-                </Form.Select>
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("payment_method")}
-                </Form.Control.Feedback>
+                <Select
+                  options={paymentMethods.map(m => ({ value: m.value, label: m.label }))}
+                  value={paymentMethods.find(m => m.value === formData.payment_method) ? { value: formData.payment_method, label: paymentMethods.find(m => m.value === formData.payment_method).label } : null}
+                  onChange={(opt) => setFormData(prev => ({ ...prev, payment_method: opt ? opt.value : "" }))}
+                  placeholder="-- اختر --"
+                  isClearable
+                  isRtl
+                />
+                {getFieldError("payment_method") && (
+                  <div className="text-danger small mt-1">{getFieldError("payment_method")}</div>
+                )}
               </Form.Group>
             </Col>
             <Col md={6}>
@@ -242,23 +231,17 @@ const FinanceFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   بنك المستفيد
                 </Form.Label>
-                <Form.Select
-                  name="bank_name"
-                  value={formData.bank_name}
-                  onChange={handleChange}
-                  isInvalid={!!getFieldError("bank_name")}
-                  className="rounded-3"
-                >
-                  <option value="">-- اختر --</option>
-                  {bankNames.map((bank) => (
-                    <option key={bank.value} value={bank.value}>
-                      {bank.label}
-                    </option>
-                  ))}
-                </Form.Select>
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("bank_name")}
-                </Form.Control.Feedback>
+                <Select
+                  options={bankNames.map(b => ({ value: b.value, label: b.label }))}
+                  value={bankNames.find(b => b.value === formData.bank_name) ? { value: formData.bank_name, label: bankNames.find(b => b.value === formData.bank_name).label } : null}
+                  onChange={(opt) => setFormData(prev => ({ ...prev, bank_name: opt ? opt.value : "" }))}
+                  placeholder="-- اختر --"
+                  isClearable
+                  isRtl
+                />
+                {getFieldError("bank_name") && (
+                  <div className="text-danger small mt-1">{getFieldError("bank_name")}</div>
+                )}
               </Form.Group>
             </Col>
           </Row>
@@ -309,23 +292,17 @@ const FinanceFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   حالة الحوالة
                 </Form.Label>
-                <Form.Select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  isInvalid={!!getFieldError("status")}
-                  className="rounded-3"
-                >
-                  <option value="">-- اختر --</option>
-                  {transferStatuses.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </Form.Select>
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("status")}
-                </Form.Control.Feedback>
+                <Select
+                  options={transferStatuses.map(s => ({ value: s.value, label: s.label }))}
+                  value={transferStatuses.find(s => s.value === formData.status) ? { value: formData.status, label: transferStatuses.find(s => s.value === formData.status).label } : null}
+                  onChange={(opt) => setFormData(prev => ({ ...prev, status: opt ? opt.value : "" }))}
+                  placeholder="-- اختر --"
+                  isClearable
+                  isRtl
+                />
+                {getFieldError("status") && (
+                  <div className="text-danger small mt-1">{getFieldError("status")}</div>
+                )}
               </Form.Group>
             </Col>
             <Col md={6}>
@@ -333,22 +310,17 @@ const FinanceFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   درجة الأهمية
                 </Form.Label>
-                <Form.Select
-                  name="priority_level"
-                  value={formData.priority_level}
-                  onChange={handleChange}
-                  isInvalid={!!getFieldError("priority_level")}
-                  className="rounded-3"
-                >
-                  {priorityLevels.map((level) => (
-                    <option key={level.value} value={level.value}>
-                      {level.label}
-                    </option>
-                  ))}
-                </Form.Select>
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("priority_level")}
-                </Form.Control.Feedback>
+                <Select
+                  options={priorityLevels.map(l => ({ value: l.value, label: l.label }))}
+                  value={priorityLevels.find(l => l.value === formData.priority_level) ? { value: formData.priority_level, label: priorityLevels.find(l => l.value === formData.priority_level).label } : null}
+                  onChange={(opt) => setFormData(prev => ({ ...prev, priority_level: opt ? opt.value : "" }))}
+                  placeholder="-- اختر --"
+                  isClearable
+                  isRtl
+                />
+                {getFieldError("priority_level") && (
+                  <div className="text-danger small mt-1">{getFieldError("priority_level")}</div>
+                )}
               </Form.Group>
             </Col>
           </Row>

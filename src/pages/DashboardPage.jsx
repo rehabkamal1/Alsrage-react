@@ -49,10 +49,11 @@ const DashboardPage = () => {
         ]);
         
         setStats({
-          clients: clientsRes.data.data.length,
-          orders: ordersRes.data.data.length,
-          employees: employeesRes.data.length,
-          offices: saudiRes.data.data.length + externalRes.data.data.length
+          clients: clientsRes.data.meta?.total || clientsRes.data.total || clientsRes.data.data?.length || 0,
+          orders: ordersRes.data.meta?.total || ordersRes.data.total || ordersRes.data.data?.length || 0,
+          employees: employeesRes.data.total || employeesRes.data.data?.length || 0,
+          offices: (saudiRes.data.meta?.total || saudiRes.data.total || saudiRes.data.data?.length || 0) + 
+                   (externalRes.data.meta?.total || externalRes.data.total || externalRes.data.data?.length || 0)
         });
         
         setRecentOrders(ordersRes.data.data.slice(0, 5));

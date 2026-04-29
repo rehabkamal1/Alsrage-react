@@ -1,18 +1,23 @@
 import React from "react";
 import { Table, Button, Badge } from "react-bootstrap";
 
-const OrderTable = ({ orders, onEdit, onDelete }) => {
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      pending: { text: "قيد الانتظار", variant: "warning" },
-      in_progress: { text: "قيد التنفيذ", variant: "info" },
-      completed: { text: "مكتمل", variant: "success" },
-      cancelled: { text: "ملغي", variant: "danger" },
-    };
-    const s = statusMap[status] || { text: status, variant: "secondary" };
+const OrderTable = ({ orders, onEdit, onDelete, statusOptions = [] }) => {
+  const getStatusBadge = (statusKey) => {
+    const status = statusOptions.find(s => (s.key || s.id) === statusKey);
+
+    if (!status) {
+      return <Badge bg="secondary" className="rounded-pill px-3 py-2">{statusKey}</Badge>;
+    }
+
     return (
-      <Badge bg={s.variant} className="rounded-pill px-3 py-2">
-        {s.text}
+      <Badge
+        className="rounded-pill px-3 py-2"
+        style={{
+          backgroundColor: status.color || '#6c757d',
+          color: '#fff'
+        }}
+      >
+        {status.label}
       </Badge>
     );
   };
@@ -28,7 +33,7 @@ const OrderTable = ({ orders, onEdit, onDelete }) => {
             <th>رقم عقد مساند</th>
             <th>إجمالي السعر</th>
             <th>الرصيد المتبقي</th>
-            <th>الحالة</th>
+            <th>حالة سداد مساند</th>
             <th>التاريخ</th>
             <th>الإجراءات</th>
           </tr>

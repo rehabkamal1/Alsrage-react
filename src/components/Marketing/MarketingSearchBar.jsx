@@ -1,5 +1,5 @@
-import React from "react";
 import { Form, InputGroup, Button, Spinner, Row, Col } from "react-bootstrap";
+import Select from "react-select";
 
 const MarketingSearchBar = ({
   searchQuery,
@@ -72,33 +72,23 @@ const MarketingSearchBar = ({
         <Col md={3}>
           <Form.Group>
             <Form.Label className="small text-secondary">النوع</Form.Label>
-            <Form.Select
-              value={filters.type || ""}
-              onChange={(e) => onFilterChange("type", e.target.value)}
-            >
-              <option value="">الكل</option>
-              {types.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </Form.Select>
+            <Select
+              options={[{ value: "", label: "الكل" }, ...types.map(t => ({ value: t.value, label: t.label }))]}
+              value={types.find(t => t.value === filters.type) ? { value: filters.type, label: types.find(t => t.value === filters.type).label } : { value: "", label: "الكل" }}
+              onChange={(opt) => onFilterChange("type", opt ? opt.value : "")}
+              isRtl
+            />
           </Form.Group>
         </Col>
         <Col md={3}>
           <Form.Group>
             <Form.Label className="small text-secondary">الحالة</Form.Label>
-            <Form.Select
-              value={filters.status || ""}
-              onChange={(e) => onFilterChange("status", e.target.value)}
-            >
-              <option value="">الكل</option>
-              {statuses.map((status) => (
-                <option key={status.key} value={status.key}>
-                  {status.label}
-                </option>
-              ))}
-            </Form.Select>
+            <Select
+              options={[{ value: "", label: "الكل" }, ...statuses.map(s => ({ value: s.key, label: s.label }))]}
+              value={statuses.find(s => s.key === filters.status) ? { value: filters.status, label: statuses.find(s => s.key === filters.status).label } : { value: "", label: "الكل" }}
+              onChange={(opt) => onFilterChange("status", opt ? opt.value : "")}
+              isRtl
+            />
           </Form.Group>
         </Col>
         <Col md={3}>
@@ -106,31 +96,31 @@ const MarketingSearchBar = ({
             <Form.Label className="small text-secondary">
               درجة الأهمية
             </Form.Label>
-            <Form.Select
-              value={filters.priority_level || ""}
-              onChange={(e) => onFilterChange("priority_level", e.target.value)}
-            >
-              <option value="">الكل</option>
-              {priorityLevels.map((level) => (
-                <option key={level.key} value={level.key}>
-                  {level.label}
-                </option>
-              ))}
-            </Form.Select>
+            <Select
+              options={[{ value: "", label: "الكل" }, ...priorityLevels.map(l => ({ value: l.key, label: l.label }))]}
+              value={priorityLevels.find(l => l.key === filters.priority_level) ? { value: filters.priority_level, label: priorityLevels.find(l => l.key === filters.priority_level).label } : { value: "", label: "الكل" }}
+              onChange={(opt) => onFilterChange("priority_level", opt ? opt.value : "")}
+              isRtl
+            />
           </Form.Group>
         </Col>
         <Col md={3}>
           <Form.Group>
             <Form.Label className="small text-secondary">ترتيب حسب</Form.Label>
-            <Form.Select
-              value={sortField}
-              onChange={(e) => onSortChange(e.target.value, sortDirection)}
-            >
-              <option value="id">رقم المعرف</option>
-              <option value="name">الاسم</option>
-              <option value="contact_date">تاريخ التواصل</option>
-              <option value="created_at">تاريخ الإنشاء</option>
-            </Form.Select>
+            <Select
+              options={[
+                { value: "id", label: "رقم المعرف" },
+                { value: "name", label: "الاسم" },
+                { value: "contact_date", label: "تاريخ التواصل" },
+                { value: "created_at", label: "تاريخ الإنشاء" },
+              ]}
+              value={{
+                value: sortField,
+                label: sortField === "id" ? "رقم المعرف" : sortField === "name" ? "الاسم" : sortField === "contact_date" ? "تاريخ التواصل" : "تاريخ الإنشاء"
+              }}
+              onChange={(opt) => onSortChange(opt ? opt.value : "id", sortDirection)}
+              isRtl
+            />
           </Form.Group>
         </Col>
       </Row>

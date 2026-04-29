@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
+import Select from "react-select";
 import "../../styles/FormModal.css";
 import { getEmployees } from "../../services/apiService";
 
@@ -12,7 +13,7 @@ const ClientFormModal = ({
   isEdit,
 }) => {
   const [formData, setFormData] = useState({
-    client_type: "عميل فردي",
+    client_type: "individual",
     name: "",
     employee_id: "",
     phone: "",
@@ -43,7 +44,7 @@ const ClientFormModal = ({
     if (initialData) {
       const selectedEmployeeName = initialData.employee?.name || "";
       setFormData({
-        client_type: initialData.client_type || "عميل فردي",
+        client_type: initialData.client_type || "individual",
         name: initialData.name || "",
         employee_id: initialData.employee_id || "",
         phone: initialData.phone || "",
@@ -54,7 +55,7 @@ const ClientFormModal = ({
       setEmployeeSearch(selectedEmployeeName);
     } else {
       setFormData({
-        client_type: "عميل فردي",
+        client_type: "individual",
         name: "",
         employee_id: "",
         phone: "",
@@ -119,87 +120,11 @@ const ClientFormModal = ({
                   required
                   className="rounded-3"
                 >
-                  <option value="عميل فردي">👤 عميل فردي</option>
-                  <option value="مكتب خدمات">🏢 مكتب خدمات</option>
+                  <option value="individual">👤 عميل فردي</option>
+                  <option value="office">🏢 مكتب خدمات</option>
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold small text-secondary">
-                  الاسم بالكامل <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  placeholder="الاسم بالكامل"
-                  className="rounded-3"
-                />
-                <Form.Control.Feedback type="invalid">
-                  يرجى إدخال اسم العميل
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
-
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold small text-secondary">
-                  اسم الموظف <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  list="employees-options"
-                  value={employeeSearch}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setEmployeeSearch(value);
-                    const matched = employees.find((emp) => emp.name === value);
-                    setFormData((prev) => ({
-                      ...prev,
-                      employee_id: matched ? matched.id : "",
-                    }));
-                  }}
-                  required
-                  placeholder="اكتب اسم الموظف..."
-                  className="rounded-3"
-                />
-                <datalist id="employees-options">
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.name} />
-                  ))}
-                </datalist>
-                <Form.Control.Feedback type="invalid">
-                  يرجى اختيار الموظف
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold small text-secondary">
-                  المدينة <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Control
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  required
-                  placeholder="المدينة"
-                  className="rounded-3"
-                />
-                <Form.Control.Feedback type="invalid">
-                  يرجى إدخال المدينة
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
-
-          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
@@ -217,6 +142,61 @@ const ClientFormModal = ({
                 <Form.Control.Feedback type="invalid">
                   يرجى إدخال رقم الهاتف
                 </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  المندوب
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="اسم المندوب"
+                  className="rounded-3"
+                />
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  اسم الموظف
+                </Form.Label>
+                <Select
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  options={employees.map(emp => ({ value: emp.id, label: emp.name }))}
+                  value={employees.find(emp => emp.id === formData.employee_id) ? { value: formData.employee_id, label: employees.find(emp => emp.id === formData.employee_id).name } : null}
+                  onChange={(option) => {
+                    setFormData(prev => ({ ...prev, employee_id: option ? option.value : "" }));
+                  }}
+                  placeholder="اختر الموظف..."
+                  isClearable
+                  isRtl
+                />
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  المدينة
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  placeholder="المدينة"
+                  className="rounded-3"
+                />
               </Form.Group>
             </Col>
             <Col md={6}>

@@ -30,6 +30,11 @@ const ExternalOfficeTable = ({ offices, onEdit, onDelete }) => {
                         <Badge bg="light" text="dark">
                           {contact.name || "-"}
                         </Badge>
+                        {contact.commission && (
+                          <div className="text-success small mt-1 fw-bold">
+                            العمولة: {contact.commission}
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (

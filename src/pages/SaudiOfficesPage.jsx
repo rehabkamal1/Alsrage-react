@@ -13,6 +13,7 @@ import SaudiOfficeSearchBar from "../components/SaudiOffice/SaudiOfficeSearchBar
 import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
+import { exportToPDF } from "../utils/pdfHelper";
 
 const SaudiOfficesPage = () => {
   const [offices, setOffices] = useState([]);
@@ -143,6 +144,20 @@ const SaudiOfficesPage = () => {
     exportToExcel(filteredOffices, columns, "المكاتب_السعودية.xlsx");
   };
 
+  const handleExportPDF = () => {
+    const columns = [
+      { header: "اسم المكتب", key: "name" },
+      { header: "جهة الوصول", key: "destination" },
+      { header: "المدينة", key: "city" },
+      { header: "الموظف المسؤول", key: "responsible_employee" },
+      { header: "رقم الجوال", key: "mobile" },
+      { header: "رقم الهاتف", key: "phone" },
+      { header: "العنوان", key: "address" },
+      { header: "ملاحظات", key: "notes" },
+    ];
+    exportToPDF(filteredOffices, columns, "المكاتب_السعودية.pdf");
+  };
+
   const totalPages = Math.ceil(filteredOffices.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const displayedOffices = filteredOffices.slice(
@@ -187,17 +202,32 @@ const SaudiOfficesPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">المكاتب السعودية</h1>
-          <div>
+          <div className="d-flex gap-2">
             <Button
-              variant="outline-success"
+              variant="light"
               onClick={handleExport}
-              className="me-2"
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
               disabled={filteredOffices.length === 0}
             >
-              📊 تصدير إكسيل
+              <i className="fa-solid fa-file-excel fs-5"></i>
+              <span>إكسيل</span>
             </Button>
-            <Button variant="dark" onClick={handleAddOffice}>
-              + مكتب جديد
+            <Button
+              variant="light"
+              onClick={handleExportPDF}
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
+              disabled={filteredOffices.length === 0}
+            >
+              <i className="fa-solid fa-file-pdf fs-5"></i>
+              <span>بي دي اف</span>
+            </Button>
+            <Button
+              variant="dark"
+              onClick={handleAddOffice}
+              className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+            >
+              <i className="fa-solid fa-plus"></i>
+              <span>مكتب جديد</span>
             </Button>
           </div>
         </div>

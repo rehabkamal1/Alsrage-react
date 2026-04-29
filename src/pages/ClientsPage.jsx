@@ -14,6 +14,7 @@ import PaginationComponent from "../components/common/Pagination";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import TableSkeleton from "../components/common/TableSkeleton";
 import { exportToExcel } from "../utils/excelHelper";
+import { exportToPDF } from "../utils/pdfHelper";
 
 const ClientsPage = () => {
   const [clients, setClients] = useState([]);
@@ -135,7 +136,7 @@ const ClientsPage = () => {
   const handleExport = () => {
     const columns = [
       { header: "نوع العميل", key: "client_type" },
-      { header: "الاسم بالكامل", key: "name" },
+      { header: "المندوب", key: "name" },
       { header: "اسم الموظف", format: (client) => client.employee?.name || "-" },
       { header: "رقم الهاتف", key: "phone" },
       { header: "رقم هاتف إضافي", key: "additional_phone" },
@@ -143,6 +144,19 @@ const ClientsPage = () => {
       { header: "العنوان", key: "address" },
     ];
     exportToExcel(clients, columns, "العملاء.xlsx");
+  };
+
+  const handleExportPDF = () => {
+    const columns = [
+      { header: "نوع العميل", key: "client_type" },
+      { header: "المندوب", key: "name" },
+      { header: "اسم الموظف", format: (client) => client.employee?.name || "-" },
+      { header: "رقم الهاتف", key: "phone" },
+      { header: "رقم هاتف إضافي", key: "additional_phone" },
+      { header: "المدينة", key: "city" },
+      { header: "العنوان", key: "address" },
+    ];
+    exportToPDF(clients, columns, "العملاء.pdf");
   };
 
   return (
@@ -156,17 +170,32 @@ const ClientsPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">العملاء</h1>
-          <div>
+          <div className="d-flex gap-2">
             <Button
-              variant="outline-success"
+              variant="light"
               onClick={handleExport}
-              className="me-2"
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
               disabled={clients.length === 0}
             >
-              📊 تصدير إكسيل
+              <i className="fa-solid fa-file-excel fs-5"></i>
+              <span>إكسيل</span>
             </Button>
-            <Button variant="dark" onClick={handleAddClient}>
-              + عميل جديد
+            <Button
+              variant="light"
+              onClick={handleExportPDF}
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
+              disabled={clients.length === 0}
+            >
+              <i className="fa-solid fa-file-pdf fs-5"></i>
+              <span>بي دي اف</span>
+            </Button>
+            <Button
+              variant="dark"
+              onClick={handleAddClient}
+              className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+            >
+              <i className="fa-solid fa-plus"></i>
+              <span>عميل جديد</span>
             </Button>
           </div>
         </div>

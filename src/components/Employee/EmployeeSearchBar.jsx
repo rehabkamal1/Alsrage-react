@@ -1,5 +1,6 @@
 import React from "react";
 import { Form, InputGroup, Button, Spinner } from "react-bootstrap";
+import Select from "react-select";
 
 const EmployeeSearchBar = ({
   searchQuery,
@@ -12,6 +13,14 @@ const EmployeeSearchBar = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     onSearch(searchQuery);
+  };
+
+  const customStyles = {
+    control: (base) => ({
+      ...base,
+      borderRadius: "8px",
+      minWidth: "180px",
+    }),
   };
 
   return (
@@ -56,25 +65,47 @@ const EmployeeSearchBar = ({
           )}
         </Button>
       </InputGroup>
-      <div className="d-flex gap-2 mt-2 flex-wrap">
-        <Form.Select
-          value={filters.sort_by}
-          onChange={(e) => onFilterChange("sort_by", e.target.value)}
-          style={{ maxWidth: "180px" }}
-        >
-          <option value="created_at">ترتيب حسب التاريخ</option>
-          <option value="name">ترتيب حسب الاسم</option>
-          <option value="position">ترتيب حسب المنصب</option>
-          <option value="username">ترتيب حسب اسم المستخدم</option>
-        </Form.Select>
-        <Form.Select
-          value={filters.sort_dir}
-          onChange={(e) => onFilterChange("sort_dir", e.target.value)}
-          style={{ maxWidth: "180px" }}
-        >
-          <option value="desc">تنازلي</option>
-          <option value="asc">تصاعدي</option>
-        </Form.Select>
+      <div className="d-flex gap-2 mt-2 flex-wrap align-items-center">
+        <div style={{ minWidth: "180px" }}>
+          <Select
+            options={[
+              { value: "created_at", label: "ترتيب حسب التاريخ" },
+              { value: "name", label: "ترتيب حسب الاسم" },
+              { value: "position", label: "ترتيب حسب المنصب" },
+              { value: "username", label: "ترتيب حسب اسم المستخدم" },
+            ]}
+            value={{
+              value: filters.sort_by,
+              label:
+                filters.sort_by === "created_at"
+                  ? "ترتيب حسب التاريخ"
+                  : filters.sort_by === "name"
+                  ? "ترتيب حسب الاسم"
+                  : filters.sort_by === "position"
+                  ? "ترتيب حسب المنصب"
+                  : "ترتيب حسب اسم المستخدم",
+            }}
+            onChange={(opt) => onFilterChange("sort_by", opt ? opt.value : "created_at")}
+            styles={customStyles}
+            isRtl
+          />
+        </div>
+
+        <div style={{ minWidth: "180px" }}>
+          <Select
+            options={[
+              { value: "desc", label: "تنازلي" },
+              { value: "asc", label: "تصاعدي" },
+            ]}
+            value={{
+              value: filters.sort_dir,
+              label: filters.sort_dir === "desc" ? "تنازلي" : "تصاعدي",
+            }}
+            onChange={(opt) => onFilterChange("sort_dir", opt ? opt.value : "desc")}
+            styles={customStyles}
+            isRtl
+          />
+        </div>
       </div>
     </Form>
   );

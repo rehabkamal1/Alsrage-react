@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
+import Select from "react-select";
 
 const MarketingFormModal = ({
   show,
@@ -132,16 +133,22 @@ const MarketingFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   نوع المصدر
                 </Form.Label>
-                <Form.Select
-                  name="source_type"
-                  value={formData.source_type}
-                  onChange={handleChange}
-                  className="rounded-3"
-                >
-                  <option value="saudi_office">مكتب سعودي</option>
-                  <option value="external_office">مكتب خارجي</option>
-                  <option value="client">مكتب خدمات</option>
-                </Form.Select>
+                <Select
+                  options={[
+                    { value: "saudi_office", label: "مكتب سعودي" },
+                    { value: "external_office", label: "مكتب خارجي" },
+                    { value: "client", label: "مكتب خدمات" },
+                  ]}
+                  value={
+                    formData.source_type === "saudi_office"
+                      ? { value: "saudi_office", label: "مكتب سعودي" }
+                      : formData.source_type === "external_office"
+                      ? { value: "external_office", label: "مكتب خارجي" }
+                      : { value: "client", label: "مكتب خدمات" }
+                  }
+                  onChange={(opt) => setFormData(prev => ({ ...prev, source_type: opt ? opt.value : "saudi_office", source_id: "" }))}
+                  isRtl
+                />
               </Form.Group>
             </Col>
             <Col md={6}>
@@ -149,24 +156,17 @@ const MarketingFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   {getSourceLabel()}
                 </Form.Label>
-                <Form.Select
-                  name="source_id"
-                  value={formData.source_id}
-                  onChange={handleChange}
-                  required
-                  isInvalid={!!getFieldError("source_id")}
-                  className="rounded-3"
-                >
-                  <option value="">-- اختر --</option>
-                  {sourceOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.name || option.office_name}
-                    </option>
-                  ))}
-                </Form.Select>
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("source_id")}
-                </Form.Control.Feedback>
+                <Select
+                  options={sourceOptions.map(opt => ({ value: opt.id, label: opt.name || opt.office_name }))}
+                  value={sourceOptions.find(opt => opt.id === formData.source_id) ? { value: formData.source_id, label: sourceOptions.find(opt => opt.id === formData.source_id).name || sourceOptions.find(opt => opt.id === formData.source_id).office_name } : null}
+                  onChange={(opt) => setFormData(prev => ({ ...prev, source_id: opt ? opt.value : "" }))}
+                  placeholder="-- اختر --"
+                  isClearable
+                  isRtl
+                />
+                {getFieldError("source_id") && (
+                  <div className="text-danger small mt-1">{getFieldError("source_id")}</div>
+                )}
               </Form.Group>
             </Col>
           </Row>
@@ -177,16 +177,22 @@ const MarketingFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   نوع العميل
                 </Form.Label>
-                <Form.Select
-                  name="type"
-                  value={formData.type}
-                  onChange={handleChange}
-                  className="rounded-3"
-                >
-                  <option value="saudi_office">مكتب سعودي</option>
-                  <option value="external_office">مكتب خارجي</option>
-                  <option value="service_office">مكتب خدمات</option>
-                </Form.Select>
+                <Select
+                  options={[
+                    { value: "saudi_office", label: "مكتب سعودي" },
+                    { value: "external_office", label: "مكتب خارجي" },
+                    { value: "service_office", label: "مكتب خدمات" },
+                  ]}
+                  value={
+                    formData.type === "saudi_office"
+                      ? { value: "saudi_office", label: "مكتب سعودي" }
+                      : formData.type === "external_office"
+                      ? { value: "external_office", label: "مكتب خارجي" }
+                      : { value: "service_office", label: "مكتب خدمات" }
+                  }
+                  onChange={(opt) => setFormData(prev => ({ ...prev, type: opt ? opt.value : "" }))}
+                  isRtl
+                />
               </Form.Group>
             </Col>
             <Col md={6}>
@@ -194,18 +200,12 @@ const MarketingFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   الحالة
                 </Form.Label>
-                <Form.Select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="rounded-3"
-                >
-                  {statuses.map((status) => (
-                    <option key={status.key} value={status.key}>
-                      {status.label}
-                    </option>
-                  ))}
-                </Form.Select>
+                <Select
+                  options={statuses.map(s => ({ value: s.key, label: s.label }))}
+                  value={statuses.find(s => s.key === formData.status) ? { value: formData.status, label: statuses.find(s => s.key === formData.status).label } : null}
+                  onChange={(opt) => setFormData(prev => ({ ...prev, status: opt ? opt.value : "" }))}
+                  isRtl
+                />
               </Form.Group>
             </Col>
           </Row>
@@ -216,18 +216,12 @@ const MarketingFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   درجة الأهمية
                 </Form.Label>
-                <Form.Select
-                  name="priority_level"
-                  value={formData.priority_level}
-                  onChange={handleChange}
-                  className="rounded-3"
-                >
-                  {priorityLevels.map((level) => (
-                    <option key={level.key} value={level.key}>
-                      {level.label}
-                    </option>
-                  ))}
-                </Form.Select>
+                <Select
+                  options={priorityLevels.map(l => ({ value: l.key, label: l.label }))}
+                  value={priorityLevels.find(l => l.key === formData.priority_level) ? { value: formData.priority_level, label: priorityLevels.find(l => l.key === formData.priority_level).label } : null}
+                  onChange={(opt) => setFormData(prev => ({ ...prev, priority_level: opt ? opt.value : "" }))}
+                  isRtl
+                />
               </Form.Group>
             </Col>
             <Col md={6}>

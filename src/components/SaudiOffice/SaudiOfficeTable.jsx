@@ -1,7 +1,12 @@
 import React from "react";
-import { Table, Button } from "react-bootstrap";
+import { Table, Button, Badge } from "react-bootstrap";
 
 const SaudiOfficeTable = ({ offices, onEdit, onDelete }) => {
+  const getWhatsAppLink = (mobile) => {
+    if (!mobile) return null;
+    const cleanNumber = mobile.replace(/\D/g, "");
+    return `https://wa.me/${cleanNumber}`;
+  };
   return (
     <div className="table-responsive">
       <Table hover className="mb-0 align-middle">
@@ -11,6 +16,8 @@ const SaudiOfficeTable = ({ offices, onEdit, onDelete }) => {
             <th>اسم المكتب / جهة الوصول</th>
             <th>المدينة</th>
             <th>الموظف المسؤول</th>
+            <th>إجمالي التفويض</th>
+            <th>السعر ع مساند</th>
             <th>رقم الجوال</th>
             <th>ملاحظات</th>
             <th>العنوان</th>
@@ -30,7 +37,29 @@ const SaudiOfficeTable = ({ offices, onEdit, onDelete }) => {
                 </td>
                 <td>{office.city || "-"}</td>
                 <td>{office.responsible_employee || "-"}</td>
-                <td dir="ltr">{office.mobile || "-"}</td>
+                <td>
+                  <Badge bg="info" text="dark">
+                    {office.total_authorization || "0"}
+                  </Badge>
+                </td>
+                <td>
+                  <Badge bg="warning" text="dark">
+                    {office.musaned_price || "0"}
+                  </Badge>
+                </td>
+                <td dir="ltr">
+                  <div>{office.mobile || "-"}</div>
+                  {office.mobile && (
+                    <a
+                      href={getWhatsAppLink(office.mobile)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-success text-decoration-none small d-flex align-items-center mt-1"
+                    >
+                      <i className="fa-brands fa-whatsapp me-1"></i> واتساب
+                    </a>
+                  )}
+                </td>
                 <td>{office.notes || "-"}</td>
                 <td>{office.address || "-"}</td>
                 <td>

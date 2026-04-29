@@ -20,6 +20,7 @@ import OrderSearchBar from "../components/Order/OrderSearchBar";
 import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
+import { exportToPDF } from "../utils/pdfHelper";
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -153,22 +154,37 @@ const OrdersPage = () => {
   const handleExport = () => {
     const columns = [
       { header: "رقم الطلب", key: "id" },
-      { header: "العميل", format: (order) => order.client?.name || "-" },
-      { header: "رقم مساند", key: "musaned_contract_number" },
-      { header: "المكتب السعودي", format: (order) => order.saudiOffice?.name || "-" },
-      { header: "المكتب الخارجي", format: (order) => order.externalOffice?.name || "-" },
-      { header: "المهنة", key: "profession" },
-      { header: "الجنسية", key: "nationality" },
-      { header: "الديانة", key: "religion" },
+      { header: "صاحب التأشيرة", key: "visa_holder_name" },
       { header: "رقم التأشيرة", key: "visa_number" },
       { header: "رقم الهوية", key: "id_number" },
-      { header: "اسم العامل", key: "worker_name" },
-      { header: "المبلغ", key: "amount" },
-      { header: "الضريبة", key: "tax" },
-      { header: "الإجمالي", key: "total" },
-      { header: "الحالة", key: "status" },
+      { header: "رقم عقد مساند", key: "musaned_contract_number" },
+      { header: "إجمالي السعر", key: "total_price" },
+      { header: "الرصيد المتبقي", key: "price_difference" },
+      {
+        header: "الحالة",
+        format: (order) => orderStatuses.find(s => (s.key || s.id) === order.status)?.label || order.status
+      },
+      { header: "التاريخ", format: (order) => new Date(order.created_at).toLocaleDateString("ar-SA") },
     ];
     exportToExcel(orders, columns, "الطلبات.xlsx");
+  };
+
+  const handleExportPDF = () => {
+    const columns = [
+      { header: "رقم الطلب", key: "id" },
+      { header: "صاحب التأشيرة", key: "visa_holder_name" },
+      { header: "رقم التأشيرة", key: "visa_number" },
+      { header: "رقم الهوية", key: "id_number" },
+      { header: "رقم عقد مساند", key: "musaned_contract_number" },
+      { header: "إجمالي السعر", key: "total_price" },
+      { header: "الرصيد المتبقي", key: "price_difference" },
+      {
+        header: "الحالة",
+        format: (order) => orderStatuses.find(s => (s.key || s.id) === order.status)?.label || order.status
+      },
+      { header: "التاريخ", format: (order) => new Date(order.created_at).toLocaleDateString("ar-SA") },
+    ];
+    exportToPDF(orders, columns, "الطلبات.pdf");
   };
 
   if (initialLoading) {
@@ -208,17 +224,34 @@ const OrdersPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">الطلبات</h1>
-          <div>
+          <div className="d-flex gap-2">
             <Button
-              variant="outline-success"
+              variant="light"
               onClick={handleExport}
-              className="me-2"
               disabled={orders.length === 0}
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
+              style={{ transition: 'all 0.3s ease' }}
             >
-              📊 تصدير إكسيل
+              <i className="fa-solid fa-file-excel fs-5"></i>
+              <span>إكسيل</span>
             </Button>
-            <Button variant="dark" onClick={handleAddOrder}>
-              + طلب جديد
+            <Button
+              variant="light"
+              onClick={handleExportPDF}
+              disabled={orders.length === 0}
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
+              style={{ transition: 'all 0.3s ease' }}
+            >
+              <i className="fa-solid fa-file-pdf fs-5"></i>
+              <span>بي دي اف</span>
+            </Button>
+            <Button
+              variant="dark"
+              onClick={handleAddOrder}
+              className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+            >
+              <i className="fa-solid fa-plus"></i>
+              <span>طلب جديد</span>
             </Button>
           </div>
         </div>
@@ -245,6 +278,7 @@ const OrdersPage = () => {
                   orders={orders}
                   onEdit={handleEditOrder}
                   onDelete={handleDeleteOrder}
+                  statusOptions={orderStatuses}
                 />
                 {totalPages > 1 && (
                   <PaginationComponent

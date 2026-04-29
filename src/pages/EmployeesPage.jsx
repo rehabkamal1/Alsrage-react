@@ -13,6 +13,7 @@ import EmployeeSearchBar from "../components/Employee/EmployeeSearchBar";
 import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
+import { exportToPDF } from "../utils/pdfHelper";
 
 const EmployeesPage = () => {
   const [employees, setEmployees] = useState([]);
@@ -141,6 +142,18 @@ const EmployeesPage = () => {
     exportToExcel(employees, columns, "الموظفين.xlsx");
   };
 
+  const handleExportPDF = () => {
+    const columns = [
+      { header: "الاسم", key: "name" },
+      { header: "رقم الجوال", key: "phone" },
+      { header: "المنصب", key: "position" },
+      { header: "رقم الهوية", key: "id_number" },
+      { header: "البريد الإلكتروني", key: "email" },
+      { header: "العنوان", key: "address" },
+    ];
+    exportToPDF(employees, columns, "الموظفين.pdf");
+  };
+
   if (initialLoading) {
     return (
       <div
@@ -178,17 +191,32 @@ const EmployeesPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">الموظفين</h1>
-          <div>
+          <div className="d-flex gap-2">
             <Button
-              variant="outline-success"
+              variant="light"
               onClick={handleExport}
-              className="me-2"
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
               disabled={employees.length === 0}
             >
-              📊 تصدير إكسيل
+              <i className="fa-solid fa-file-excel fs-5"></i>
+              <span>إكسيل</span>
             </Button>
-            <Button variant="dark" onClick={handleAddEmployee}>
-              + موظف جديد
+            <Button
+              variant="light"
+              onClick={handleExportPDF}
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
+              disabled={employees.length === 0}
+            >
+              <i className="fa-solid fa-file-pdf fs-5"></i>
+              <span>بي دي اف</span>
+            </Button>
+            <Button
+              variant="dark"
+              onClick={handleAddEmployee}
+              className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+            >
+              <i className="fa-solid fa-plus"></i>
+              <span>موظف جديد</span>
             </Button>
           </div>
         </div>

@@ -18,6 +18,8 @@ const SaudiOfficeFormModal = ({
     mobile: "",
     phone: "",
     address: "",
+    total_authorization: "",
+    musaned_price: "",
   });
 
   const [validated, setValidated] = useState(false);
@@ -34,6 +36,8 @@ const SaudiOfficeFormModal = ({
         phone: initialData.phone || "",
         address: initialData.address || "",
         notes: initialData.notes || "",
+        total_authorization: initialData.total_authorization || "",
+        musaned_price: initialData.musaned_price || "",
       });
     } else {
       setFormData({
@@ -45,6 +49,8 @@ const SaudiOfficeFormModal = ({
         phone: "",
         address: "",
         notes: "",
+        total_authorization: "",
+        musaned_price: "",
       });
     }
     setValidated(false);
@@ -203,6 +209,19 @@ const SaudiOfficeFormModal = ({
                 <Form.Control.Feedback type="invalid">
                   {getFieldError("mobile") || "يرجى إدخال رقم الجوال"}
                 </Form.Control.Feedback>
+                {formData.mobile && (
+                  <div className="mt-2">
+                    <a
+                      href={`https://wa.me/${formData.mobile.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-sm btn-outline-success rounded-3 w-100 d-flex align-items-center justify-content-center gap-2"
+                    >
+                      <i className="fa-brands fa-whatsapp fs-5"></i>
+                      <span>تواصل عبر واتساب</span>
+                    </a>
+                  </div>
+                )}
               </Form.Group>
             </Col>
             <Col md={6}>
@@ -220,6 +239,47 @@ const SaudiOfficeFormModal = ({
                 />
                 <Form.Control.Feedback type="invalid">
                   {getFieldError("phone")}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  إجمالي التفويض
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  name="total_authorization"
+                  value={formData.total_authorization}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  isInvalid={!!getFieldError("total_authorization")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("total_authorization")}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  السعر ع مساند
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  name="musaned_price"
+                  value={formData.musaned_price}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  isInvalid={!!getFieldError("musaned_price")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("musaned_price")}
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>

@@ -1,5 +1,6 @@
 import React from "react";
 import { Form, InputGroup, Button, Spinner, Row, Col } from "react-bootstrap";
+import Select from "react-select";
 
 const FinanceSearchBar = ({
   searchQuery,
@@ -72,14 +73,23 @@ const FinanceSearchBar = ({
         <Col md={2}>
           <Form.Group>
             <Form.Label className="small text-secondary">النوع</Form.Label>
-            <Form.Select
-              value={filters.type || ""}
-              onChange={(e) => onFilterChange("type", e.target.value)}
-            >
-              <option value="">الكل</option>
-              <option value="receipt">مقبوضات</option>
-              <option value="payment">مصروفات</option>
-            </Form.Select>
+            <Select
+              options={[
+                { value: "", label: "الكل" },
+                { value: "receipt", label: "مقبوضات" },
+                { value: "payment", label: "مصروفات" },
+              ]}
+              value={
+                filters.type === "receipt"
+                  ? { value: "receipt", label: "مقبوضات" }
+                  : filters.type === "payment"
+                  ? { value: "payment", label: "مصروفات" }
+                  : { value: "", label: "الكل" }
+              }
+              onChange={(opt) => onFilterChange("type", opt ? opt.value : "")}
+              placeholder="النوع"
+              isRtl
+            />
           </Form.Group>
         </Col>
         <Col md={2}>
@@ -87,17 +97,23 @@ const FinanceSearchBar = ({
             <Form.Label className="small text-secondary">
               طريقة الدفع
             </Form.Label>
-            <Form.Select
-              value={filters.payment_method || ""}
-              onChange={(e) => onFilterChange("payment_method", e.target.value)}
-            >
-              <option value="">الكل</option>
-              {paymentMethods.map((method) => (
-                <option key={method.value} value={method.value}>
-                  {method.label}
-                </option>
-              ))}
-            </Form.Select>
+            <Select
+              options={[
+                { value: "", label: "الكل" },
+                ...paymentMethods.map((m) => ({ value: m.value, label: m.label })),
+              ]}
+              value={
+                paymentMethods.find((m) => m.value === filters.payment_method)
+                  ? {
+                      value: filters.payment_method,
+                      label: paymentMethods.find((m) => m.value === filters.payment_method).label,
+                    }
+                  : { value: "", label: "الكل" }
+              }
+              onChange={(opt) => onFilterChange("payment_method", opt ? opt.value : "")}
+              placeholder="طريقة الدفع"
+              isRtl
+            />
           </Form.Group>
         </Col>
         <Col md={2}>
@@ -105,17 +121,23 @@ const FinanceSearchBar = ({
             <Form.Label className="small text-secondary">
               حالة الحوالة
             </Form.Label>
-            <Form.Select
-              value={filters.status || ""}
-              onChange={(e) => onFilterChange("status", e.target.value)}
-            >
-              <option value="">الكل</option>
-              {transferStatuses.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </Form.Select>
+            <Select
+              options={[
+                { value: "", label: "الكل" },
+                ...transferStatuses.map((s) => ({ value: s.value, label: s.label })),
+              ]}
+              value={
+                transferStatuses.find((s) => s.value === filters.status)
+                  ? {
+                      value: filters.status,
+                      label: transferStatuses.find((s) => s.value === filters.status).label,
+                    }
+                  : { value: "", label: "الكل" }
+              }
+              onChange={(opt) => onFilterChange("status", opt ? opt.value : "")}
+              placeholder="حالة الحوالة"
+              isRtl
+            />
           </Form.Group>
         </Col>
         <Col md={2}>
@@ -123,43 +145,66 @@ const FinanceSearchBar = ({
             <Form.Label className="small text-secondary">
               درجة الأهمية
             </Form.Label>
-            <Form.Select
-              value={filters.priority_level || ""}
-              onChange={(e) => onFilterChange("priority_level", e.target.value)}
-            >
-              <option value="">الكل</option>
-              {priorityLevels.map((level) => (
-                <option key={level.value} value={level.value}>
-                  {level.label}
-                </option>
-              ))}
-            </Form.Select>
+            <Select
+              options={[
+                { value: "", label: "الكل" },
+                ...priorityLevels.map((l) => ({ value: l.value, label: l.label })),
+              ]}
+              value={
+                priorityLevels.find((l) => l.value === filters.priority_level)
+                  ? {
+                      value: filters.priority_level,
+                      label: priorityLevels.find((l) => l.value === filters.priority_level).label,
+                    }
+                  : { value: "", label: "الكل" }
+              }
+              onChange={(opt) => onFilterChange("priority_level", opt ? opt.value : "")}
+              placeholder="درجة الأهمية"
+              isRtl
+            />
           </Form.Group>
         </Col>
         <Col md={2}>
           <Form.Group>
             <Form.Label className="small text-secondary">ترتيب حسب</Form.Label>
-            <Form.Select
-              value={sortField}
-              onChange={(e) => onSortChange(e.target.value, sortDirection)}
-            >
-              <option value="id">رقم الحوالة</option>
-              <option value="amount">المبلغ</option>
-              <option value="transfer_date">تاريخ الحوالة</option>
-              <option value="created_at">تاريخ الإنشاء</option>
-            </Form.Select>
+            <Select
+              options={[
+                { value: "id", label: "رقم الحوالة" },
+                { value: "amount", label: "المبلغ" },
+                { value: "transfer_date", label: "تاريخ الحوالة" },
+                { value: "created_at", label: "تاريخ الإنشاء" },
+              ]}
+              value={{
+                value: sortField,
+                label:
+                  sortField === "id"
+                    ? "رقم الحوالة"
+                    : sortField === "amount"
+                    ? "المبلغ"
+                    : sortField === "transfer_date"
+                    ? "تاريخ الحوالة"
+                    : "تاريخ الإنشاء",
+              }}
+              onChange={(opt) => onSortChange(opt ? opt.value : "id", sortDirection)}
+              isRtl
+            />
           </Form.Group>
         </Col>
         <Col md={2}>
           <Form.Group>
             <Form.Label className="small text-secondary">الاتجاه</Form.Label>
-            <Form.Select
-              value={sortDirection}
-              onChange={(e) => onSortChange(sortField, e.target.value)}
-            >
-              <option value="desc">تنازلي</option>
-              <option value="asc">تصاعدي</option>
-            </Form.Select>
+            <Select
+              options={[
+                { value: "desc", label: "تنازلي" },
+                { value: "asc", label: "تصاعدي" },
+              ]}
+              value={{
+                value: sortDirection,
+                label: sortDirection === "desc" ? "تنازلي" : "تصاعدي",
+              }}
+              onChange={(opt) => onSortChange(sortField, opt ? opt.value : "desc")}
+              isRtl
+            />
           </Form.Group>
         </Col>
       </Row>
