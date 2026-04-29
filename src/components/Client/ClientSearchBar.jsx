@@ -1,5 +1,6 @@
 import React from "react";
 import { Form, InputGroup, Button, Spinner } from "react-bootstrap";
+import Select from "react-select";
 
 const ClientSearchBar = ({
   searchQuery,
@@ -12,6 +13,14 @@ const ClientSearchBar = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     onSearch(searchQuery);
+  };
+
+  const customStyles = {
+    control: (base) => ({
+      ...base,
+      borderRadius: "8px",
+      minWidth: "180px",
+    }),
   };
 
   return (
@@ -56,33 +65,62 @@ const ClientSearchBar = ({
           )}
         </Button>
       </InputGroup>
-      <div className="d-flex gap-2 mt-2 flex-wrap">
-        <Form.Select
-          value={filters.client_type}
-          onChange={(e) => onFilterChange("client_type", e.target.value)}
-          style={{ maxWidth: "180px" }}
-        >
-          <option value="">كل الأنواع</option>
-          <option value="عميل فردي">عميل فردي</option>
-          <option value="مكتب خدمات">مكتب خدمات</option>
-        </Form.Select>
-        <Form.Select
-          value={filters.sort_by}
-          onChange={(e) => onFilterChange("sort_by", e.target.value)}
-          style={{ maxWidth: "180px" }}
-        >
-          <option value="created_at">ترتيب حسب تاريخ الإضافة</option>
-          <option value="name">ترتيب حسب الاسم</option>
-          <option value="phone">ترتيب حسب الهاتف</option>
-        </Form.Select>
-        <Form.Select
-          value={filters.sort_dir}
-          onChange={(e) => onFilterChange("sort_dir", e.target.value)}
-          style={{ maxWidth: "180px" }}
-        >
-          <option value="desc">الأحدث/تنازلي</option>
-          <option value="asc">الأقدم/تصاعدي</option>
-        </Form.Select>
+      <div className="d-flex gap-2 mt-2 flex-wrap align-items-center">
+        <div style={{ minWidth: "180px" }}>
+          <Select
+            options={[
+              { value: "", label: "كل الأنواع" },
+              { value: "individual", label: "عميل فردي" },
+              { value: "office", label: "مكتب خدمات" },
+            ]}
+            value={
+              filters.client_type
+                ? { value: filters.client_type, label: filters.client_type === "individual" ? "عميل فردي" : "مكتب خدمات" }
+                : { value: "", label: "كل الأنواع" }
+            }
+            onChange={(opt) => onFilterChange("client_type", opt ? opt.value : "")}
+            styles={customStyles}
+            isRtl
+          />
+        </div>
+
+        <div style={{ minWidth: "180px" }}>
+          <Select
+            options={[
+              { value: "created_at", label: "ترتيب حسب تاريخ الإضافة" },
+              { value: "name", label: "ترتيب حسب الاسم" },
+              { value: "phone", label: "ترتيب حسب الهاتف" },
+            ]}
+            value={{
+              value: filters.sort_by,
+              label:
+                filters.sort_by === "created_at"
+                  ? "ترتيب حسب تاريخ الإضافة"
+                  : filters.sort_by === "name"
+                  ? "ترتيب حسب الاسم"
+                  : "ترتيب حسب الهاتف",
+            }}
+            onChange={(opt) => onFilterChange("sort_by", opt ? opt.value : "created_at")}
+            styles={customStyles}
+            isRtl
+          />
+        </div>
+
+        <div style={{ minWidth: "180px" }}>
+          <Select
+            options={[
+              { value: "desc", label: "الأحدث/تنازلي" },
+              { value: "asc", label: "الأقدم/تصاعدي" },
+            ]}
+            value={{
+              value: filters.sort_dir,
+              label: filters.sort_dir === "desc" ? "الأحدث/تنازلي" : "الأقدم/تصاعدي",
+            }}
+            onChange={(opt) => onFilterChange("sort_dir", opt ? opt.value : "desc")}
+            styles={customStyles}
+            isRtl
+          />
+        </div>
       </div>
     </Form>
   );

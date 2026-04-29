@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
+import Select from "react-select";
 import "../../styles/FormModal.css";
 
 const TrackingFormModal = ({
@@ -140,26 +140,22 @@ const TrackingFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   رقم الطلب <span className="text-danger">*</span>
                 </Form.Label>
-                <Form.Select
-                  name="order_id"
-                  value={formData.order_id}
-                  onChange={handleOrderChange}
-                  required
-                  disabled={isEdit}
-                  isInvalid={!!getFieldError("order_id")}
-                  className="rounded-3"
-                >
-                  <option value="">-- اختر طلباً --</option>
-                  {orders?.map((order) => (
-                    <option key={order.id} value={order.id}>
-                      #{order.id} -{" "}
-                      {order.visa_holder_name || order.client?.visa_holder_name}{" "}
-                      - {order.visa_number}
-                    </option>
-                  ))}
-                </Form.Select>
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("order_id") || "يرجى اختيار الطلب"}
+                <Select
+                  options={orders?.map(o => ({ value: o.id, label: `#${o.id} - ${o.visa_holder_name || o.client?.visa_holder_name} - ${o.visa_number}` })) || []}
+                  value={orders?.find(o => o.id === parseInt(formData.order_id)) ? { value: formData.order_id, label: `#${formData.order_id} - ${orders.find(o => o.id === parseInt(formData.order_id)).visa_holder_name || orders.find(o => o.id === parseInt(formData.order_id)).client?.visa_holder_name} - ${orders.find(o => o.id === parseInt(formData.order_id)).visa_number}` } : null}
+                  onChange={(opt) => {
+                    const orderId = opt ? opt.value : "";
+                    setFormData(prev => ({ ...prev, order_id: orderId }));
+                    const order = orders?.find((o) => o.id === parseInt(orderId));
+                    setSelectedOrder(order);
+                  }}
+                  isDisabled={isEdit}
+                  placeholder="-- اختر طلباً --"
+                  isClearable
+                  isRtl
+                />
+                <Form.Control.Feedback type="invalid" style={{ display: validated && !formData.order_id ? 'block' : 'none' }}>
+                  يرجى اختيار الطلب
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
@@ -302,23 +298,17 @@ const TrackingFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   درجة الأهمية
                 </Form.Label>
-                <Form.Select
-                  name="priority_level"
-                  value={formData.priority_level}
-                  onChange={handleChange}
-                  isInvalid={!!getFieldError("priority_level")}
-                  className="rounded-3"
-                >
-                  <option value="">-- اختر --</option>
-                  {priorityLevels?.map((level) => (
-                    <option key={level.value} value={level.value}>
-                      {level.label}
-                    </option>
-                  ))}
-                </Form.Select>
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("priority_level")}
-                </Form.Control.Feedback>
+                <Select
+                  options={priorityLevels?.map(l => ({ value: l.value, label: l.label })) || []}
+                  value={priorityLevels?.find(l => l.value === formData.priority_level) ? { value: formData.priority_level, label: priorityLevels.find(l => l.value === formData.priority_level).label } : null}
+                  onChange={(opt) => setFormData(prev => ({ ...prev, priority_level: opt ? opt.value : "" }))}
+                  placeholder="-- اختر --"
+                  isClearable
+                  isRtl
+                />
+                {getFieldError("priority_level") && (
+                  <div className="text-danger small mt-1">{getFieldError("priority_level")}</div>
+                )}
               </Form.Group>
             </Col>
           </Row>
@@ -329,23 +319,17 @@ const TrackingFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   حالة ترشيح الجواز
                 </Form.Label>
-                <Form.Select
-                  name="passport_status"
-                  value={formData.passport_status}
-                  onChange={handleChange}
-                  isInvalid={!!getFieldError("passport_status")}
-                  className="rounded-3"
-                >
-                  <option value="">-- اختر --</option>
-                  {passportStatuses?.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </Form.Select>
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("passport_status")}
-                </Form.Control.Feedback>
+                <Select
+                  options={passportStatuses?.map(s => ({ value: s.value, label: s.label })) || []}
+                  value={passportStatuses?.find(s => s.value === formData.passport_status) ? { value: formData.passport_status, label: passportStatuses.find(s => s.value === formData.passport_status).label } : null}
+                  onChange={(opt) => setFormData(prev => ({ ...prev, passport_status: opt ? opt.value : "" }))}
+                  placeholder="-- اختر --"
+                  isClearable
+                  isRtl
+                />
+                {getFieldError("passport_status") && (
+                  <div className="text-danger small mt-1">{getFieldError("passport_status")}</div>
+                )}
               </Form.Group>
             </Col>
             <Col md={6}>
@@ -353,23 +337,17 @@ const TrackingFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   حالة التحويل
                 </Form.Label>
-                <Form.Select
-                  name="transfer_status"
-                  value={formData.transfer_status}
-                  onChange={handleChange}
-                  isInvalid={!!getFieldError("transfer_status")}
-                  className="rounded-3"
-                >
-                  <option value="">-- اختر --</option>
-                  {transferStatuses?.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </Form.Select>
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("transfer_status")}
-                </Form.Control.Feedback>
+                <Select
+                  options={transferStatuses?.map(s => ({ value: s.value, label: s.label })) || []}
+                  value={transferStatuses?.find(s => s.value === formData.transfer_status) ? { value: formData.transfer_status, label: transferStatuses.find(s => s.value === formData.transfer_status).label } : null}
+                  onChange={(opt) => setFormData(prev => ({ ...prev, transfer_status: opt ? opt.value : "" }))}
+                  placeholder="-- اختر --"
+                  isClearable
+                  isRtl
+                />
+                {getFieldError("transfer_status") && (
+                  <div className="text-danger small mt-1">{getFieldError("transfer_status")}</div>
+                )}
               </Form.Group>
             </Col>
           </Row>

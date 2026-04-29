@@ -8,7 +8,7 @@ const ClientTable = ({ clients, onEdit, onDelete }) => {
         <thead className="table-light">
           <tr>
             <th className="rounded-end">التصنيف</th>
-            <th>الاسم</th>
+            <th>المندوب</th>
             <th>اسم الموظف</th>
             <th>رقم الهاتف</th>
             <th>هاتف إضافي</th>

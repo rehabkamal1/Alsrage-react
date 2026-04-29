@@ -1,5 +1,6 @@
 import React from "react";
 import { Form, InputGroup, Button, Spinner } from "react-bootstrap";
+import Select from "react-select";
 
 const OrderSearchBar = ({
   searchQuery,
@@ -9,10 +10,19 @@ const OrderSearchBar = ({
   filters,
   onFilterChange,
   statusOptions = [],
+  isCompletedPage = false,
 }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     onSearch(searchQuery);
+  };
+
+  const customStyles = {
+    control: (base) => ({
+      ...base,
+      borderRadius: "8px",
+      minWidth: "180px",
+    }),
   };
 
   return (
@@ -57,36 +67,79 @@ const OrderSearchBar = ({
           )}
         </Button>
       </InputGroup>
-      <div className="d-flex gap-2 mt-2 flex-wrap">
-        <Form.Select
-          value={filters.status}
-          onChange={(e) => onFilterChange("status", e.target.value)}
-          style={{ maxWidth: "180px" }}
-        >
-          <option value="">كل الحالات</option>
-          {statusOptions.map((status) => (
-            <option key={status.key || status.id} value={status.key}>
-              {status.label}
-            </option>
-          ))}
-        </Form.Select>
-        <Form.Select
-          value={filters.sort_by}
-          onChange={(e) => onFilterChange("sort_by", e.target.value)}
-          style={{ maxWidth: "180px" }}
-        >
-          <option value="id">ترتيب حسب رقم الطلب</option>
-          <option value="created_at">ترتيب حسب التاريخ</option>
-          <option value="status">ترتيب حسب الحالة</option>
-        </Form.Select>
-        <Form.Select
-          value={filters.sort_dir}
-          onChange={(e) => onFilterChange("sort_dir", e.target.value)}
-          style={{ maxWidth: "180px" }}
-        >
-          <option value="desc">تنازلي</option>
-          <option value="asc">تصاعدي</option>
-        </Form.Select>
+      <div className="d-flex gap-2 mt-2 flex-wrap align-items-center">
+        {!isCompletedPage && (
+          <div style={{ minWidth: "180px" }}>
+            <Select
+              options={[
+                { value: "", label: "كل الحالات" },
+                ...statusOptions.map((s) => ({ value: s.key || s.id, label: s.label })),
+              ]}
+              value={
+                filters.status
+                  ? {
+                      value: filters.status,
+                      label:
+                        statusOptions.find((s) => (s.key || s.id) === filters.status)?.label ||
+                        filters.status,
+                    }
+                  : { value: "", label: "كل الحالات" }
+              }
+              onChange={(opt) => onFilterChange("status", opt ? opt.value : "")}
+              styles={customStyles}
+              placeholder="كل الحالات"
+              isRtl
+            />
+          </div>
+        )}
+
+        <div style={{ minWidth: "180px" }}>
+          <Select
+            options={[
+              { value: "id", label: "رقم الطلب" },
+              { value: "created_at", label: "تاريخ الإضافة" },
+              { value: "visa_holder_name", label: "اسم صاحب التأشيرة" },
+              { value: "visa_number", label: "رقم التأشيرة" },
+              { value: "id_number", label: "رقم الهوية" },
+              { value: "musaned_contract_number", label: "رقم عقد مساند" },
+              { value: "total_price", label: "إجمالي السعر" },
+              { value: "musaned_paid", label: "المبلغ المدفوع" },
+              { value: "status", label: "الحالة" },
+            ]}
+            value={
+              [
+                { value: "id", label: "رقم الطلب" },
+                { value: "created_at", label: "تاريخ الإضافة" },
+                { value: "visa_holder_name", label: "اسم صاحب التأشيرة" },
+                { value: "visa_number", label: "رقم التأشيرة" },
+                { value: "id_number", label: "رقم الهوية" },
+                { value: "musaned_contract_number", label: "رقم عقد مساند" },
+                { value: "total_price", label: "إجمالي السعر" },
+                { value: "musaned_paid", label: "المبلغ المدفوع" },
+                { value: "status", label: "الحالة" },
+              ].find(opt => opt.value === filters.sort_by) || { value: "id", label: "رقم الطلب" }
+            }
+            onChange={(opt) => onFilterChange("sort_by", opt ? opt.value : "id")}
+            styles={customStyles}
+            isRtl
+          />
+        </div>
+
+        <div style={{ minWidth: "180px" }}>
+          <Select
+            options={[
+              { value: "desc", label: "تنازلي" },
+              { value: "asc", label: "تصاعدي" },
+            ]}
+            value={{
+              value: filters.sort_dir,
+              label: filters.sort_dir === "desc" ? "تنازلي" : "تصاعدي",
+            }}
+            onChange={(opt) => onFilterChange("sort_dir", opt ? opt.value : "desc")}
+            styles={customStyles}
+            isRtl
+          />
+        </div>
       </div>
     </Form>
   );

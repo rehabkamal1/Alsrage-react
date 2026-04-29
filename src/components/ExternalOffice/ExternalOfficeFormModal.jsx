@@ -14,7 +14,7 @@ const ExternalOfficeFormModal = ({
   const [formData, setFormData] = useState({
     name: "",
     country: "",
-    contacts: [{ name: "", phone: "" }],
+    contacts: [{ name: "", phone: "", commission: "" }],
   });
 
   const [validated, setValidated] = useState(false);
@@ -28,14 +28,14 @@ const ExternalOfficeFormModal = ({
         contacts:
           initialData.contacts && initialData.contacts.length > 0
             ? [...initialData.contacts]
-            : [{ name: "", phone: "" }],
+            : [{ name: "", phone: "", commission: "" }],
         notes: initialData.notes || "",
       });
     } else {
       setFormData({
         name: "",
         country: "",
-        contacts: [{ name: "", phone: "" }],
+        contacts: [{ name: "", phone: "", commission: "" }],
         notes: "",
       });
     }
@@ -67,7 +67,7 @@ const ExternalOfficeFormModal = ({
   const addContact = () => {
     setFormData((prev) => ({
       ...prev,
-      contacts: [...prev.contacts, { name: "", phone: "" }],
+      contacts: [...prev.contacts, { name: "", phone: "", commission: "" }],
     }));
   };
 
@@ -199,6 +199,19 @@ const ExternalOfficeFormModal = ({
                         {getFieldError("name", index) ||
                           "يرجى إدخال اسم الموظف"}
                       </Form.Control.Feedback>
+                    </Form.Group>
+                    <Form.Group className="mb-2">
+                      <Form.Label className="small text-secondary">
+                        العمولة
+                      </Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="commission"
+                        value={contact.commission || ""}
+                        onChange={(e) => handleContactChange(index, e)}
+                        placeholder="العمولة"
+                        className="rounded-3"
+                      />
                     </Form.Group>
                   </Col>
                   <Col md={6}>

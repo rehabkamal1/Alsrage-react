@@ -8,7 +8,10 @@ import {
   Tab,
   Tabs,
   Image,
+  InputGroup,
 } from "react-bootstrap";
+import Select from "react-select";
+import { showSuccess, showError } from "../../utils/swalHelper";
 import "../../styles/FormModal.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
@@ -59,6 +62,7 @@ const OrderFormModal = ({
   const [showQuickCreate, setShowQuickCreate] = useState(false);
   const [newClientName, setNewClientName] = useState("");
   const [newClientPhone, setNewClientPhone] = useState("");
+  const [newClientType, setNewClientType] = useState("individual");
   const [quickCreateLoading, setQuickCreateLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [saudiOfficeSearch, setSaudiOfficeSearch] = useState("");
@@ -83,13 +87,8 @@ const OrderFormModal = ({
         musaned_paid: initialData.musaned_paid || "",
         status: initialData.status || "",
         notes: initialData.notes || "",
-        visa_image: null,
-        contract_image: null,
       });
-      setPreviewImages({
-        visa_image: initialData.visa_image || null,
-        contract_image: initialData.contract_image || null,
-      });
+      setPreviewImages({});
       if (initialData.client) {
         setSearchQuery(
           `${initialData.client.name} (${initialData.client.phone})`,
@@ -113,13 +112,8 @@ const OrderFormModal = ({
         musaned_paid: "",
         status: "",
         notes: "",
-        visa_image: null,
-        contract_image: null,
       });
-      setPreviewImages({
-        visa_image: null,
-        contract_image: null,
-      });
+      setPreviewImages({});
       setSearchQuery("");
       setSaudiOfficeSearch("");
       setExternalOfficeSearch("");
@@ -170,7 +164,7 @@ const OrderFormModal = ({
       client_id: client.id,
       visa_holder_name: client.visa_holder_name || client.name,
     }));
-    setSearchQuery(`${client.name} (${client.phone})`);
+    setSearchQuery(`${client.phone} (${client.name || "بدون اسم"})`);
     setShowSearchResults(false);
     if (fieldErrors.client_id) {
       setFieldErrors((prev) => ({ ...prev, client_id: undefined }));
@@ -206,6 +200,7 @@ const OrderFormModal = ({
       const response = await quickCreateClient({
         name: newClientName,
         phone: newClientPhone,
+        client_type: newClientType,
       });
       const newClient = response.data.data;
       setFormData((prev) => ({
@@ -213,7 +208,8 @@ const OrderFormModal = ({
         client_id: newClient.id,
         visa_holder_name: newClient.visa_holder_name || newClient.name,
       }));
-      setSearchQuery(`${newClient.name} (${newClient.phone})`);
+      setSearchQuery(`${newClient.phone} (${newClient.name || "بدون اسم"})`);
+      showSuccess("تمت الإضافة", "تم إضافة العميل بنجاح واختياره للطلب");
       setShowQuickCreate(false);
       setNewClientName("");
       setNewClientPhone("");
@@ -338,12 +334,12 @@ const OrderFormModal = ({
 
                   <Form.Group className="mb-3">
                     <Form.Label className="fw-semibold small text-secondary">
-                      العميل (للربط فقط)
+                      المندوب
                     </Form.Label>
                     <div className="position-relative">
                       <Form.Control
                         type="text"
-                        placeholder="ابحث عن عميل بالاسم أو رقم الهاتف..."
+                        placeholder="ابحث عن المندوب برقم الهاتف فقط..."
                         value={searchQuery}
                         onChange={(e) => handleClientSearch(e.target.value)}
                         isInvalid={!!getFieldError("client_id")}
@@ -372,7 +368,7 @@ const OrderFormModal = ({
                                 style={{ cursor: "pointer" }}
                                 onClick={() => selectClient(client)}
                               >
-                                <strong>{client.name}</strong> - {client.phone}
+                                <strong>{client.phone}</strong> - {client.name || "بدون اسم"}
                               </div>
                             ))}
                             <div
@@ -380,7 +376,7 @@ const OrderFormModal = ({
                               style={{ cursor: "pointer" }}
                               onClick={() => setShowQuickCreate(true)}
                             >
-                              + إضافة عميل جديد
+                              + إضافة مندوب جديد
                             </div>
                           </div>
                         )}
@@ -395,7 +391,7 @@ const OrderFormModal = ({
                               className="p-0"
                               onClick={() => setShowQuickCreate(true)}
                             >
-                              + إضافة عميل جديد
+                              + إضافة مندوب جديد
                             </Button>
                           </div>
                         )}
@@ -406,39 +402,57 @@ const OrderFormModal = ({
                   </Form.Group>
 
                   <Row>
-                    <Col md={6}>
+                    <Col md={12}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                          رقم التأشيرة
+                          رقم الهوية / رقم التأشيرة
                         </Form.Label>
-                        <Form.Control
-                          type="text"
-                          name="visa_number"
-                          value={formData.visa_number}
-                          onChange={handleChange}
-                          isInvalid={!!getFieldError("visa_number")}
-                          className="rounded-3"
-                        />
-                        <Form.Control.Feedback type="invalid">
-                          {getFieldError("visa_number")}
-                        </Form.Control.Feedback>
+                        <InputGroup>
+                          <Form.Control
+                            type="text"
+                            name="id_number"
+                            placeholder="رقم الهوية"
+                            value={formData.id_number}
+                            onChange={handleChange}
+                            isInvalid={!!getFieldError("id_number")}
+                            className="rounded-start-3"
+                          />
+                          <Form.Control
+                            type="text"
+                            name="visa_number"
+                            placeholder="رقم التأشيرة"
+                            value={formData.visa_number}
+                            onChange={handleChange}
+                            isInvalid={!!getFieldError("visa_number")}
+                            className="rounded-end-3"
+                          />
+                        </InputGroup>
+                        {(getFieldError("id_number") || getFieldError("visa_number")) && (
+                          <div className="text-danger small mt-1">
+                            {getFieldError("id_number") || getFieldError("visa_number")}
+                          </div>
+                        )}
                       </Form.Group>
                     </Col>
-                    <Col md={6}>
+                  </Row>
+
+                  <Row>
+                    <Col md={12}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                          رقم الهوية
+                          اسم صاحب التأشيرة
                         </Form.Label>
                         <Form.Control
                           type="text"
-                          name="id_number"
-                          value={formData.id_number}
+                          name="visa_holder_name"
+                          value={formData.visa_holder_name}
                           onChange={handleChange}
-                          isInvalid={!!getFieldError("id_number")}
+                          isInvalid={!!getFieldError("visa_holder_name")}
+                          placeholder="أدخل اسم صاحب التأشيرة"
                           className="rounded-3"
                         />
                         <Form.Control.Feedback type="invalid">
-                          {getFieldError("id_number")}
+                          {getFieldError("visa_holder_name")}
                         </Form.Control.Feedback>
                       </Form.Group>
                     </Col>
@@ -471,31 +485,21 @@ const OrderFormModal = ({
                         <Form.Label className="fw-semibold small text-secondary">
                           المكتب السعودي
                         </Form.Label>
-                        <Form.Control
-                          type="text"
-                          list="saudi-offices-options"
-                          value={saudiOfficeSearch}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setSaudiOfficeSearch(value);
-                            const matched = saudiOffices.find((office) => office.name === value);
-                            setFormData((prev) => ({
-                              ...prev,
-                              saudi_office_id: matched ? matched.id : "",
-                            }));
+                        <Select
+                          className="react-select-container"
+                          classNamePrefix="react-select"
+                          options={saudiOffices.map(office => ({ value: office.id, label: office.name }))}
+                          value={saudiOffices.find(o => o.id === formData.saudi_office_id) ? { value: formData.saudi_office_id, label: saudiOffices.find(o => o.id === formData.saudi_office_id).name } : null}
+                          onChange={(option) => {
+                            setFormData(prev => ({ ...prev, saudi_office_id: option ? option.value : "" }));
                           }}
-                          placeholder="اكتب اسم المكتب السعودي..."
-                          isInvalid={!!getFieldError("saudi_office_id")}
-                          className="rounded-3"
+                          placeholder="اختر المكتب السعودي..."
+                          isClearable
+                          isRtl
                         />
-                        <datalist id="saudi-offices-options">
-                          {saudiOffices.map((office) => (
-                            <option key={office.id} value={office.name} />
-                          ))}
-                        </datalist>
-                        <Form.Control.Feedback type="invalid">
-                          {getFieldError("saudi_office_id")}
-                        </Form.Control.Feedback>
+                        {getFieldError("saudi_office_id") && (
+                          <div className="text-danger small mt-1">{getFieldError("saudi_office_id")}</div>
+                        )}
                       </Form.Group>
                     </Col>
                     <Col md={6}>
@@ -503,31 +507,21 @@ const OrderFormModal = ({
                         <Form.Label className="fw-semibold small text-secondary">
                           المكتب الخارجي
                         </Form.Label>
-                        <Form.Control
-                          type="text"
-                          list="external-offices-options"
-                          value={externalOfficeSearch}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setExternalOfficeSearch(value);
-                            const matched = externalOffices.find((office) => office.name === value);
-                            setFormData((prev) => ({
-                              ...prev,
-                              external_office_id: matched ? matched.id : "",
-                            }));
+                        <Select
+                          className="react-select-container"
+                          classNamePrefix="react-select"
+                          options={externalOffices.map(office => ({ value: office.id, label: office.name }))}
+                          value={externalOffices.find(o => o.id === formData.external_office_id) ? { value: formData.external_office_id, label: externalOffices.find(o => o.id === formData.external_office_id).name } : null}
+                          onChange={(option) => {
+                            setFormData(prev => ({ ...prev, external_office_id: option ? option.value : "" }));
                           }}
-                          placeholder="اكتب اسم المكتب الخارجي..."
-                          isInvalid={!!getFieldError("external_office_id")}
-                          className="rounded-3"
+                          placeholder="اختر المكتب الخارجي..."
+                          isClearable
+                          isRtl
                         />
-                        <datalist id="external-offices-options">
-                          {externalOffices.map((office) => (
-                            <option key={office.id} value={office.name} />
-                          ))}
-                        </datalist>
-                        <Form.Control.Feedback type="invalid">
-                          {getFieldError("external_office_id")}
-                        </Form.Control.Feedback>
+                        {getFieldError("external_office_id") && (
+                          <div className="text-danger small mt-1">{getFieldError("external_office_id")}</div>
+                        )}
                       </Form.Group>
                     </Col>
                   </Row>
@@ -554,25 +548,23 @@ const OrderFormModal = ({
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                          الحالة
+                          حالة سداد مساند
                         </Form.Label>
-                        <Form.Select
-                          name="status"
-                          value={formData.status}
-                          onChange={handleChange}
-                          isInvalid={!!getFieldError("status")}
-                          className="rounded-3"
-                        >
-                          <option value="">-- اختر --</option>
-                          {statusOptions.map((status) => (
-                            <option key={status.key || status.id} value={status.key}>
-                              {status.label}
-                            </option>
-                          ))}
-                        </Form.Select>
-                        <Form.Control.Feedback type="invalid">
-                          {getFieldError("status")}
-                        </Form.Control.Feedback>
+                        <Select
+                          className="react-select-container"
+                          classNamePrefix="react-select"
+                          options={statusOptions.map(status => ({ value: status.key || status.id, label: status.label }))}
+                          value={statusOptions.find(s => (s.key || s.id) === formData.status) ? { value: formData.status, label: statusOptions.find(s => (s.key || s.id) === formData.status).label } : null}
+                          onChange={(option) => {
+                            setFormData(prev => ({ ...prev, status: option ? option.value : "" }));
+                          }}
+                          placeholder="اختر الحالة..."
+                          isClearable
+                          isRtl
+                        />
+                        {getFieldError("status") && (
+                          <div className="text-danger small mt-1">{getFieldError("status")}</div>
+                        )}
                       </Form.Group>
                     </Col>
                   </Row>
@@ -642,7 +634,7 @@ const OrderFormModal = ({
 
                   {(totalPrice > 0 || musanedPaid > 0) && (
                     <div
-                      className={`p-3 rounded-3 ${priceDifference >= 0 ? "bg-success bg-opacity-10" : "bg-danger bg-opacity-10"}`}
+                      className={`p-3 rounded-3 mt-3 ${priceDifference >= 0 ? "bg-success bg-opacity-10" : "bg-danger bg-opacity-10"}`}
                     >
                       <div className="d-flex justify-content-between align-items-center">
                         <span className="fw-semibold">الرصيد المتبقي:</span>
@@ -659,125 +651,86 @@ const OrderFormModal = ({
 
               <Tab eventKey="images" title="الصور والمرفقات">
                 <div className="mt-3">
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="fw-semibold small text-secondary">
-                          صورة التأشيرة
-                        </Form.Label>
-                        <Form.Control
-                          type="file"
-                          name="visa_image"
-                          accept="image/jpeg,image/png,image/jpg"
-                          onChange={handleFileChange}
-                          className="rounded-3"
-                        />
-                        {previewImages.visa_image && (
-                          <div className="mt-2 text-center position-relative">
-                            <Image
-                              src={getImageUrl(previewImages.visa_image)}
-                              thumbnail
-                              style={{ maxHeight: "100px" }}
-                            />
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              className="position-absolute top-0 start-0"
-                              onClick={() => handleRemoveImage("visa_image")}
-                              style={{
-                                borderRadius: "50%",
-                                padding: "2px 6px",
-                              }}
-                            >
-                              ×
-                            </Button>
-                          </div>
-                        )}
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="fw-semibold small text-secondary">
-                          صورة العقد
-                        </Form.Label>
-                        <Form.Control
-                          type="file"
-                          name="contract_image"
-                          accept="image/jpeg,image/png,image/jpg"
-                          onChange={handleFileChange}
-                          className="rounded-3"
-                        />
-                        {previewImages.contract_image && (
-                          <div className="mt-2 text-center position-relative">
-                            <Image
-                              src={getImageUrl(previewImages.contract_image)}
-                              thumbnail
-                              style={{ maxHeight: "100px" }}
-                            />
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              className="position-absolute top-0 start-0"
-                              onClick={() =>
-                                handleRemoveImage("contract_image")
-                              }
-                              style={{
-                                borderRadius: "50%",
-                                padding: "2px 6px",
-                              }}
-                            >
-                              ×
-                            </Button>
-                          </div>
-                        )}
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                  <hr />
-                  <div className="mb-2 fw-semibold">مرفقات إضافية (سحب وإفلات مع عنوان)</div>
+                  <div className="alert alert-info border-0 rounded-3 small">
+                    💡 يمكنك إضافة عدة مرفقات وتسميتها (مثال: صورة الجواز، صورة الهوية، إلخ...)
+                  </div>
+
                   {attachmentRows.map((row, index) => (
-                    <Row key={`attachment-${index}`} className="align-items-end mb-2">
-                      <Col md={5}>
-                        <Form.Group>
-                          <Form.Label className="small text-secondary">عنوان الصورة</Form.Label>
-                          <Form.Control
-                            type="text"
-                            value={row.title}
-                            onChange={(e) =>
-                              updateAttachmentRow(index, "title", e.target.value)
-                            }
-                            placeholder="مثال: صورة الجواز"
-                            className="rounded-3"
-                          />
-                        </Form.Group>
-                      </Col>
-                      <Col md={5}>
-                        <Form.Group>
-                          <Form.Label className="small text-secondary">الملف</Form.Label>
-                          <Form.Control
-                            type="file"
-                            accept="image/jpeg,image/png,image/jpg,image/gif"
-                            className="rounded-3"
-                            onChange={(e) =>
-                              updateAttachmentRow(index, "file", e.target.files?.[0] || null)
-                            }
-                          />
-                        </Form.Group>
-                      </Col>
-                      <Col md={2}>
-                        <Button
-                          variant="outline-danger"
-                          className="w-100"
-                          disabled={attachmentRows.length === 1}
-                          onClick={() => removeAttachmentRow(index)}
-                        >
-                          حذف
-                        </Button>
-                      </Col>
-                    </Row>
+                    <div
+                      key={`attachment-${index}`}
+                      className="attachment-row p-4 mb-3 border rounded-4 bg-white shadow-sm border-light position-relative overflow-hidden"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.add('border-primary', 'bg-light');
+                      }}
+                      onDragLeave={(e) => {
+                        e.currentTarget.classList.remove('border-primary', 'bg-light');
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove('border-primary', 'bg-light');
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) {
+                          updateAttachmentRow(index, "file", file);
+                        }
+                      }}
+                    >
+                      <div className="position-absolute top-0 start-0 w-100 h-1 bg-primary bg-opacity-25" style={{ height: '4px' }}></div>
+                      <Row className="align-items-end g-3">
+                        <Col md={5}>
+                          <Form.Group>
+                            <Form.Label className="fw-bold small text-dark mb-2">🏷️ عنوان المرفق</Form.Label>
+                            <Form.Control
+                              type="text"
+                              value={row.title}
+                              onChange={(e) => updateAttachmentRow(index, "title", e.target.value)}
+                              placeholder="مثال: صورة الجواز، صورة الهوية..."
+                              className="rounded-3 border-light-subtle shadow-none"
+                              style={{ backgroundColor: '#fcfcfc' }}
+                            />
+                          </Form.Group>
+                        </Col>
+                        <Col md={5}>
+                          <Form.Group>
+                            <Form.Label className="fw-bold small text-dark mb-2">📁 اختيار الملف</Form.Label>
+                            <div className="custom-file-upload">
+                              <Form.Control
+                                type="file"
+                                accept="image/*,application/pdf"
+                                onChange={(e) => updateAttachmentRow(index, "file", e.target.files?.[0] || null)}
+                                className="rounded-3 border-light-subtle shadow-none"
+                                style={{ backgroundColor: '#fcfcfc' }}
+                              />
+                            </div>
+                          </Form.Group>
+                        </Col>
+                        <Col md={2}>
+                          <Button
+                            variant="link"
+                            className="w-100 text-danger text-decoration-none fw-semibold"
+                            disabled={attachmentRows.length === 1 && !row.file && !row.title}
+                            onClick={() => removeAttachmentRow(index)}
+                          >
+                            🗑️ إزالة
+                          </Button>
+                        </Col>
+                      </Row>
+                      {row.file && (
+                        <div className="mt-3 p-2 rounded-3 bg-success bg-opacity-10 border border-success border-opacity-10 d-flex align-items-center gap-2">
+                          <span className="text-success small fw-bold">✅ تم اختيار: {row.file.name}</span>
+                          <span className="text-muted extra-small">({(row.file.size / 1024).toFixed(1)} KB)</span>
+                        </div>
+                      )}
+                    </div>
                   ))}
-                  <Button variant="outline-primary" onClick={addAttachmentRow}>
-                    + إضافة مرفق
+
+                  <Button
+                    variant="outline-dark"
+                    onClick={addAttachmentRow}
+                    className="w-100 py-2 border-dashed rounded-3"
+                    style={{ borderStyle: "dashed" }}
+                  >
+                    + إضافة مرفق جديد
                   </Button>
                 </div>
               </Tab>
@@ -822,12 +775,12 @@ const OrderFormModal = ({
         dir="rtl"
       >
         <Modal.Header closeButton className="border-0 pt-4 px-4">
-          <Modal.Title className="fw-bold fs-5">إضافة عميل جديد</Modal.Title>
+          <Modal.Title className="fw-bold fs-5">إضافة مندوب جديد</Modal.Title>
         </Modal.Header>
         <Modal.Body className="px-4">
           <Form.Group className="mb-3">
             <Form.Label className="fw-semibold small text-secondary">
-              اسم العميل
+              اسم المندوب
             </Form.Label>
             <Form.Control
               type="text"
@@ -839,7 +792,28 @@ const OrderFormModal = ({
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="fw-semibold small text-secondary">
-              رقم الهاتف
+              نوع العميل
+            </Form.Label>
+            <div className="d-flex gap-3">
+              <Form.Check
+                type="radio"
+                label="فردي"
+                name="clientType"
+                checked={newClientType === "individual"}
+                onChange={() => setNewClientType("individual")}
+              />
+              <Form.Check
+                type="radio"
+                label="مكتب خدمات"
+                name="clientType"
+                checked={newClientType === "office"}
+                onChange={() => setNewClientType("office")}
+              />
+            </div>
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary">
+              رقم الهاتف <span className="text-danger small">(يجب أن يكون فريداً)</span>
             </Form.Label>
             <Form.Control
               type="text"
@@ -868,7 +842,7 @@ const OrderFormModal = ({
             disabled={quickCreateLoading}
             className="px-3 rounded-3"
           >
-            {quickCreateLoading ? "جاري الإضافة..." : "إضافة العميل"}
+            {quickCreateLoading ? "جاري الإضافة..." : "حفظ المندوب"}
           </Button>
         </Modal.Footer>
       </Modal>
