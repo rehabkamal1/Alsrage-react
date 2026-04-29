@@ -8,6 +8,7 @@ import {
   getFinanceSummary,
   getOrders,
 } from "../services/apiService";
+import api from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import FinanceFormModal from "../components/Finance/FinanceFormModal";
 import FinanceTable from "../components/Finance/FinanceTable";
@@ -21,6 +22,10 @@ const FinancePage = () => {
   const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [orders, setOrders] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [bankNames, setBankNames] = useState([]);
+  const [priorityLevels, setPriorityLevels] = useState([]);
+  const [transferStatuses, setTransferStatuses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -28,56 +33,131 @@ const FinancePage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [submitError, setSubmitError] = useState(null);
-  const itemsPerPage = 8;
+  const [filters, setFilters] = useState({
+    type: "",
+    status: "",
+    payment_method: "",
+    priority_level: "",
+  });
+  const [sortField, setSortField] = useState("id");
+  const [sortDirection, setSortDirection] = useState("desc");
+  const [filterFromDate, setFilterFromDate] = useState("");
+  const [filterToDate, setFilterToDate] = useState("");
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchAllData();
+    fetchSettings();
   }, []);
 
   useEffect(() => {
-    if (searchQuery.trim()) {
-      const filtered = transactions.filter((item) => {
-        const orderIdMatch = item.order_number
-          ?.toString()
-          .includes(searchQuery);
-        const clientNameMatch = item.client_name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase());
-        return orderIdMatch || clientNameMatch;
-      });
-      setFilteredTransactions(filtered);
-    } else {
-      setFilteredTransactions(transactions);
-    }
-    setCurrentPage(1);
-  }, [searchQuery, transactions]);
+    fetchTransactions();
+  }, [
+    searchQuery,
+    filters,
+    sortField,
+    sortDirection,
+    filterFromDate,
+    filterToDate,
+    currentPage,
+  ]);
 
   const fetchAllData = async () => {
     setInitialLoading(true);
     try {
-      const [transactionsRes, summaryRes, ordersRes] = await Promise.all([
-        getTransactions(),
-        getFinanceSummary(),
-        getOrders(),
-      ]);
-      setTransactions(transactionsRes.data.data || []);
-      setFilteredTransactions(transactionsRes.data.data || []);
-      setSummary(summaryRes.data.data);
+      const ordersRes = await getOrders();
       setOrders(ordersRes.data.data || []);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching orders:", error);
     } finally {
       setInitialLoading(false);
     }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const [paymentRes, bankRes, priorityRes, transferRes] = await Promise.all(
+        [
+          api.get("/settings/payment-methods"),
+          api.get("/settings/bank-names"),
+          api.get("/settings/priority-levels"),
+          api.get("/settings/transfer-statuses"),
+        ],
+      );
+      setPaymentMethods(paymentRes.data.data);
+      setBankNames(bankRes.data.data);
+      setPriorityLevels(priorityRes.data.data);
+      setTransferStatuses(transferRes.data.data);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    setLoading(true);
+    try {
+      const params = {
+        search: searchQuery,
+        type: filters.type,
+        status: filters.status,
+        payment_method: filters.payment_method,
+        priority_level: filters.priority_level,
+        from_date: filterFromDate,
+        to_date: filterToDate,
+        sort_field: sortField,
+        sort_direction: sortDirection,
+        per_page: itemsPerPage,
+        page: currentPage,
+      };
+      const response = await getTransactions(params);
+      setTransactions(response.data.data);
+      setFilteredTransactions(response.data.data);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSummary = async () => {
+    try {
+      const params = {};
+      if (filterFromDate) params.from_date = filterFromDate;
+      if (filterToDate) params.to_date = filterToDate;
+      const response = await getFinanceSummary(params);
+      setSummary(response.data.data);
+    } catch (error) {
+      console.error("Error fetching summary:", error);
+    }
+  };
+
   const handleSearch = (query) => {
     setSearchQuery(query);
+    setCurrentPage(1);
   };
 
   const handleClearSearch = () => {
     setSearchQuery("");
-    setFilteredTransactions(transactions);
+    setFilters({
+      type: "",
+      status: "",
+      payment_method: "",
+      priority_level: "",
+    });
+    setFilterFromDate("");
+    setFilterToDate("");
+    setCurrentPage(1);
+  };
+
+  const handleFilterChange = (key, value) => {
+    setFilters({ ...filters, [key]: value });
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (field, direction) => {
+    setSortField(field);
+    setSortDirection(direction);
+    setCurrentPage(1);
   };
 
   const handleAddTransaction = () => {
@@ -105,6 +185,8 @@ const FinancePage = () => {
       }
       setShowModal(false);
       setEditingTransaction(null);
+      fetchTransactions();
+      fetchSummary();
       fetchAllData();
     } catch (error) {
       setSubmitError(error.response?.data);
@@ -127,7 +209,8 @@ const FinancePage = () => {
       try {
         await deleteTransaction(id);
         showSuccess("تم الحذف", "تم حذف الحوالة بنجاح");
-        fetchAllData();
+        fetchTransactions();
+        fetchSummary();
       } catch (error) {
         showError("خطأ", "حدث خطأ أثناء الحذف");
       } finally {
@@ -136,12 +219,13 @@ const FinancePage = () => {
     }
   };
 
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedTransactions = filteredTransactions.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  );
+  const handleDateFilter = async () => {
+    setCurrentPage(1);
+    await fetchTransactions();
+    await fetchSummary();
+  };
+
+  const totalPages = Math.ceil(transactions.length / itemsPerPage);
 
   if (initialLoading) {
     return (
@@ -161,7 +245,7 @@ const FinancePage = () => {
           </div>
           <Card className="shadow-sm border-0 rounded-4">
             <Card.Body className="p-0">
-              <TableSkeleton rows={5} columns={10} />
+              <TableSkeleton rows={5} columns={12} />
             </Card.Body>
           </Card>
         </Container>
@@ -192,20 +276,36 @@ const FinancePage = () => {
           onSearch={handleSearch}
           onClear={handleClearSearch}
           loading={loading}
+          paymentMethods={paymentMethods}
+          transferStatuses={transferStatuses}
+          priorityLevels={priorityLevels}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSortChange={handleSortChange}
+          filterFromDate={filterFromDate}
+          filterToDate={filterToDate}
+          setFilterFromDate={setFilterFromDate}
+          setFilterToDate={setFilterToDate}
+          onDateFilter={handleDateFilter}
         />
 
         <Card className="shadow-sm border-0 rounded-4">
           <Card.Body className="p-0">
             {loading ? (
               <div className="text-center py-5">
-                <TableSkeleton rows={3} columns={10} />
+                <TableSkeleton rows={3} columns={12} />
               </div>
             ) : (
               <>
                 <FinanceTable
-                  transactions={displayedTransactions}
+                  transactions={filteredTransactions}
                   onEdit={handleEditTransaction}
                   onDelete={handleDeleteTransaction}
+                  paymentMethods={paymentMethods}
+                  transferStatuses={transferStatuses}
+                  priorityLevels={priorityLevels}
                 />
                 {totalPages > 1 && (
                   <PaginationComponent
@@ -230,6 +330,10 @@ const FinancePage = () => {
         onSubmit={handleSubmit}
         initialData={editingTransaction}
         orders={orders}
+        paymentMethods={paymentMethods}
+        bankNames={bankNames}
+        priorityLevels={priorityLevels}
+        transferStatuses={transferStatuses}
         loading={loading}
         isEdit={!!editingTransaction}
         error={submitError}

@@ -30,6 +30,7 @@ const OrderFormModal = ({
 }) => {
   const [formData, setFormData] = useState({
     client_id: "",
+    visa_holder_name: "",
     saudi_office_id: "",
     external_office_id: "",
     employee_id: "",
@@ -67,6 +68,10 @@ const OrderFormModal = ({
     if (initialData) {
       setFormData({
         client_id: initialData.client_id || "",
+        visa_holder_name:
+          initialData.visa_holder_name ||
+          initialData.client?.visa_holder_name ||
+          "",
         saudi_office_id: initialData.saudi_office_id || "",
         external_office_id: initialData.external_office_id || "",
         employee_id: initialData.employee_id || "",
@@ -95,6 +100,7 @@ const OrderFormModal = ({
     } else {
       setFormData({
         client_id: "",
+        visa_holder_name: "",
         saudi_office_id: "",
         external_office_id: "",
         employee_id: "",
@@ -156,7 +162,11 @@ const OrderFormModal = ({
   };
 
   const selectClient = (client) => {
-    setFormData((prev) => ({ ...prev, client_id: client.id }));
+    setFormData((prev) => ({
+      ...prev,
+      client_id: client.id,
+      visa_holder_name: client.visa_holder_name || client.name,
+    }));
     setSearchQuery(`${client.name} (${client.phone})`);
     setShowSearchResults(false);
     if (fieldErrors.client_id) {
@@ -195,7 +205,11 @@ const OrderFormModal = ({
         phone: newClientPhone,
       });
       const newClient = response.data.data;
-      setFormData((prev) => ({ ...prev, client_id: newClient.id }));
+      setFormData((prev) => ({
+        ...prev,
+        client_id: newClient.id,
+        visa_holder_name: newClient.visa_holder_name || newClient.name,
+      }));
       setSearchQuery(`${newClient.name} (${newClient.phone})`);
       setShowQuickCreate(false);
       setNewClientName("");
@@ -281,7 +295,27 @@ const OrderFormModal = ({
                 <div className="mt-3">
                   <Form.Group className="mb-3">
                     <Form.Label className="fw-semibold small text-secondary">
-                      العميل <span className="text-danger">*</span>
+                      اسم صاحب التأشيرة <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="visa_holder_name"
+                      value={formData.visa_holder_name}
+                      onChange={handleChange}
+                      required
+                      placeholder="أدخل اسم صاحب التأشيرة"
+                      isInvalid={!!getFieldError("visa_holder_name")}
+                      className="rounded-3"
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      {getFieldError("visa_holder_name") ||
+                        "يرجى إدخال اسم صاحب التأشيرة"}
+                    </Form.Control.Feedback>
+                  </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold small text-secondary">
+                      العميل (للربط فقط)
                     </Form.Label>
                     <div className="position-relative">
                       <Form.Control
@@ -289,11 +323,7 @@ const OrderFormModal = ({
                         placeholder="ابحث عن عميل بالاسم أو رقم الهاتف..."
                         value={searchQuery}
                         onChange={(e) => handleClientSearch(e.target.value)}
-                        required
-                        isInvalid={
-                          (validated && !formData.client_id) ||
-                          !!getFieldError("client_id")
-                        }
+                        isInvalid={!!getFieldError("client_id")}
                         className="rounded-3"
                       />
                       {searching && (
@@ -348,7 +378,7 @@ const OrderFormModal = ({
                         )}
                     </div>
                     <Form.Control.Feedback type="invalid">
-                      {getFieldError("client_id") || "يرجى اختيار العميل"}
+                      {getFieldError("client_id")}
                     </Form.Control.Feedback>
                   </Form.Group>
 

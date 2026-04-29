@@ -23,7 +23,7 @@ const OrderTable = ({ orders, onEdit, onDelete }) => {
         <thead className="table-light">
           <tr>
             <th>#</th>
-            <th>العميل</th>
+            <th>صاحب التأشيرة</th>
             <th>رقم التأشيرة</th>
             <th>رقم عقد مساند</th>
             <th>إجمالي السعر</th>
@@ -38,7 +38,11 @@ const OrderTable = ({ orders, onEdit, onDelete }) => {
             orders.map((order) => (
               <tr key={order.id}>
                 <td className="fw-semibold">#{order.id}</td>
-                <td>{order.client?.name || "-"}</td>
+                <td>
+                  {order.visa_holder_name ||
+                    order.client?.visa_holder_name ||
+                    "-"}
+                </td>
                 <td>{order.visa_number || "-"}</td>
                 <td>{order.musaned_contract_number || "-"}</td>
                 <td>{order.total_price ? `${order.total_price} ر.س` : "-"}</td>

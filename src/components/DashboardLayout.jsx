@@ -8,6 +8,8 @@ import EmployeesPage from "../pages/EmployeesPage";
 import DashboardPage from "../pages/DashboardPage";
 import TrackingPage from "../pages/TrackingPage";
 import FinancePage from "../pages/FinancePage";
+import SettingsPage from "../pages/SettingsPage";
+import MarketingPage from "../pages/MarketingPage";
 
 const DashboardLayout = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -30,6 +32,10 @@ const DashboardLayout = ({ user, onLogout }) => {
         return <TrackingPage />;
       case "finance":
         return <FinancePage />;
+      case "settings":
+        return <SettingsPage />;
+      case "marketing":
+        return <MarketingPage />;
       default:
         return <ClientsPage />;
     }

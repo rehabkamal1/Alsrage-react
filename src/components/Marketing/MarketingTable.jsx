@@ -1,16 +1,15 @@
 import React from "react";
 import { Table, Button, Badge } from "react-bootstrap";
 
-const FinanceTable = ({
-  transactions,
+const MarketingTable = ({
+  leads,
   onEdit,
   onDelete,
-  paymentMethods,
-  transferStatuses,
+  statuses,
   priorityLevels,
 }) => {
   const getStatusBadge = (status) => {
-    const found = transferStatuses?.find((s) => s.value === status);
+    const found = statuses?.find((s) => s.key === status);
     if (found) {
       return (
         <Badge
@@ -29,7 +28,7 @@ const FinanceTable = ({
   };
 
   const getPriorityBadge = (level) => {
-    const found = priorityLevels?.find((p) => p.value === level);
+    const found = priorityLevels?.find((p) => p.key === level);
     if (found) {
       return (
         <Badge
@@ -47,69 +46,52 @@ const FinanceTable = ({
     );
   };
 
-  const getPaymentMethodLabel = (method) => {
-    const found = paymentMethods?.find((p) => p.value === method);
-    return found?.label || method;
-  };
-
   return (
     <div className="table-responsive">
       <Table hover className="mb-0 align-middle">
         <thead className="table-light">
           <tr>
             <th>#</th>
+            <th>اسم العميل</th>
+            <th>رقم الهاتف</th>
+            <th>المصدر</th>
             <th>النوع</th>
-            <th>المبلغ</th>
-            <th>رقم الطلب</th>
-            <th>صاحب التأشيرة</th>
-            <th>رقم الحوالة</th>
-            <th>طريقة الدفع</th>
-            <th>بنك المستفيد</th>
-            <th>تاريخ الحوالة</th>
             <th>الحالة</th>
             <th>درجة الأهمية</th>
-            <th>تاريخ الإنشاء</th>
+            <th>تاريخ التواصل</th>
+            <th>تاريخ المتابعة</th>
+            <th>الملاحظات</th>
             <th>الإجراءات</th>
           </tr>
         </thead>
         <tbody>
-          {transactions &&
-            transactions.map((transaction) => (
-              <tr key={transaction.id}>
-                <td className="fw-semibold">#{transaction.id}</td>
-                <td>
-                  <span
-                    className={
-                      transaction.type === "receipt"
-                        ? "text-success"
-                        : "text-danger"
-                    }
-                  >
-                    {transaction.type === "receipt"
-                      ? "📥 مقبوضات"
-                      : "📤 مصروفات"}
-                  </span>
-                </td>
-                <td className="fw-semibold">
-                  {transaction.amount?.toFixed(2)} ر.س
-                </td>
-                <td>#{transaction.order_number}</td>
-                <td>{transaction.visa_holder_name || "-"}</td>
-                <td>{transaction.transfer_number || "-"}</td>
-                <td>{getPaymentMethodLabel(transaction.payment_method)}</td>
-                <td>{transaction.bank_name || "-"}</td>
-                <td>{transaction.transfer_date || "-"}</td>
-                <td>{getStatusBadge(transaction.status)}</td>
-                <td>{getPriorityBadge(transaction.priority_level)}</td>
-                <td>
-                  {new Date(transaction.created_at).toLocaleDateString("ar-SA")}
+          {leads &&
+            leads.map((lead) => (
+              <tr key={lead.id}>
+                <td className="fw-semibold">#{lead.id}</td>
+                <td>{lead.name}</td>
+                <td dir="ltr">{lead.phone}</td>
+                <td>{lead.source_name || "-"}</td>
+                <td>{lead.type_text}</td>
+                <td>{getStatusBadge(lead.status)}</td>
+                <td>{getPriorityBadge(lead.priority_level)}</td>
+                <td>{lead.contact_date || "-"}</td>
+                <td>{lead.next_followup_date || "-"}</td>
+                <td
+                  style={{
+                    maxWidth: "150px",
+                    whiteSpace: "normal",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {lead.notes || "-"}
                 </td>
                 <td>
                   <div className="d-flex gap-2">
                     <Button
                       variant="link"
                       className="text-primary p-0 rounded-circle"
-                      onClick={() => onEdit(transaction)}
+                      onClick={() => onEdit(lead)}
                       style={{
                         width: "32px",
                         height: "32px",
@@ -132,7 +114,7 @@ const FinanceTable = ({
                     <Button
                       variant="link"
                       className="text-danger p-0 rounded-circle"
-                      onClick={() => onDelete(transaction.id)}
+                      onClick={() => onDelete(lead.id)}
                       style={{
                         width: "32px",
                         height: "32px",
@@ -158,10 +140,10 @@ const FinanceTable = ({
                 </td>
               </tr>
             ))}
-          {(!transactions || transactions.length === 0) && (
+          {(!leads || leads.length === 0) && (
             <tr>
-              <td colSpan="13" className="text-center py-5 text-muted">
-                لا توجد حوالات
+              <td colSpan="11" className="text-center py-5 text-muted">
+                لا توجد بيانات تسويقية
               </td>
             </tr>
           )}
@@ -171,4 +153,4 @@ const FinanceTable = ({
   );
 };
 
-export default FinanceTable;
+export default MarketingTable;

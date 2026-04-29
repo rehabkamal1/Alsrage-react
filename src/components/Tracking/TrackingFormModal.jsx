@@ -7,6 +7,10 @@ const TrackingFormModal = ({
   onHide,
   onSubmit,
   initialData,
+  orders,
+  priorityLevels,
+  passportStatuses,
+  transferStatuses,
   loading,
   isEdit,
   error,
@@ -16,12 +20,16 @@ const TrackingFormModal = ({
     is_authenticated: false,
     authentication_date: "",
     authentication_number: "",
-    sent_to_external: false,
-    external_status: "pending",
-    passport_filtered: "pending",
-    is_delivered: false,
+    authorization_number: "",
+    sponsor_number: "",
+    last_action_date: "",
+    notes: "",
+    priority_level: "medium",
+    passport_status: "",
+    transfer_status: "",
   });
 
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [validated, setValidated] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
@@ -32,26 +40,37 @@ const TrackingFormModal = ({
         is_authenticated: initialData.is_authenticated || false,
         authentication_date: initialData.authentication_date || "",
         authentication_number: initialData.authentication_number || "",
-        sent_to_external: initialData.sent_to_external || false,
-        external_status: initialData.external_status || "pending",
-        passport_filtered: initialData.passport_filtered || "pending",
-        is_delivered: initialData.is_delivered || false,
+        authorization_number: initialData.authorization_number || "",
+        sponsor_number: initialData.sponsor_number || "",
+        last_action_date: initialData.last_action_date || "",
+        notes: initialData.notes || "",
+        priority_level: initialData.priority_level || "medium",
+        passport_status: initialData.passport_status || "",
+        transfer_status: initialData.transfer_status || "",
       });
+      if (initialData.order_id) {
+        const order = orders?.find((o) => o.id === initialData.order_id);
+        setSelectedOrder(order);
+      }
     } else {
       setFormData({
         order_id: "",
         is_authenticated: false,
         authentication_date: "",
         authentication_number: "",
-        sent_to_external: false,
-        external_status: "pending",
-        passport_filtered: "pending",
-        is_delivered: false,
+        authorization_number: "",
+        sponsor_number: "",
+        last_action_date: "",
+        notes: "",
+        priority_level: "medium",
+        passport_status: "",
+        transfer_status: "",
       });
+      setSelectedOrder(null);
     }
     setValidated(false);
     setFieldErrors({});
-  }, [initialData, show]);
+  }, [initialData, show, orders]);
 
   useEffect(() => {
     if (error && error.errors) {
@@ -67,6 +86,16 @@ const TrackingFormModal = ({
     }));
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const handleOrderChange = (e) => {
+    const orderId = e.target.value;
+    setFormData((prev) => ({ ...prev, order_id: orderId }));
+    const order = orders?.find((o) => o.id === parseInt(orderId));
+    setSelectedOrder(order);
+    if (fieldErrors.order_id) {
+      setFieldErrors((prev) => ({ ...prev, order_id: undefined }));
     }
   };
 
@@ -93,7 +122,7 @@ const TrackingFormModal = ({
       show={show}
       onHide={onHide}
       centered
-      size="lg"
+      size="xl"
       dir="rtl"
       backdrop="static"
     >
@@ -105,29 +134,37 @@ const TrackingFormModal = ({
 
       <Form onSubmit={handleSubmit} noValidate validated={validated}>
         <Modal.Body className="px-4">
-          <Row>
+          <Row className="mb-3">
             <Col md={6}>
-              <Form.Group className="mb-3">
+              <Form.Group>
                 <Form.Label className="fw-semibold small text-secondary">
                   رقم الطلب <span className="text-danger">*</span>
                 </Form.Label>
-                <Form.Control
-                  type="number"
+                <Form.Select
                   name="order_id"
                   value={formData.order_id}
-                  onChange={handleChange}
+                  onChange={handleOrderChange}
                   required
                   disabled={isEdit}
                   isInvalid={!!getFieldError("order_id")}
                   className="rounded-3"
-                />
+                >
+                  <option value="">-- اختر طلباً --</option>
+                  {orders?.map((order) => (
+                    <option key={order.id} value={order.id}>
+                      #{order.id} -{" "}
+                      {order.visa_holder_name || order.client?.visa_holder_name}{" "}
+                      - {order.visa_number}
+                    </option>
+                  ))}
+                </Form.Select>
                 <Form.Control.Feedback type="invalid">
-                  {getFieldError("order_id") || "يرجى إدخال رقم الطلب"}
+                  {getFieldError("order_id") || "يرجى اختيار الطلب"}
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
             <Col md={6}>
-              <Form.Group className="mb-3">
+              <Form.Group>
                 <Form.Label className="fw-semibold small text-secondary">
                   رقم التوثيق
                 </Form.Label>
@@ -138,6 +175,7 @@ const TrackingFormModal = ({
                   onChange={handleChange}
                   isInvalid={!!getFieldError("authentication_number")}
                   className="rounded-3"
+                  placeholder="أدخل رقم التوثيق"
                 />
                 <Form.Control.Feedback type="invalid">
                   {getFieldError("authentication_number")}
@@ -146,9 +184,28 @@ const TrackingFormModal = ({
             </Col>
           </Row>
 
-          <Row>
+          {selectedOrder && (
+            <div className="bg-light p-3 rounded-3 mb-4">
+              <div className="d-flex flex-wrap gap-3">
+                <div className="flex-grow-1">
+                  <small className="text-muted d-block">صاحب التأشيرة</small>
+                  <strong>
+                    {selectedOrder.visa_holder_name ||
+                      selectedOrder.client?.visa_holder_name ||
+                      "-"}
+                  </strong>
+                </div>
+                <div className="flex-grow-1">
+                  <small className="text-muted d-block">رقم التأشيرة</small>
+                  <strong>{selectedOrder.visa_number || "-"}</strong>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Row className="mb-3">
             <Col md={6}>
-              <Form.Group className="mb-3">
+              <Form.Group>
                 <Form.Check
                   type="switch"
                   id="is_authenticated"
@@ -160,7 +217,7 @@ const TrackingFormModal = ({
               </Form.Group>
             </Col>
             <Col md={6}>
-              <Form.Group className="mb-3">
+              <Form.Group>
                 <Form.Label className="fw-semibold small text-secondary">
                   تاريخ التصديق
                 </Form.Label>
@@ -180,78 +237,161 @@ const TrackingFormModal = ({
             </Col>
           </Row>
 
-          <Row>
+          <Row className="mb-3">
             <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Check
-                  type="switch"
-                  id="sent_to_external"
-                  name="sent_to_external"
-                  label="تم الإرسال للمكتب الخارجي"
-                  checked={formData.sent_to_external}
+              <Form.Group>
+                <Form.Label className="fw-semibold small text-secondary">
+                  رقم التفويض
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="authorization_number"
+                  value={formData.authorization_number}
                   onChange={handleChange}
+                  isInvalid={!!getFieldError("authorization_number")}
+                  className="rounded-3"
+                  placeholder="أدخل رقم التفويض"
                 />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("authorization_number")}
+                </Form.Control.Feedback>
               </Form.Group>
             </Col>
             <Col md={6}>
-              <Form.Group className="mb-3">
+              <Form.Group>
                 <Form.Label className="fw-semibold small text-secondary">
-                  حالة المكتب الخارجي
+                  رقم الكفيل
                 </Form.Label>
-                <Form.Select
-                  name="external_status"
-                  value={formData.external_status}
+                <Form.Control
+                  type="text"
+                  name="sponsor_number"
+                  value={formData.sponsor_number}
                   onChange={handleChange}
-                  disabled={!formData.sent_to_external}
-                  isInvalid={!!getFieldError("external_status")}
+                  isInvalid={!!getFieldError("sponsor_number")}
                   className="rounded-3"
-                >
-                  <option value="pending">في الانتظار</option>
-                  <option value="accepted">مقبول</option>
-                  <option value="rejected">مرفوض</option>
-                </Form.Select>
+                  placeholder="أدخل رقم الكفيل"
+                />
                 <Form.Control.Feedback type="invalid">
-                  {getFieldError("external_status")}
+                  {getFieldError("sponsor_number")}
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
           </Row>
 
-          <Row>
+          <Row className="mb-3">
             <Col md={6}>
-              <Form.Group className="mb-3">
+              <Form.Group>
                 <Form.Label className="fw-semibold small text-secondary">
-                  ترشيح الجواز
+                  تاريخ آخر إجراء
                 </Form.Label>
-                <Form.Select
-                  name="passport_filtered"
-                  value={formData.passport_filtered}
+                <Form.Control
+                  type="date"
+                  name="last_action_date"
+                  value={formData.last_action_date}
                   onChange={handleChange}
-                  isInvalid={!!getFieldError("passport_filtered")}
+                  isInvalid={!!getFieldError("last_action_date")}
                   className="rounded-3"
-                >
-                  <option value="pending">في الانتظار</option>
-                  <option value="accepted">مرشح</option>
-                  <option value="rejected">غير مرشح</option>
-                </Form.Select>
+                />
                 <Form.Control.Feedback type="invalid">
-                  {getFieldError("passport_filtered")}
+                  {getFieldError("last_action_date")}
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
             <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Check
-                  type="switch"
-                  id="is_delivered"
-                  name="is_delivered"
-                  label="تم التوريد"
-                  checked={formData.is_delivered}
+              <Form.Group>
+                <Form.Label className="fw-semibold small text-secondary">
+                  درجة الأهمية
+                </Form.Label>
+                <Form.Select
+                  name="priority_level"
+                  value={formData.priority_level}
                   onChange={handleChange}
-                />
+                  isInvalid={!!getFieldError("priority_level")}
+                  className="rounded-3"
+                >
+                  <option value="">-- اختر --</option>
+                  {priorityLevels?.map((level) => (
+                    <option key={level.value} value={level.value}>
+                      {level.label}
+                    </option>
+                  ))}
+                </Form.Select>
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("priority_level")}
+                </Form.Control.Feedback>
               </Form.Group>
             </Col>
           </Row>
+
+          <Row className="mb-3">
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label className="fw-semibold small text-secondary">
+                  حالة ترشيح الجواز
+                </Form.Label>
+                <Form.Select
+                  name="passport_status"
+                  value={formData.passport_status}
+                  onChange={handleChange}
+                  isInvalid={!!getFieldError("passport_status")}
+                  className="rounded-3"
+                >
+                  <option value="">-- اختر --</option>
+                  {passportStatuses?.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </Form.Select>
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("passport_status")}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label className="fw-semibold small text-secondary">
+                  حالة التحويل
+                </Form.Label>
+                <Form.Select
+                  name="transfer_status"
+                  value={formData.transfer_status}
+                  onChange={handleChange}
+                  isInvalid={!!getFieldError("transfer_status")}
+                  className="rounded-3"
+                >
+                  <option value="">-- اختر --</option>
+                  {transferStatuses?.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </Form.Select>
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("transfer_status")}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary">
+              الملاحظات
+            </Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              isInvalid={!!getFieldError("notes")}
+              className="rounded-3"
+              placeholder="أدخل ملاحظات إضافية..."
+            />
+            <Form.Control.Feedback type="invalid">
+              {getFieldError("notes")}
+            </Form.Control.Feedback>
+          </Form.Group>
         </Modal.Body>
 
         <Modal.Footer className="border-0 pb-4 px-4">

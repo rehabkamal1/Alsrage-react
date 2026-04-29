@@ -5,7 +5,9 @@ import {
   createOrderTracking,
   updateOrderTracking,
   deleteOrderTracking,
+  getOrders,
 } from "../services/apiService";
+import api from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import TrackingFormModal from "../components/Tracking/TrackingFormModal";
 import TrackingTable from "../components/Tracking/TrackingTable";
@@ -16,6 +18,10 @@ import PaginationComponent from "../components/common/Pagination";
 const TrackingPage = () => {
   const [tracking, setTracking] = useState([]);
   const [filteredTracking, setFilteredTracking] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [priorityLevels, setPriorityLevels] = useState([]);
+  const [passportStatuses, setPassportStatuses] = useState([]);
+  const [transferStatuses, setTransferStatuses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -23,54 +29,98 @@ const TrackingPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [submitError, setSubmitError] = useState(null);
-  const itemsPerPage = 8;
+  const [filters, setFilters] = useState({
+    priority_level: "",
+    passport_status: "",
+    transfer_status: "",
+  });
+  const [sortField, setSortField] = useState("id");
+  const [sortDirection, setSortDirection] = useState("desc");
+  const itemsPerPage = 10;
 
   useEffect(() => {
-    fetchTracking();
+    fetchAllData();
+    fetchSettings();
   }, []);
 
   useEffect(() => {
-    if (searchQuery.trim()) {
-      const filtered = tracking.filter((item) => {
-        const orderIdMatch = item.order_id?.toString().includes(searchQuery);
-        const clientNameMatch = item.client_name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase());
-        const clientPhoneMatch = item.client_phone?.includes(searchQuery);
-        const visaNumberMatch = item.visa_number
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase());
-        return (
-          orderIdMatch || clientNameMatch || clientPhoneMatch || visaNumberMatch
-        );
-      });
-      setFilteredTracking(filtered);
-    } else {
-      setFilteredTracking(tracking);
-    }
-    setCurrentPage(1);
-  }, [searchQuery, tracking]);
+    fetchTracking();
+  }, [filters, sortField, sortDirection, searchQuery, currentPage]);
 
-  const fetchTracking = async () => {
+  const fetchAllData = async () => {
     setInitialLoading(true);
     try {
-      const response = await getOrderTracking();
-      setTracking(response.data.data || []);
-      setFilteredTracking(response.data.data || []);
+      const ordersRes = await getOrders();
+      setOrders(ordersRes.data.data || []);
     } catch (error) {
-      console.error("Error fetching tracking:", error);
+      console.error("Error fetching orders:", error);
     } finally {
       setInitialLoading(false);
     }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const [priorityRes, passportRes, transferRes] = await Promise.all([
+        api.get("/settings/priority-levels"),
+        api.get("/settings/passport-statuses"),
+        api.get("/settings/transfer-statuses"),
+      ]);
+      setPriorityLevels(priorityRes.data.data);
+      setPassportStatuses(passportRes.data.data);
+      setTransferStatuses(transferRes.data.data);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+    }
+  };
+
+  const fetchTracking = async () => {
+    setLoading(true);
+    try {
+      const params = {
+        search: searchQuery,
+        priority_level: filters.priority_level,
+        passport_status: filters.passport_status,
+        transfer_status: filters.transfer_status,
+        sort_field: sortField,
+        sort_direction: sortDirection,
+        per_page: itemsPerPage,
+        page: currentPage,
+      };
+      const response = await getOrderTracking(params);
+      setTracking(response.data.data);
+      setFilteredTracking(response.data.data);
+    } catch (error) {
+      console.error("Error fetching tracking:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearch = (query) => {
     setSearchQuery(query);
+    setCurrentPage(1);
   };
 
   const handleClearSearch = () => {
     setSearchQuery("");
-    setFilteredTracking(tracking);
+    setFilters({
+      priority_level: "",
+      passport_status: "",
+      transfer_status: "",
+    });
+    setCurrentPage(1);
+  };
+
+  const handleFilterChange = (key, value) => {
+    setFilters({ ...filters, [key]: value });
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (field, direction) => {
+    setSortField(field);
+    setSortDirection(direction);
+    setCurrentPage(1);
   };
 
   const handleAddTracking = () => {
@@ -99,6 +149,7 @@ const TrackingPage = () => {
       setShowModal(false);
       setEditingTracking(null);
       fetchTracking();
+      fetchAllData();
     } catch (error) {
       setSubmitError(error.response?.data);
       showError(
@@ -129,12 +180,7 @@ const TrackingPage = () => {
     }
   };
 
-  const totalPages = Math.ceil(filteredTracking.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedTracking = filteredTracking.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  );
+  const totalPages = Math.ceil(tracking.length / itemsPerPage);
 
   if (initialLoading) {
     return (
@@ -154,7 +200,7 @@ const TrackingPage = () => {
           </div>
           <Card className="shadow-sm border-0 rounded-4">
             <Card.Body className="p-0">
-              <TableSkeleton rows={5} columns={11} />
+              <TableSkeleton rows={5} columns={12} />
             </Card.Body>
           </Card>
         </Container>
@@ -183,20 +229,32 @@ const TrackingPage = () => {
           onSearch={handleSearch}
           onClear={handleClearSearch}
           loading={loading}
+          priorityLevels={priorityLevels}
+          passportStatuses={passportStatuses}
+          transferStatuses={transferStatuses}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSortChange={handleSortChange}
         />
 
         <Card className="shadow-sm border-0 rounded-4">
           <Card.Body className="p-0">
             {loading ? (
               <div className="text-center py-5">
-                <TableSkeleton rows={3} columns={11} />
+                <TableSkeleton rows={3} columns={12} />
               </div>
             ) : (
               <>
                 <TrackingTable
-                  tracking={displayedTracking}
+                  tracking={filteredTracking}
                   onEdit={handleEditTracking}
                   onDelete={handleDeleteTracking}
+                  onRefresh={fetchTracking}
+                  priorityLevels={priorityLevels}
+                  passportStatuses={passportStatuses}
+                  transferStatuses={transferStatuses}
                 />
                 {totalPages > 1 && (
                   <PaginationComponent
@@ -220,8 +278,13 @@ const TrackingPage = () => {
         }}
         onSubmit={handleSubmit}
         initialData={editingTracking}
+        orders={orders}
+        priorityLevels={priorityLevels}
+        passportStatuses={passportStatuses}
+        transferStatuses={transferStatuses}
         loading={loading}
         isEdit={!!editingTracking}
+        error={submitError}
       />
     </div>
   );
