@@ -21,7 +21,7 @@ const ADMIN_ACCOUNTS = [
 //  Axios instance pointing to Laravel API
 // ─────────────────────────────────────────────
 const api = axios.create({
-  baseURL: "https://api.alserage.alfanar-rec.com/api",
+  baseURL: "https://alserage.alfanar-rec.com/api/public/api",
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
