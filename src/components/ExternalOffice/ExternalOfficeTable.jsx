@@ -13,6 +13,7 @@ const ExternalOfficeTable = ({ offices, onEdit, onDelete }) => {
             <th>اسم الموظف</th>
             <th>الأرقام</th>
             <th>ملاحظات</th>
+            <th>جروب الواتساب</th>
             <th>الإجراءات</th>
           </tr>
         </thead>
@@ -53,6 +54,22 @@ const ExternalOfficeTable = ({ offices, onEdit, onDelete }) => {
                   )}
                 </td>
                 <td>{office.notes || "-"}</td>
+                <td className="text-center">
+                  {office.whatsapp_link ? (
+                    <a
+                      href={office.whatsapp_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-sm btn-outline-success rounded-circle d-inline-flex align-items-center justify-content-center"
+                      style={{ width: "32px", height: "32px" }}
+                      title="الدخول للجروب"
+                    >
+                      <i className="fa-brands fa-whatsapp fs-5"></i>
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </td>
                 <td>
                   <Button
                     variant="link"
@@ -107,7 +124,7 @@ const ExternalOfficeTable = ({ offices, onEdit, onDelete }) => {
             ))}
           {(!offices || offices.length === 0) && (
             <tr>
-              <td colSpan="5" className="text-center py-5 text-muted">
+              <td colSpan="8" className="text-center py-5 text-muted">
                 لا يوجد مكاتب خارجية مضافين بعد
               </td>
             </tr>
