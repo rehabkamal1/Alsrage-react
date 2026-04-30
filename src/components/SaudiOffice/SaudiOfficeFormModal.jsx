@@ -20,6 +20,7 @@ const SaudiOfficeFormModal = ({
     address: "",
     total_authorization: "",
     musaned_price: "",
+    whatsapp_link: "",
   });
 
   const [validated, setValidated] = useState(false);
@@ -38,6 +39,7 @@ const SaudiOfficeFormModal = ({
         notes: initialData.notes || "",
         total_authorization: initialData.total_authorization || "",
         musaned_price: initialData.musaned_price || "",
+        whatsapp_link: initialData.whatsapp_link || "",
       });
     } else {
       setFormData({
@@ -51,6 +53,7 @@ const SaudiOfficeFormModal = ({
         notes: "",
         total_authorization: "",
         musaned_price: "",
+        whatsapp_link: "",
       });
     }
     setValidated(false);
@@ -323,6 +326,41 @@ const SaudiOfficeFormModal = ({
                 />
                 <Form.Control.Feedback type="invalid">
                   {getFieldError("notes")}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  وتساب
+                </Form.Label>
+                <div className="d-flex align-items-center gap-2">
+                  <Form.Control
+                    type="url"
+                    name="whatsapp_link"
+                    value={formData.whatsapp_link}
+                    onChange={handleChange}
+                    placeholder="رابط جروب الواتساب"
+                    isInvalid={!!getFieldError("whatsapp_link")}
+                    className="rounded-3"
+                  />
+                  {formData.whatsapp_link && (
+                    <a
+                      href={formData.whatsapp_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-success rounded-3 d-flex align-items-center justify-content-center"
+                      title="الدخول لجروب الواتساب"
+                    >
+                      <i className="fa-brands fa-whatsapp fs-5"></i>
+                    </a>
+                  )}
+                </div>
+                <Form.Control.Feedback type="invalid" className={getFieldError("whatsapp_link") ? "d-block" : ""}>
+                  {getFieldError("whatsapp_link")}
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>

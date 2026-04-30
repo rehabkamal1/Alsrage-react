@@ -39,6 +39,10 @@ const OrderFormModal = ({
     visa_number: "",
     id_number: "",
     musaned_contract_number: "",
+    nationality: "",
+    arrival_destination: "",
+    profession: "",
+    passport_number: "",
     contract_date: "",
     total_price: "",
     musaned_paid: "",
@@ -82,6 +86,10 @@ const OrderFormModal = ({
         visa_number: initialData.visa_number || "",
         id_number: initialData.id_number || "",
         musaned_contract_number: initialData.musaned_contract_number || "",
+        nationality: initialData.nationality || "",
+        arrival_destination: initialData.arrival_destination || "",
+        profession: initialData.profession || "",
+        passport_number: initialData.passport_number || "",
         contract_date: initialData.contract_date || "",
         total_price: initialData.total_price || "",
         musaned_paid: initialData.musaned_paid || "",
@@ -107,6 +115,10 @@ const OrderFormModal = ({
         visa_number: "",
         id_number: "",
         musaned_contract_number: "",
+        nationality: "",
+        arrival_destination: "",
+        profession: "",
+        passport_number: "",
         contract_date: "",
         total_price: "",
         musaned_paid: "",
@@ -437,22 +449,82 @@ const OrderFormModal = ({
                   </Row>
 
                   <Row>
-                    <Col md={12}>
+                    <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                          اسم صاحب التأشيرة
+                          رقم الجواز
                         </Form.Label>
                         <Form.Control
                           type="text"
-                          name="visa_holder_name"
-                          value={formData.visa_holder_name}
+                          name="passport_number"
+                          value={formData.passport_number}
                           onChange={handleChange}
-                          isInvalid={!!getFieldError("visa_holder_name")}
-                          placeholder="أدخل اسم صاحب التأشيرة"
+                          isInvalid={!!getFieldError("passport_number")}
+                          placeholder="أدخل رقم الجواز"
                           className="rounded-3"
                         />
                         <Form.Control.Feedback type="invalid">
-                          {getFieldError("visa_holder_name")}
+                          {getFieldError("passport_number")}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          الجنسية
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="nationality"
+                          value={formData.nationality}
+                          onChange={handleChange}
+                          isInvalid={!!getFieldError("nationality")}
+                          placeholder="أدخل الجنسية"
+                          className="rounded-3"
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {getFieldError("nationality")}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          جهة القدوم
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="arrival_destination"
+                          value={formData.arrival_destination}
+                          onChange={handleChange}
+                          isInvalid={!!getFieldError("arrival_destination")}
+                          placeholder="أدخل جهة القدوم"
+                          className="rounded-3"
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {getFieldError("arrival_destination")}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          المهنة
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="profession"
+                          value={formData.profession}
+                          onChange={handleChange}
+                          isInvalid={!!getFieldError("profession")}
+                          placeholder="أدخل المهنة"
+                          className="rounded-3"
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {getFieldError("profession")}
                         </Form.Control.Feedback>
                       </Form.Group>
                     </Col>
