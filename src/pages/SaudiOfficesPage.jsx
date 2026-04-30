@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Container, Card, Button } from "react-bootstrap";
+import { Container, Card, Button, Tabs, Tab } from "react-bootstrap";
 import {
   getSaudiOffices,
   createSaudiOffice,
@@ -25,6 +25,7 @@ const SaudiOfficesPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [submitError, setSubmitError] = useState(null);
+  const [activeTab, setActiveTab] = useState("offices");
   const itemsPerPage = 8;
 
   useEffect(() => {
@@ -158,9 +159,12 @@ const SaudiOfficesPage = () => {
     exportToPDF(filteredOffices, columns, "المكاتب_السعودية.pdf");
   };
 
-  const totalPages = Math.ceil(filteredOffices.length / itemsPerPage);
+  const currentTabOffices = filteredOffices.filter((o) =>
+    activeTab === "suppliers" ? o.is_supplier : true
+  );
+  const totalPages = Math.ceil(currentTabOffices.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedOffices = filteredOffices.slice(
+  const displayedOffices = currentTabOffices.slice(
     startIndex,
     startIndex + itemsPerPage,
   );
@@ -238,6 +242,29 @@ const SaudiOfficesPage = () => {
           onClear={handleClearSearch}
           loading={loading}
         />
+
+        <div className="d-flex bg-white rounded-3 p-1 mb-4 shadow-sm border" style={{ width: "fit-content" }}>
+          <Button
+            variant={activeTab === "offices" ? "dark" : "white"}
+            className={`rounded-3 border-0 px-4 py-2 fw-semibold ${activeTab !== "offices" ? "text-secondary" : ""}`}
+            onClick={() => {
+              setActiveTab("offices");
+              setCurrentPage(1);
+            }}
+          >
+            المكاتب السعودية
+          </Button>
+          <Button
+            variant={activeTab === "suppliers" ? "dark" : "white"}
+            className={`rounded-3 border-0 px-4 py-2 fw-semibold ${activeTab !== "suppliers" ? "text-secondary" : ""}`}
+            onClick={() => {
+              setActiveTab("suppliers");
+              setCurrentPage(1);
+            }}
+          >
+            الموردين
+          </Button>
+        </div>
 
         <Card className="shadow-sm border-0 rounded-4">
           <Card.Body className="p-0">
