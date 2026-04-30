@@ -1,8 +1,7 @@
 import axios from "axios";
 
 const getToken = () => localStorage.getItem("auth_token");
-const API_URL =
-  import.meta.env.VITE_API_URL || "https://alserage.alfanar-rec.com";
+const API_URL = import.meta.env.VITE_API_URL || "https://api.alserage.alfanar-rec.com";
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -27,6 +26,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// =============== Clients ===============
 export const getClients = (params = {}) => api.get("/clients", { params });
 export const createClient = (data) => api.post("/clients", data);
 export const updateClient = (id, data) =>
@@ -36,12 +36,14 @@ export const searchClients = (query) =>
   api.get(`/clients/search?query=${query}`);
 export const quickCreateClient = (data) => api.post("/clients/quick", data);
 
+// =============== Saudi Offices ===============
 export const getSaudiOffices = () => api.get("/saudi-offices");
 export const createSaudiOffice = (data) => api.post("/saudi-offices", data);
 export const updateSaudiOffice = (id, data) =>
   api.put(`/saudi-offices/${id}`, data);
 export const deleteSaudiOffice = (id) => api.delete(`/saudi-offices/${id}`);
 
+// =============== External Offices ===============
 export const getExternalOffices = () => api.get("/external-offices");
 export const createExternalOffice = (data) =>
   api.post("/external-offices", data);
@@ -50,17 +52,20 @@ export const updateExternalOffice = (id, data) =>
 export const deleteExternalOffice = (id) =>
   api.delete(`/external-offices/${id}`);
 
+// =============== Orders ===============
 export const getOrders = (params = {}) => api.get("/orders", { params });
 export const getOrder = (id) => api.get(`/orders/${id}`);
 export const createOrder = (data) => api.post("/orders", data);
 export const updateOrder = (id, data) => api.put(`/orders/${id}`, data);
 export const deleteOrder = (id) => api.delete(`/orders/${id}`);
 
+// =============== Employees ===============
 export const getEmployees = (params = {}) => api.get("/employees", { params });
 export const createEmployee = (data) => api.post("/employees", data);
 export const updateEmployee = (id, data) => api.put(`/employees/${id}`, data);
 export const deleteEmployee = (id) => api.delete(`/employees/${id}`);
 
+// =============== Order Tracking ===============
 export const getOrderTracking = (params) =>
   api.get("/order-tracking", { params });
 export const getOrderTrackingByOrderId = (orderId) =>
@@ -71,6 +76,7 @@ export const updateOrderTracking = (id, data) =>
   api.put(`/order-tracking/${id}`, data);
 export const deleteOrderTracking = (id) => api.delete(`/order-tracking/${id}`);
 
+// =============== Transactions ===============
 export const getTransactions = (params) => api.get("/transactions", { params });
 export const getTransaction = (id) => api.get(`/transactions/${id}`);
 export const createTransaction = (data) => api.post("/transactions", data);
@@ -80,6 +86,7 @@ export const deleteTransaction = (id) => api.delete(`/transactions/${id}`);
 export const getFinanceSummary = (params) =>
   api.get("/finance/summary", { params });
 
+// =============== Settings ===============
 export const getSettingsPriorityLevels = () =>
   api.get("/settings/priority-levels");
 export const getSettingsPassportStatuses = () =>
@@ -121,6 +128,7 @@ export const deleteMarketingStatus = (id) =>
   api.delete(`/settings/marketing-statuses/${id}`);
 export const deleteOrderStatus = (id) => api.delete(`/settings/order-statuses/${id}`);
 
+// =============== Marketing Leads ===============
 export const getMarketingLeads = (params) =>
   api.get("/marketing-leads", { params });
 export const getMarketingLead = (id) => api.get(`/marketing-leads/${id}`);
@@ -146,6 +154,7 @@ export const createMarketingExternalOffice = (data) =>
 export const createMarketingServiceOffice = (data) =>
   api.post("/marketing-leads/service-office", data);
 
+// =============== Attachments ===============
 export const uploadAttachment = (trackingId, data) =>
   api.post(`/order-tracking/${trackingId}/attachments`, data);
 export const deleteAttachment = (id) => api.delete(`/attachments/${id}`);
