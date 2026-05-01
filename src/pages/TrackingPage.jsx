@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button } from "react-bootstrap";
-import {
+import api, {
   getOrderTracking,
   createOrderTracking,
   updateOrderTracking,
   deleteOrderTracking,
   getOrders,
 } from "../services/apiService";
-import api from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import TrackingFormModal from "../components/Tracking/TrackingFormModal";
 import TrackingTable from "../components/Tracking/TrackingTable";
@@ -66,9 +65,9 @@ const TrackingPage = () => {
         api.get("/settings/passport-statuses"),
         api.get("/settings/transfer-statuses"),
       ]);
-      setPriorityLevels(priorityRes.data.data);
-      setPassportStatuses(passportRes.data.data);
-      setTransferStatuses(transferRes.data.data);
+      setPriorityLevels(priorityRes.data.data || []);
+      setPassportStatuses(passportRes.data.data || []);
+      setTransferStatuses(transferRes.data.data || []);
     } catch (error) {
       console.error("Error fetching settings:", error);
     }
@@ -88,8 +87,8 @@ const TrackingPage = () => {
         page: currentPage,
       };
       const response = await getOrderTracking(params);
-      setTracking(response.data.data);
-      setFilteredTracking(response.data.data);
+      setTracking(response.data.data || []);
+      setFilteredTracking(response.data.data || []);
     } catch (error) {
       console.error("Error fetching tracking:", error);
     } finally {
