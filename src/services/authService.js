@@ -20,8 +20,10 @@ const ADMIN_ACCOUNTS = [
 // ─────────────────────────────────────────────
 //  Axios instance pointing to Laravel API
 // ─────────────────────────────────────────────
+const API_URL = import.meta.env.VITE_API_URL || "https://alserage.alfanar-rec.com/api/public";
+
 const api = axios.create({
-  baseURL: "https://alserage.alfanar-rec.com/api/public/api",
+  baseURL: `${API_URL}/api`,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
