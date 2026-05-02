@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button } from "react-bootstrap";
-import {
+import api, {
   getOrderTracking,
   createOrderTracking,
   updateOrderTracking,
   deleteOrderTracking,
   getOrders,
 } from "../services/apiService";
-import api from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import TrackingFormModal from "../components/Tracking/TrackingFormModal";
 import TrackingTable from "../components/Tracking/TrackingTable";
 import TrackingSearchBar from "../components/Tracking/TrackingSearchBar";
 import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
+import { exportToExcel } from "../utils/excelHelper";
+import { exportToPDF } from "../utils/pdfHelper";
 
 const TrackingPage = () => {
   const [tracking, setTracking] = useState([]);
@@ -66,9 +67,9 @@ const TrackingPage = () => {
         api.get("/settings/passport-statuses"),
         api.get("/settings/transfer-statuses"),
       ]);
-      setPriorityLevels(priorityRes.data.data);
-      setPassportStatuses(passportRes.data.data);
-      setTransferStatuses(transferRes.data.data);
+      setPriorityLevels(priorityRes.data.data || []);
+      setPassportStatuses(passportRes.data.data || []);
+      setTransferStatuses(transferRes.data.data || []);
     } catch (error) {
       console.error("Error fetching settings:", error);
     }
@@ -88,8 +89,8 @@ const TrackingPage = () => {
         page: currentPage,
       };
       const response = await getOrderTracking(params);
-      setTracking(response.data.data);
-      setFilteredTracking(response.data.data);
+      setTracking(response.data.data || []);
+      setFilteredTracking(response.data.data || []);
     } catch (error) {
       console.error("Error fetching tracking:", error);
     } finally {
@@ -180,6 +181,93 @@ const TrackingPage = () => {
     }
   };
 
+  const handleExportExcel = () => {
+    const columns = [
+      { header: "رقم الطلب", key: "order_number" },
+      { header: "صاحب التأشيرة", key: "visa_holder_name" },
+      { header: "رقم التأشيرة", key: "visa_number" },
+      { header: "رقم الكفيل", key: "sponsor_number" },
+      { header: "رقم الجواز", key: "passport_number" },
+      { header: "رقم التفويض", key: "authorization_number" },
+      { header: "رقم التوثيق", key: "authentication_number" },
+      { header: "تاريخ آخر إجراء", key: "last_action_date" },
+      {
+        header: "حالة ترشيح الجواز",
+        key: "passport_status",
+        format: (item) => {
+          const found = passportStatuses?.find(
+            (s) => s.value === item.passport_status,
+          );
+          return found?.label || item.passport_status || "-";
+        },
+      },
+      {
+        header: "حالة التحويل",
+        key: "transfer_status",
+        format: (item) => {
+          const found = transferStatuses?.find(
+            (s) => s.value === item.transfer_status,
+          );
+          return found?.label || item.transfer_status || "-";
+        },
+      },
+      {
+        header: "درجة الأهمية",
+        key: "priority_level",
+        format: (item) => {
+          const found = priorityLevels?.find(
+            (p) => p.value === item.priority_level,
+          );
+          return found?.label || item.priority_level || "-";
+        },
+      },
+      { header: "الملاحظات", key: "notes" },
+    ];
+    exportToExcel(filteredTracking, columns, "متابعة_الطلبات.xlsx");
+  };
+
+  const handleExportPDF = () => {
+    const columns = [
+      { header: "رقم الطلب", key: "order_number" },
+      { header: "صاحب التأشيرة", key: "visa_holder_name" },
+      { header: "رقم التأشيرة", key: "visa_number" },
+      { header: "رقم الكفيل", key: "sponsor_number" },
+      { header: "رقم الجواز", key: "passport_number" },
+      { header: "تاريخ آخر إجراء", key: "last_action_date" },
+      {
+        header: "حالة ترشيح الجواز",
+        key: "passport_status",
+        format: (item) => {
+          const found = passportStatuses?.find(
+            (s) => s.value === item.passport_status,
+          );
+          return found?.label || item.passport_status || "-";
+        },
+      },
+      {
+        header: "حالة التحويل",
+        key: "transfer_status",
+        format: (item) => {
+          const found = transferStatuses?.find(
+            (s) => s.value === item.transfer_status,
+          );
+          return found?.label || item.transfer_status || "-";
+        },
+      },
+      {
+        header: "درجة الأهمية",
+        key: "priority_level",
+        format: (item) => {
+          const found = priorityLevels?.find(
+            (p) => p.value === item.priority_level,
+          );
+          return found?.label || item.priority_level || "-";
+        },
+      },
+    ];
+    exportToPDF(filteredTracking, columns, "متابعة_الطلبات.pdf");
+  };
+
   const totalPages = Math.ceil(tracking.length / itemsPerPage);
 
   if (initialLoading) {
@@ -219,9 +307,34 @@ const TrackingPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">متابعة الطلبات</h1>
-          <Button variant="dark" onClick={handleAddTracking}>
-            + متابعة جديدة
-          </Button>
+          <div className="d-flex gap-2">
+            <Button
+              variant="light"
+              onClick={handleExportExcel}
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
+              disabled={filteredTracking.length === 0}
+            >
+              <i className="fa-solid fa-file-excel fs-5"></i>
+              <span>إكسيل</span>
+            </Button>
+            <Button
+              variant="light"
+              onClick={handleExportPDF}
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
+              disabled={filteredTracking.length === 0}
+            >
+              <i className="fa-solid fa-file-pdf fs-5"></i>
+              <span>بي دي اف</span>
+            </Button>
+            <Button
+              variant="dark"
+              onClick={handleAddTracking}
+              className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+            >
+              <i className="fa-solid fa-plus"></i>
+              <span>متابعة جديدة</span>
+            </Button>
+          </div>
         </div>
 
         <TrackingSearchBar

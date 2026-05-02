@@ -137,7 +137,12 @@ const FinanceFormModal = ({
                       ? { value: "receipt", label: "📥 مقبوضات (من العميل)" }
                       : { value: "payment", label: "📤 مصروفات" }
                   }
-                  onChange={(opt) => setFormData(prev => ({ ...prev, type: opt ? opt.value : "receipt" }))}
+                  onChange={(opt) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      type: opt ? opt.value : "receipt",
+                    }))
+                  }
                   isRtl
                 />
                 <Form.Control.Feedback type="invalid">
@@ -174,14 +179,37 @@ const FinanceFormModal = ({
                   رقم الطلب <span className="text-danger">*</span>
                 </Form.Label>
                 <Select
-                  options={orders?.map(o => ({ value: o.id, label: `#${o.id} - ${o.client?.visa_holder_name} - ${o.visa_number || ""}` })) || []}
-                  value={orders?.find(o => o.id === parseInt(formData.order_id)) ? { value: formData.order_id, label: `#${formData.order_id} - ${orders.find(o => o.id === parseInt(formData.order_id)).client?.visa_holder_name} - ${orders.find(o => o.id === parseInt(formData.order_id)).visa_number || ""}` } : null}
-                  onChange={(opt) => setFormData(prev => ({ ...prev, order_id: opt ? opt.value : "" }))}
+                  options={
+                    orders?.map((o) => ({
+                      value: o.id,
+                      label: `#${o.id} - ${o.visa_holder_name || o.client?.visa_holder_name || "بدون اسم"} - ${o.visa_number || ""}`,
+                    })) || []
+                  }
+                  value={
+                    formData.order_id &&
+                    orders?.find((o) => o.id === parseInt(formData.order_id))
+                      ? {
+                          value: formData.order_id,
+                          label: `#${formData.order_id} - ${orders.find((o) => o.id === parseInt(formData.order_id)).visa_holder_name || orders.find((o) => o.id === parseInt(formData.order_id)).client?.visa_holder_name || "بدون اسم"} - ${orders.find((o) => o.id === parseInt(formData.order_id)).visa_number || ""}`,
+                        }
+                      : null
+                  }
+                  onChange={(opt) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      order_id: opt ? opt.value : "",
+                    }))
+                  }
                   placeholder="-- اختر طلباً --"
                   isClearable
                   isRtl
                 />
-                <Form.Control.Feedback type="invalid" style={{ display: validated && !formData.order_id ? 'block' : 'none' }}>
+                <Form.Control.Feedback
+                  type="invalid"
+                  style={{
+                    display: validated && !formData.order_id ? "block" : "none",
+                  }}
+                >
                   يرجى اختيار الطلب
                 </Form.Control.Feedback>
               </Form.Group>
@@ -189,22 +217,20 @@ const FinanceFormModal = ({
           </Row>
 
           {selectedOrder && formData.type === "receipt" && (
-            <Row>
-              <Col md={12}>
-                <div className="bg-light p-3 rounded-3 mb-3">
-                  <div className="d-flex justify-content-between">
-                    <span className="text-muted">صاحب التأشيرة:</span>
-                    <span className="fw-semibold">
-                      {selectedOrder.client?.visa_holder_name}
-                    </span>
-                  </div>
-                  <div className="d-flex justify-content-between mt-2">
-                    <span className="text-muted">رقم التأشيرة:</span>
-                    <span>{selectedOrder.visa_number || "-"}</span>
-                  </div>
-                </div>
-              </Col>
-            </Row>
+            <div className="bg-light p-3 rounded-3 mb-3">
+              <div className="d-flex justify-content-between">
+                <span className="text-muted">صاحب التأشيرة:</span>
+                <span className="fw-semibold">
+                  {selectedOrder.visa_holder_name ||
+                    selectedOrder.client?.visa_holder_name ||
+                    "-"}
+                </span>
+              </div>
+              <div className="d-flex justify-content-between mt-2">
+                <span className="text-muted">رقم التأشيرة:</span>
+                <span>{selectedOrder.visa_number || "-"}</span>
+              </div>
+            </div>
           )}
 
           <Row>
@@ -214,15 +240,36 @@ const FinanceFormModal = ({
                   طريقة الدفع
                 </Form.Label>
                 <Select
-                  options={paymentMethods.map(m => ({ value: m.value, label: m.label }))}
-                  value={paymentMethods.find(m => m.value === formData.payment_method) ? { value: formData.payment_method, label: paymentMethods.find(m => m.value === formData.payment_method).label } : null}
-                  onChange={(opt) => setFormData(prev => ({ ...prev, payment_method: opt ? opt.value : "" }))}
+                  options={paymentMethods.map((m) => ({
+                    value: m.value,
+                    label: m.label,
+                  }))}
+                  value={
+                    paymentMethods.find(
+                      (m) => m.value === formData.payment_method,
+                    )
+                      ? {
+                          value: formData.payment_method,
+                          label: paymentMethods.find(
+                            (m) => m.value === formData.payment_method,
+                          ).label,
+                        }
+                      : null
+                  }
+                  onChange={(opt) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      payment_method: opt ? opt.value : "",
+                    }))
+                  }
                   placeholder="-- اختر --"
                   isClearable
                   isRtl
                 />
                 {getFieldError("payment_method") && (
-                  <div className="text-danger small mt-1">{getFieldError("payment_method")}</div>
+                  <div className="text-danger small mt-1">
+                    {getFieldError("payment_method")}
+                  </div>
                 )}
               </Form.Group>
             </Col>
@@ -232,15 +279,34 @@ const FinanceFormModal = ({
                   بنك المستفيد
                 </Form.Label>
                 <Select
-                  options={bankNames.map(b => ({ value: b.value, label: b.label }))}
-                  value={bankNames.find(b => b.value === formData.bank_name) ? { value: formData.bank_name, label: bankNames.find(b => b.value === formData.bank_name).label } : null}
-                  onChange={(opt) => setFormData(prev => ({ ...prev, bank_name: opt ? opt.value : "" }))}
+                  options={bankNames.map((b) => ({
+                    value: b.value,
+                    label: b.label,
+                  }))}
+                  value={
+                    bankNames.find((b) => b.value === formData.bank_name)
+                      ? {
+                          value: formData.bank_name,
+                          label: bankNames.find(
+                            (b) => b.value === formData.bank_name,
+                          ).label,
+                        }
+                      : null
+                  }
+                  onChange={(opt) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      bank_name: opt ? opt.value : "",
+                    }))
+                  }
                   placeholder="-- اختر --"
                   isClearable
                   isRtl
                 />
                 {getFieldError("bank_name") && (
-                  <div className="text-danger small mt-1">{getFieldError("bank_name")}</div>
+                  <div className="text-danger small mt-1">
+                    {getFieldError("bank_name")}
+                  </div>
                 )}
               </Form.Group>
             </Col>
@@ -293,15 +359,34 @@ const FinanceFormModal = ({
                   حالة الحوالة
                 </Form.Label>
                 <Select
-                  options={transferStatuses.map(s => ({ value: s.value, label: s.label }))}
-                  value={transferStatuses.find(s => s.value === formData.status) ? { value: formData.status, label: transferStatuses.find(s => s.value === formData.status).label } : null}
-                  onChange={(opt) => setFormData(prev => ({ ...prev, status: opt ? opt.value : "" }))}
+                  options={transferStatuses.map((s) => ({
+                    value: s.value,
+                    label: s.label,
+                  }))}
+                  value={
+                    transferStatuses.find((s) => s.value === formData.status)
+                      ? {
+                          value: formData.status,
+                          label: transferStatuses.find(
+                            (s) => s.value === formData.status,
+                          ).label,
+                        }
+                      : null
+                  }
+                  onChange={(opt) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      status: opt ? opt.value : "",
+                    }))
+                  }
                   placeholder="-- اختر --"
                   isClearable
                   isRtl
                 />
                 {getFieldError("status") && (
-                  <div className="text-danger small mt-1">{getFieldError("status")}</div>
+                  <div className="text-danger small mt-1">
+                    {getFieldError("status")}
+                  </div>
                 )}
               </Form.Group>
             </Col>
@@ -311,15 +396,36 @@ const FinanceFormModal = ({
                   درجة الأهمية
                 </Form.Label>
                 <Select
-                  options={priorityLevels.map(l => ({ value: l.value, label: l.label }))}
-                  value={priorityLevels.find(l => l.value === formData.priority_level) ? { value: formData.priority_level, label: priorityLevels.find(l => l.value === formData.priority_level).label } : null}
-                  onChange={(opt) => setFormData(prev => ({ ...prev, priority_level: opt ? opt.value : "" }))}
+                  options={priorityLevels.map((l) => ({
+                    value: l.value,
+                    label: l.label,
+                  }))}
+                  value={
+                    priorityLevels.find(
+                      (l) => l.value === formData.priority_level,
+                    )
+                      ? {
+                          value: formData.priority_level,
+                          label: priorityLevels.find(
+                            (l) => l.value === formData.priority_level,
+                          ).label,
+                        }
+                      : null
+                  }
+                  onChange={(opt) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      priority_level: opt ? opt.value : "",
+                    }))
+                  }
                   placeholder="-- اختر --"
                   isClearable
                   isRtl
                 />
                 {getFieldError("priority_level") && (
-                  <div className="text-danger small mt-1">{getFieldError("priority_level")}</div>
+                  <div className="text-danger small mt-1">
+                    {getFieldError("priority_level")}
+                  </div>
                 )}
               </Form.Group>
             </Col>

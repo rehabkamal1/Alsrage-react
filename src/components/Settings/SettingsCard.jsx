@@ -38,7 +38,7 @@ const SettingsCard = ({
           ) : (
             items.map((item, idx) => (
               <div
-                key={item.id || item.key || idx}
+                key={item.uniqueId || item.id || item.key || idx}
                 className="mb-2 p-2 border rounded-3"
               >
                 <Row className="g-1 align-items-center">

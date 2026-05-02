@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Container, Card, Button, Row, Col, Dropdown } from "react-bootstrap";
+import { Container, Card, Button, Dropdown } from "react-bootstrap";
 import api, {
   getMarketingLeads,
   createMarketingLead,
@@ -21,6 +21,8 @@ import MarketingSearchBar from "../components/Marketing/MarketingSearchBar";
 import MarketingAddOfficeModal from "../components/Marketing/MarketingAddOfficeModal";
 import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
+import { exportToExcel } from "../utils/excelHelper";
+import { exportToPDF } from "../utils/pdfHelper";
 
 const MarketingPage = () => {
   const [leads, setLeads] = useState([]);
@@ -231,6 +233,81 @@ const MarketingPage = () => {
     }
   };
 
+  const handleExportExcel = () => {
+    const columns = [
+      { header: "اسم العميل", key: "name" },
+      { header: "رقم الهاتف", key: "phone" },
+      { header: "المصدر", key: "source_name" },
+      {
+        header: "النوع",
+        key: "type",
+        format: (item) => {
+          const found = types.find((t) => t.value === item.type);
+          return found?.label || item.type || "-";
+        },
+      },
+      {
+        header: "الحالة",
+        key: "status",
+        format: (item) => {
+          const found = statuses?.find((s) => s.key === item.status);
+          return found?.label || item.status || "-";
+        },
+      },
+      {
+        header: "درجة الأهمية",
+        key: "priority_level",
+        format: (item) => {
+          const found = priorityLevels?.find(
+            (p) => p.key === item.priority_level,
+          );
+          return found?.label || item.priority_level || "-";
+        },
+      },
+      { header: "تاريخ التواصل", key: "contact_date" },
+      { header: "تاريخ المتابعة", key: "next_followup_date" },
+      { header: "الملاحظات", key: "notes" },
+    ];
+    exportToExcel(leads, columns, "التسويق.xlsx");
+  };
+
+  const handleExportPDF = () => {
+    const columns = [
+      { header: "اسم العميل", key: "name" },
+      { header: "رقم الهاتف", key: "phone" },
+      { header: "المصدر", key: "source_name" },
+      {
+        header: "النوع",
+        key: "type",
+        format: (item) => {
+          const found = types.find((t) => t.value === item.type);
+          return found?.label || item.type || "-";
+        },
+      },
+      {
+        header: "الحالة",
+        key: "status",
+        format: (item) => {
+          const found = statuses?.find((s) => s.key === item.status);
+          return found?.label || item.status || "-";
+        },
+      },
+      {
+        header: "درجة الأهمية",
+        key: "priority_level",
+        format: (item) => {
+          const found = priorityLevels?.find(
+            (p) => p.key === item.priority_level,
+          );
+          return found?.label || item.priority_level || "-";
+        },
+      },
+      { header: "تاريخ التواصل", key: "contact_date" },
+      { header: "تاريخ المتابعة", key: "next_followup_date" },
+    ];
+    exportToPDF(leads, columns, "التسويق.pdf");
+  };
+
   const totalPages = Math.ceil(leads.length / itemsPerPage);
 
   if (initialLoading) {
@@ -270,41 +347,61 @@ const MarketingPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">التسويق</h1>
-          <Dropdown>
-            <Dropdown.Toggle variant="dark" id="dropdown-basic">
-              + إضافة
-            </Dropdown.Toggle>
-            <Dropdown.Menu>
-              <Dropdown.Item
-                onClick={() => {
-                  setAddOfficeType("saudi");
-                  setShowAddOfficeModal(true);
-                }}
-              >
-                مكتب سعودي جديد
-              </Dropdown.Item>
-              <Dropdown.Item
-                onClick={() => {
-                  setAddOfficeType("external");
-                  setShowAddOfficeModal(true);
-                }}
-              >
-                مكتب خارجي جديد
-              </Dropdown.Item>
-              <Dropdown.Item
-                onClick={() => {
-                  setAddOfficeType("service");
-                  setShowAddOfficeModal(true);
-                }}
-              >
-                مكتب خدمات جديد
-              </Dropdown.Item>
-              <Dropdown.Divider />
-              <Dropdown.Item onClick={handleAddLead}>
-                عميل تسويقي جديد
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+          <div className="d-flex gap-2">
+            <Button
+              variant="light"
+              onClick={handleExportExcel}
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
+              disabled={leads.length === 0}
+            >
+              <i className="fa-solid fa-file-excel fs-5"></i>
+              <span>إكسيل</span>
+            </Button>
+            <Button
+              variant="light"
+              onClick={handleExportPDF}
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
+              disabled={leads.length === 0}
+            >
+              <i className="fa-solid fa-file-pdf fs-5"></i>
+              <span>بي دي اف</span>
+            </Button>
+            <Dropdown>
+              <Dropdown.Toggle variant="dark" id="dropdown-basic">
+                + إضافة
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                <Dropdown.Item
+                  onClick={() => {
+                    setAddOfficeType("saudi");
+                    setShowAddOfficeModal(true);
+                  }}
+                >
+                  مكتب سعودي جديد
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onClick={() => {
+                    setAddOfficeType("external");
+                    setShowAddOfficeModal(true);
+                  }}
+                >
+                  مكتب خارجي جديد
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onClick={() => {
+                    setAddOfficeType("service");
+                    setShowAddOfficeModal(true);
+                  }}
+                >
+                  مكتب خدمات جديد
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item onClick={handleAddLead}>
+                  عميل تسويقي جديد
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          </div>
         </div>
 
         <MarketingSearchBar

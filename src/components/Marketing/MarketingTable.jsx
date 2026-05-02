@@ -46,6 +46,19 @@ const MarketingTable = ({
     );
   };
 
+  const getTypeLabel = (type) => {
+    switch (type) {
+      case "saudi_office":
+        return "مكتب سعودي";
+      case "external_office":
+        return "مكتب خارجي";
+      case "service_office":
+        return "مكتب خدمات";
+      default:
+        return type;
+    }
+  };
+
   return (
     <div className="table-responsive">
       <Table hover className="mb-0 align-middle">
@@ -72,7 +85,7 @@ const MarketingTable = ({
                 <td>{lead.name}</td>
                 <td dir="ltr">{lead.phone}</td>
                 <td>{lead.source_name || "-"}</td>
-                <td>{lead.type_text}</td>
+                <td>{getTypeLabel(lead.type)}</td>
                 <td>{getStatusBadge(lead.status)}</td>
                 <td>{getPriorityBadge(lead.priority_level)}</td>
                 <td>{lead.contact_date || "-"}</td>

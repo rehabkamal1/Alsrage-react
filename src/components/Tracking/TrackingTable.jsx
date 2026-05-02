@@ -23,34 +23,50 @@ const TrackingTable = ({
   const [dragActive, setDragActive] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Create maps for faster lookups
+  const priorityMap = React.useMemo(() => {
+    return (priorityLevels || []).reduce((acc, p) => {
+      acc[p.value] = p;
+      return acc;
+    }, {});
+  }, [priorityLevels]);
+
+  const passportMap = React.useMemo(() => {
+    return (passportStatuses || []).reduce((acc, s) => {
+      acc[s.value] = s;
+      return acc;
+    }, {});
+  }, [passportStatuses]);
+
+  const transferMap = React.useMemo(() => {
+    return (transferStatuses || []).reduce((acc, s) => {
+      acc[s.value] = s;
+      return acc;
+    }, {});
+  }, [transferStatuses]);
+
   const getPriorityColor = (level) => {
-    const found = priorityLevels?.find((p) => p.value === level);
-    return found?.color || "#e9ecef";
+    return priorityMap[level]?.color || "#e9ecef";
   };
 
   const getPriorityLabel = (level) => {
-    const found = priorityLevels?.find((p) => p.value === level);
-    return found?.label || level;
+    return priorityMap[level]?.label || level;
   };
 
   const getPassportStatusColor = (status) => {
-    const found = passportStatuses?.find((s) => s.value === status);
-    return found?.color || "#6c757d";
+    return passportMap[status]?.color || "#6c757d";
   };
 
   const getPassportStatusLabel = (status) => {
-    const found = passportStatuses?.find((s) => s.value === status);
-    return found?.label || status;
+    return passportMap[status]?.label || status;
   };
 
   const getTransferStatusColor = (status) => {
-    const found = transferStatuses?.find((s) => s.value === status);
-    return found?.color || "#6c757d";
+    return transferMap[status]?.color || "#6c757d";
   };
 
   const getTransferStatusLabel = (status) => {
-    const found = transferStatuses?.find((s) => s.value === status);
-    return found?.label || status;
+    return transferMap[status]?.label || status;
   };
 
   const handleDrag = useCallback((e) => {
@@ -199,7 +215,9 @@ const TrackingTable = ({
                     backgroundColor: `${priorityColor}08`,
                   }}
                 >
-                  <td className="fw-semibold">#{item.order_number}</td>
+                  <td className="fw-semibold">
+                    #{item.order_number || item.order_id}
+                  </td>
                   <td>{item.saudi_office_name || "-"}</td>
                   <td>{item.visa_holder_name || "-"}</td>
                   <td dir="ltr">{item.visa_number || "-"}</td>
@@ -361,6 +379,7 @@ const TrackingTable = ({
         </tbody>
       </Table>
 
+      {/* Image Preview Modal */}
       <Modal
         show={showImageModal}
         onHide={() => setShowImageModal(false)}
@@ -374,6 +393,7 @@ const TrackingTable = ({
         </Modal.Body>
       </Modal>
 
+      {/* Upload Image Modal */}
       <Modal
         show={showUploadModal}
         onHide={() => setShowUploadModal(false)}

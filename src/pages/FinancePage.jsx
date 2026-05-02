@@ -16,6 +16,8 @@ import FinanceSummaryCards from "../components/Finance/FinanceSummaryCards";
 import FinanceSearchBar from "../components/Finance/FinanceSearchBar";
 import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
+import { exportToExcel } from "../utils/excelHelper";
+import { exportToPDF } from "../utils/pdfHelper";
 
 const FinancePage = () => {
   const [transactions, setTransactions] = useState([]);
@@ -48,10 +50,12 @@ const FinancePage = () => {
   useEffect(() => {
     fetchAllData();
     fetchSettings();
+    fetchSummary();
   }, []);
 
   useEffect(() => {
     fetchTransactions();
+    fetchSummary();
   }, [
     searchQuery,
     filters,
@@ -66,6 +70,7 @@ const FinancePage = () => {
     setInitialLoading(true);
     try {
       const ordersRes = await getOrders();
+      console.log("fetchAllData - Orders response:", ordersRes.data);
       setOrders(ordersRes.data.data || []);
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -84,10 +89,16 @@ const FinancePage = () => {
           api.get("/settings/transfer-statuses"),
         ],
       );
-      setPaymentMethods(paymentRes.data.data);
-      setBankNames(bankRes.data.data);
-      setPriorityLevels(priorityRes.data.data);
-      setTransferStatuses(transferRes.data.data);
+      setPaymentMethods(paymentRes.data.data || []);
+      setBankNames(bankRes.data.data || []);
+      setPriorityLevels(priorityRes.data.data || []);
+      setTransferStatuses(transferRes.data.data || []);
+      console.log("Settings loaded:", {
+        paymentMethods,
+        bankNames,
+        priorityLevels,
+        transferStatuses,
+      });
     } catch (error) {
       console.error("Error fetching settings:", error);
     }
@@ -97,21 +108,39 @@ const FinancePage = () => {
     setLoading(true);
     try {
       const params = {
-        search: searchQuery,
-        type: filters.type,
-        status: filters.status,
-        payment_method: filters.payment_method,
-        priority_level: filters.priority_level,
-        from_date: filterFromDate,
-        to_date: filterToDate,
-        sort_field: sortField,
-        sort_direction: sortDirection,
         per_page: itemsPerPage,
         page: currentPage,
+        sort_field: sortField,
+        sort_direction: sortDirection,
       };
+
+      if (searchQuery && searchQuery.trim() !== "") {
+        params.search = searchQuery;
+      }
+      if (filters.type && filters.type !== "") {
+        params.type = filters.type;
+      }
+      if (filters.status && filters.status !== "") {
+        params.status = filters.status;
+      }
+      if (filters.payment_method && filters.payment_method !== "") {
+        params.payment_method = filters.payment_method;
+      }
+      if (filters.priority_level && filters.priority_level !== "") {
+        params.priority_level = filters.priority_level;
+      }
+      if (filterFromDate && filterFromDate.trim() !== "") {
+        params.from_date = filterFromDate;
+      }
+      if (filterToDate && filterToDate.trim() !== "") {
+        params.to_date = filterToDate;
+      }
+
+      console.log("fetchTransactions - Params:", params);
       const response = await getTransactions(params);
-      setTransactions(response.data.data);
-      setFilteredTransactions(response.data.data);
+      console.log("fetchTransactions - Response:", response.data);
+      setTransactions(response.data.data || []);
+      setFilteredTransactions(response.data.data || []);
     } catch (error) {
       console.error("Error fetching transactions:", error);
     } finally {
@@ -122,10 +151,29 @@ const FinancePage = () => {
   const fetchSummary = async () => {
     try {
       const params = {};
-      if (filterFromDate) params.from_date = filterFromDate;
-      if (filterToDate) params.to_date = filterToDate;
+      if (filterFromDate && filterFromDate.trim() !== "") {
+        params.from_date = filterFromDate;
+      }
+      if (filterToDate && filterToDate.trim() !== "") {
+        params.to_date = filterToDate;
+      }
+      console.log("===== fetchSummary START =====");
+      console.log("Params:", params);
+      console.log("filterFromDate:", filterFromDate);
+      console.log("filterToDate:", filterToDate);
+
       const response = await getFinanceSummary(params);
-      setSummary(response.data.data);
+
+      console.log("Raw response:", response);
+      console.log("response.data:", response.data);
+      console.log("response.data.data:", response.data?.data);
+      console.log("===== fetchSummary END =====");
+
+      if (response.data && response.data.data) {
+        setSummary(response.data.data);
+      } else if (response.data) {
+        setSummary(response.data);
+      }
     } catch (error) {
       console.error("Error fetching summary:", error);
     }
@@ -177,18 +225,25 @@ const FinancePage = () => {
     setSubmitError(null);
     try {
       if (editingTransaction) {
-        await updateTransaction(editingTransaction.id, formData);
+        const response = await updateTransaction(
+          editingTransaction.id,
+          formData,
+        );
+        console.log("Update transaction response:", response.data);
         showSuccess("تم التحديث!", "تم تحديث الحوالة بنجاح");
       } else {
-        await createTransaction(formData);
+        const response = await createTransaction(formData);
+        console.log("Create transaction response:", response.data);
         showSuccess("تمت الإضافة!", "تم إضافة الحوالة بنجاح");
       }
       setShowModal(false);
       setEditingTransaction(null);
-      fetchTransactions();
-      fetchSummary();
-      fetchAllData();
+      setCurrentPage(1);
+      await fetchTransactions();
+      await fetchSummary();
+      await fetchAllData();
     } catch (error) {
+      console.error("Submit error:", error.response?.data || error.message);
       setSubmitError(error.response?.data);
       showError(
         "خطأ!",
@@ -212,6 +267,7 @@ const FinancePage = () => {
         fetchTransactions();
         fetchSummary();
       } catch (error) {
+        console.error("Delete error:", error);
         showError("خطأ", "حدث خطأ أثناء الحذف");
       } finally {
         setLoading(false);
@@ -223,6 +279,103 @@ const FinancePage = () => {
     setCurrentPage(1);
     await fetchTransactions();
     await fetchSummary();
+  };
+
+  const handleExportExcel = () => {
+    const columns = [
+      { header: "رقم الطلب", key: "order_id" },
+      {
+        header: "المبلغ",
+        key: "amount",
+        format: (item) => `${item.amount} ريال`,
+      },
+      {
+        header: "النوع",
+        key: "type",
+        format: (item) => (item.type === "receipt" ? "قبض" : "صرف"),
+      },
+      {
+        header: "طريقة الدفع",
+        key: "payment_method",
+        format: (item) => {
+          const found = paymentMethods?.find(
+            (p) => p.value === item.payment_method,
+          );
+          return found?.label || item.payment_method || "-";
+        },
+      },
+      { header: "اسم البنك", key: "bank_name" },
+      { header: "رقم الحوالة", key: "transfer_number" },
+      { header: "تاريخ التحويل", key: "transfer_date" },
+      {
+        header: "الحالة",
+        key: "status",
+        format: (item) => {
+          const found = transferStatuses?.find((s) => s.value === item.status);
+          return found?.label || item.status || "-";
+        },
+      },
+      {
+        header: "درجة الأهمية",
+        key: "priority_level",
+        format: (item) => {
+          const found = priorityLevels?.find(
+            (p) => p.value === item.priority_level,
+          );
+          return found?.label || item.priority_level || "-";
+        },
+      },
+      { header: "الملاحظات", key: "notes" },
+    ];
+    exportToExcel(filteredTransactions, columns, "الحسابات_والحوالات.xlsx");
+  };
+
+  const handleExportPDF = () => {
+    const columns = [
+      { header: "رقم الطلب", key: "order_id" },
+      {
+        header: "المبلغ",
+        key: "amount",
+        format: (item) => `${item.amount} ريال`,
+      },
+      {
+        header: "النوع",
+        key: "type",
+        format: (item) => (item.type === "receipt" ? "قبض" : "صرف"),
+      },
+      {
+        header: "طريقة الدفع",
+        key: "payment_method",
+        format: (item) => {
+          const found = paymentMethods?.find(
+            (p) => p.value === item.payment_method,
+          );
+          return found?.label || item.payment_method || "-";
+        },
+      },
+      { header: "اسم البنك", key: "bank_name" },
+      { header: "رقم الحوالة", key: "transfer_number" },
+      { header: "تاريخ التحويل", key: "transfer_date" },
+      {
+        header: "الحالة",
+        key: "status",
+        format: (item) => {
+          const found = transferStatuses?.find((s) => s.value === item.status);
+          return found?.label || item.status || "-";
+        },
+      },
+      {
+        header: "درجة الأهمية",
+        key: "priority_level",
+        format: (item) => {
+          const found = priorityLevels?.find(
+            (p) => p.value === item.priority_level,
+          );
+          return found?.label || item.priority_level || "-";
+        },
+      },
+    ];
+    exportToPDF(filteredTransactions, columns, "الحسابات_والحوالات.pdf");
   };
 
   const totalPages = Math.ceil(transactions.length / itemsPerPage);
@@ -264,9 +417,34 @@ const FinancePage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">الحسابات والحوالات</h1>
-          <Button variant="dark" onClick={handleAddTransaction}>
-            + حوالة جديدة
-          </Button>
+          <div className="d-flex gap-2">
+            <Button
+              variant="light"
+              onClick={handleExportExcel}
+              disabled={filteredTransactions.length === 0}
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
+            >
+              <i className="fa-solid fa-file-excel fs-5"></i>
+              <span>إكسيل</span>
+            </Button>
+            <Button
+              variant="light"
+              onClick={handleExportPDF}
+              disabled={filteredTransactions.length === 0}
+              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
+            >
+              <i className="fa-solid fa-file-pdf fs-5"></i>
+              <span>بي دي اف</span>
+            </Button>
+            <Button
+              variant="dark"
+              onClick={handleAddTransaction}
+              className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+            >
+              <i className="fa-solid fa-plus"></i>
+              <span>حوالة جديدة</span>
+            </Button>
+          </div>
         </div>
 
         {summary && <FinanceSummaryCards summary={summary} />}
