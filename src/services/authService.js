@@ -23,7 +23,7 @@ const ADMIN_ACCOUNTS = [
 const API_URL = import.meta.env.VITE_API_URL || "https://alserage.alfanar-rec.com/api/public";
 
 const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: "https://alserage.alfanar-rec.com/api",
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
