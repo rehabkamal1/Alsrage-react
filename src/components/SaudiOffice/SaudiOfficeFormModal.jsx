@@ -21,6 +21,7 @@ const SaudiOfficeFormModal = ({
     total_authorization: "",
     musaned_price: "",
     whatsapp_link: "",
+    is_supplier: false,
   });
 
   const [validated, setValidated] = useState(false);
@@ -40,6 +41,7 @@ const SaudiOfficeFormModal = ({
         total_authorization: initialData.total_authorization || "",
         musaned_price: initialData.musaned_price || "",
         whatsapp_link: initialData.whatsapp_link || "",
+        is_supplier: initialData.is_supplier || false,
       });
     } else {
       setFormData({
@@ -54,6 +56,7 @@ const SaudiOfficeFormModal = ({
         total_authorization: "",
         musaned_price: "",
         whatsapp_link: "",
+        is_supplier: false,
       });
     }
     setValidated(false);
@@ -67,8 +70,11 @@ const SaudiOfficeFormModal = ({
   }, [error]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
     }
@@ -327,6 +333,22 @@ const SaudiOfficeFormModal = ({
                 <Form.Control.Feedback type="invalid">
                   {getFieldError("notes")}
                 </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Check 
+                  type="checkbox"
+                  id="is_supplier"
+                  name="is_supplier"
+                  label="تحديد كمورد"
+                  checked={formData.is_supplier}
+                  onChange={handleChange}
+                  className="fw-bold text-primary"
+                />
               </Form.Group>
             </Col>
           </Row>

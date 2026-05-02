@@ -34,6 +34,7 @@ const OrderFormModal = ({
     client_id: "",
     visa_holder_name: "",
     saudi_office_id: "",
+    supplier_id: "",
     external_office_id: "",
     visa_number: "",
     id_number: "",
@@ -81,6 +82,7 @@ const OrderFormModal = ({
           initialData.client?.visa_holder_name ||
           "",
         saudi_office_id: initialData.saudi_office_id || "",
+        supplier_id: initialData.supplier_id || "",
         external_office_id: initialData.external_office_id || "",
         visa_number: initialData.visa_number || "",
         id_number: initialData.id_number || "",
@@ -108,6 +110,7 @@ const OrderFormModal = ({
         client_id: "",
         visa_holder_name: "",
         saudi_office_id: "",
+        supplier_id: "",
         external_office_id: "",
         visa_number: "",
         id_number: "",
@@ -652,6 +655,52 @@ const OrderFormModal = ({
                         {getFieldError("external_office_id") && (
                           <div className="text-danger small mt-1">
                             {getFieldError("external_office_id")}
+                          </div>
+                        )}
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={12}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          المورد
+                        </Form.Label>
+                        <Select
+                          className="react-select-container"
+                          classNamePrefix="react-select"
+                          options={saudiOffices
+                            .filter((o) => o.is_supplier)
+                            .map((office) => ({
+                              value: office.id,
+                              label: office.name,
+                            }))}
+                          value={
+                            saudiOffices.find(
+                              (o) => o.id === formData.supplier_id,
+                            )
+                              ? {
+                                  value: formData.supplier_id,
+                                  label: saudiOffices.find(
+                                    (o) => o.id === formData.supplier_id,
+                                  ).name,
+                                }
+                              : null
+                          }
+                          onChange={(option) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              supplier_id: option ? option.value : "",
+                            }))
+                          }
+                          placeholder="اختر المورد..."
+                          isClearable
+                          isRtl
+                        />
+                        {getFieldError("supplier_id") && (
+                          <div className="text-danger small mt-1">
+                            {getFieldError("supplier_id")}
                           </div>
                         )}
                       </Form.Group>
