@@ -91,7 +91,7 @@ const FinanceTable = ({
                   </span>
                 </td>
                 <td className="fw-semibold">
-                  {transaction.amount?.toFixed(2)} ر.س
+                  {Number(transaction.amount).toFixed(2)} ر.س
                 </td>
                 <td>#{transaction.order_number}</td>
                 <td>{transaction.visa_holder_name || "-"}</td>

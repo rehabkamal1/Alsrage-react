@@ -7,7 +7,6 @@ import {
   Col,
   Tab,
   Tabs,
-  Image,
   InputGroup,
 } from "react-bootstrap";
 import Select from "react-select";
@@ -69,9 +68,9 @@ const OrderFormModal = ({
   const [newClientType, setNewClientType] = useState("individual");
   const [quickCreateLoading, setQuickCreateLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
-  const [saudiOfficeSearch, setSaudiOfficeSearch] = useState("");
-  const [externalOfficeSearch, setExternalOfficeSearch] = useState("");
-  const [attachmentRows, setAttachmentRows] = useState([{ title: "", file: null }]);
+  const [attachmentRows, setAttachmentRows] = useState([
+    { title: "", file: null },
+  ]);
 
   useEffect(() => {
     if (initialData) {
@@ -95,6 +94,8 @@ const OrderFormModal = ({
         musaned_paid: initialData.musaned_paid || "",
         status: initialData.status || "",
         notes: initialData.notes || "",
+        visa_image: null,
+        contract_image: null,
       });
       setPreviewImages({});
       if (initialData.client) {
@@ -102,10 +103,6 @@ const OrderFormModal = ({
           `${initialData.client.name} (${initialData.client.phone})`,
         );
       }
-      setSaudiOfficeSearch(initialData.saudiOffice?.name || initialData.saudi_office?.name || "");
-      setExternalOfficeSearch(
-        initialData.externalOffice?.name || initialData.external_office?.name || "",
-      );
     } else {
       setFormData({
         client_id: "",
@@ -124,11 +121,11 @@ const OrderFormModal = ({
         musaned_paid: "",
         status: "",
         notes: "",
+        visa_image: null,
+        contract_image: null,
       });
       setPreviewImages({});
       setSearchQuery("");
-      setSaudiOfficeSearch("");
-      setExternalOfficeSearch("");
     }
     setAttachmentRows([{ title: "", file: null }]);
     setValidated(false);
@@ -146,7 +143,7 @@ const OrderFormModal = ({
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value || "" }));
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
     }
@@ -255,14 +252,21 @@ const OrderFormModal = ({
         formData[key] !== undefined &&
         key !== "price_difference"
       ) {
-        submitData.append(key, formData[key]);
+        if (key === "status" && (!formData[key] || formData[key] === "")) {
+          submitData.append(key, "");
+        } else {
+          submitData.append(key, formData[key]);
+        }
       }
     });
     submitData.append("price_difference", priceDifference);
     attachmentRows.forEach((item, idx) => {
       if (item.file) {
         submitData.append(`attachment_files[${idx}]`, item.file);
-        submitData.append(`attachment_titles[${idx}]`, item.title || `attachment-${idx + 1}`);
+        submitData.append(
+          `attachment_titles[${idx}]`,
+          item.title || `attachment-${idx + 1}`,
+        );
       }
     });
 
@@ -348,12 +352,24 @@ const OrderFormModal = ({
                     <Form.Label className="fw-semibold small text-secondary">
                       المندوب
                     </Form.Label>
-                    <div className="position-relative">
+                    <div
+                      className="position-relative"
+                      onBlur={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                          setTimeout(() => setShowSearchResults(false), 200);
+                        }
+                      }}
+                    >
                       <Form.Control
                         type="text"
                         placeholder="ابحث عن المندوب برقم الهاتف فقط..."
                         value={searchQuery}
                         onChange={(e) => handleClientSearch(e.target.value)}
+                        onFocus={() => {
+                          if (searchQuery.length >= 2) {
+                            setShowSearchResults(true);
+                          }
+                        }}
                         isInvalid={!!getFieldError("client_id")}
                         className="rounded-3"
                       />
@@ -379,14 +395,17 @@ const OrderFormModal = ({
                                 className="px-3 py-2 border-bottom"
                                 style={{ cursor: "pointer" }}
                                 onClick={() => selectClient(client)}
+                                onMouseDown={(e) => e.preventDefault()}
                               >
-                                <strong>{client.phone}</strong> - {client.name || "بدون اسم"}
+                                <strong>{client.phone}</strong> -{" "}
+                                {client.name || "بدون اسم"}
                               </div>
                             ))}
                             <div
                               className="px-3 py-2 text-primary fw-semibold border-bottom"
                               style={{ cursor: "pointer" }}
                               onClick={() => setShowQuickCreate(true)}
+                              onMouseDown={(e) => e.preventDefault()}
                             >
                               + إضافة مندوب جديد
                             </div>
@@ -402,6 +421,7 @@ const OrderFormModal = ({
                               variant="link"
                               className="p-0"
                               onClick={() => setShowQuickCreate(true)}
+                              onMouseDown={(e) => e.preventDefault()}
                             >
                               + إضافة مندوب جديد
                             </Button>
@@ -439,9 +459,11 @@ const OrderFormModal = ({
                             className="rounded-end-3"
                           />
                         </InputGroup>
-                        {(getFieldError("id_number") || getFieldError("visa_number")) && (
+                        {(getFieldError("id_number") ||
+                          getFieldError("visa_number")) && (
                           <div className="text-danger small mt-1">
-                            {getFieldError("id_number") || getFieldError("visa_number")}
+                            {getFieldError("id_number") ||
+                              getFieldError("visa_number")}
                           </div>
                         )}
                       </Form.Group>
@@ -560,17 +582,36 @@ const OrderFormModal = ({
                         <Select
                           className="react-select-container"
                           classNamePrefix="react-select"
-                          options={saudiOffices.map(office => ({ value: office.id, label: office.name }))}
-                          value={saudiOffices.find(o => o.id === formData.saudi_office_id) ? { value: formData.saudi_office_id, label: saudiOffices.find(o => o.id === formData.saudi_office_id).name } : null}
-                          onChange={(option) => {
-                            setFormData(prev => ({ ...prev, saudi_office_id: option ? option.value : "" }));
-                          }}
+                          options={saudiOffices.map((office) => ({
+                            value: office.id,
+                            label: office.name,
+                          }))}
+                          value={
+                            saudiOffices.find(
+                              (o) => o.id === formData.saudi_office_id,
+                            )
+                              ? {
+                                  value: formData.saudi_office_id,
+                                  label: saudiOffices.find(
+                                    (o) => o.id === formData.saudi_office_id,
+                                  ).name,
+                                }
+                              : null
+                          }
+                          onChange={(option) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              saudi_office_id: option ? option.value : "",
+                            }))
+                          }
                           placeholder="اختر المكتب السعودي..."
                           isClearable
                           isRtl
                         />
                         {getFieldError("saudi_office_id") && (
-                          <div className="text-danger small mt-1">{getFieldError("saudi_office_id")}</div>
+                          <div className="text-danger small mt-1">
+                            {getFieldError("saudi_office_id")}
+                          </div>
                         )}
                       </Form.Group>
                     </Col>
@@ -582,17 +623,36 @@ const OrderFormModal = ({
                         <Select
                           className="react-select-container"
                           classNamePrefix="react-select"
-                          options={externalOffices.map(office => ({ value: office.id, label: office.name }))}
-                          value={externalOffices.find(o => o.id === formData.external_office_id) ? { value: formData.external_office_id, label: externalOffices.find(o => o.id === formData.external_office_id).name } : null}
-                          onChange={(option) => {
-                            setFormData(prev => ({ ...prev, external_office_id: option ? option.value : "" }));
-                          }}
+                          options={externalOffices.map((office) => ({
+                            value: office.id,
+                            label: office.name,
+                          }))}
+                          value={
+                            externalOffices.find(
+                              (o) => o.id === formData.external_office_id,
+                            )
+                              ? {
+                                  value: formData.external_office_id,
+                                  label: externalOffices.find(
+                                    (o) => o.id === formData.external_office_id,
+                                  ).name,
+                                }
+                              : null
+                          }
+                          onChange={(option) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              external_office_id: option ? option.value : "",
+                            }))
+                          }
                           placeholder="اختر المكتب الخارجي..."
                           isClearable
                           isRtl
                         />
                         {getFieldError("external_office_id") && (
-                          <div className="text-danger small mt-1">{getFieldError("external_office_id")}</div>
+                          <div className="text-danger small mt-1">
+                            {getFieldError("external_office_id")}
+                          </div>
                         )}
                       </Form.Group>
                     </Col>
@@ -625,17 +685,36 @@ const OrderFormModal = ({
                         <Select
                           className="react-select-container"
                           classNamePrefix="react-select"
-                          options={statusOptions.map(status => ({ value: status.key || status.id, label: status.label }))}
-                          value={statusOptions.find(s => (s.key || s.id) === formData.status) ? { value: formData.status, label: statusOptions.find(s => (s.key || s.id) === formData.status).label } : null}
-                          onChange={(option) => {
-                            setFormData(prev => ({ ...prev, status: option ? option.value : "" }));
-                          }}
+                          options={statusOptions.map((status) => ({
+                            value: status.key || status.id,
+                            label: status.label,
+                          }))}
+                          value={
+                            formData.status && formData.status !== ""
+                              ? {
+                                  value: formData.status,
+                                  label:
+                                    statusOptions.find(
+                                      (s) =>
+                                        (s.key || s.id) === formData.status,
+                                    )?.label || formData.status,
+                                }
+                              : null
+                          }
+                          onChange={(option) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              status: option ? option.value : "",
+                            }))
+                          }
                           placeholder="اختر الحالة..."
                           isClearable
                           isRtl
                         />
                         {getFieldError("status") && (
-                          <div className="text-danger small mt-1">{getFieldError("status")}</div>
+                          <div className="text-danger small mt-1">
+                            {getFieldError("status")}
+                          </div>
                         )}
                       </Form.Group>
                     </Col>
@@ -724,54 +803,57 @@ const OrderFormModal = ({
               <Tab eventKey="images" title="الصور والمرفقات">
                 <div className="mt-3">
                   <div className="alert alert-info border-0 rounded-3 small">
-                    💡 يمكنك إضافة عدة مرفقات وتسميتها (مثال: صورة الجواز، صورة الهوية، إلخ...)
+                    💡 يمكنك إضافة عدة مرفقات وتسميتها (مثال: صورة الجواز، صورة
+                    الهوية، إلخ...)
                   </div>
 
                   {attachmentRows.map((row, index) => (
                     <div
                       key={`attachment-${index}`}
                       className="attachment-row p-4 mb-3 border rounded-4 bg-white shadow-sm border-light position-relative overflow-hidden"
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.classList.add('border-primary', 'bg-light');
-                      }}
-                      onDragLeave={(e) => {
-                        e.currentTarget.classList.remove('border-primary', 'bg-light');
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.classList.remove('border-primary', 'bg-light');
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) {
-                          updateAttachmentRow(index, "file", file);
-                        }
-                      }}
                     >
-                      <div className="position-absolute top-0 start-0 w-100 h-1 bg-primary bg-opacity-25" style={{ height: '4px' }}></div>
+                      <div
+                        className="position-absolute top-0 start-0 w-100 h-1 bg-primary bg-opacity-25"
+                        style={{ height: "4px" }}
+                      ></div>
                       <Row className="align-items-end g-3">
                         <Col md={5}>
                           <Form.Group>
-                            <Form.Label className="fw-bold small text-dark mb-2">🏷️ عنوان المرفق</Form.Label>
+                            <Form.Label className="fw-bold small text-dark mb-2">
+                              🏷️ عنوان المرفق
+                            </Form.Label>
                             <Form.Control
                               type="text"
                               value={row.title}
-                              onChange={(e) => updateAttachmentRow(index, "title", e.target.value)}
+                              onChange={(e) =>
+                                updateAttachmentRow(
+                                  index,
+                                  "title",
+                                  e.target.value,
+                                )
+                              }
                               placeholder="مثال: صورة الجواز، صورة الهوية..."
                               className="rounded-3 border-light-subtle shadow-none"
-                              style={{ backgroundColor: '#fcfcfc' }}
                             />
                           </Form.Group>
                         </Col>
                         <Col md={5}>
                           <Form.Group>
-                            <Form.Label className="fw-bold small text-dark mb-2">📁 اختيار الملف</Form.Label>
+                            <Form.Label className="fw-bold small text-dark mb-2">
+                              📁 اختيار الملف
+                            </Form.Label>
                             <div className="custom-file-upload">
                               <Form.Control
                                 type="file"
                                 accept="image/*,application/pdf"
-                                onChange={(e) => updateAttachmentRow(index, "file", e.target.files?.[0] || null)}
+                                onChange={(e) =>
+                                  updateAttachmentRow(
+                                    index,
+                                    "file",
+                                    e.target.files?.[0] || null,
+                                  )
+                                }
                                 className="rounded-3 border-light-subtle shadow-none"
-                                style={{ backgroundColor: '#fcfcfc' }}
                               />
                             </div>
                           </Form.Group>
@@ -780,7 +862,11 @@ const OrderFormModal = ({
                           <Button
                             variant="link"
                             className="w-100 text-danger text-decoration-none fw-semibold"
-                            disabled={attachmentRows.length === 1 && !row.file && !row.title}
+                            disabled={
+                              attachmentRows.length === 1 &&
+                              !row.file &&
+                              !row.title
+                            }
                             onClick={() => removeAttachmentRow(index)}
                           >
                             🗑️ إزالة
@@ -789,8 +875,12 @@ const OrderFormModal = ({
                       </Row>
                       {row.file && (
                         <div className="mt-3 p-2 rounded-3 bg-success bg-opacity-10 border border-success border-opacity-10 d-flex align-items-center gap-2">
-                          <span className="text-success small fw-bold">✅ تم اختيار: {row.file.name}</span>
-                          <span className="text-muted extra-small">({(row.file.size / 1024).toFixed(1)} KB)</span>
+                          <span className="text-success small fw-bold">
+                            ✅ تم اختيار: {row.file.name}
+                          </span>
+                          <span className="text-muted extra-small">
+                            ({(row.file.size / 1024).toFixed(1)} KB)
+                          </span>
                         </div>
                       )}
                     </div>
@@ -885,7 +975,8 @@ const OrderFormModal = ({
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="fw-semibold small text-secondary">
-              رقم الهاتف <span className="text-danger small">(يجب أن يكون فريداً)</span>
+              رقم الهاتف{" "}
+              <span className="text-danger small">(يجب أن يكون فريداً)</span>
             </Form.Label>
             <Form.Control
               type="text"

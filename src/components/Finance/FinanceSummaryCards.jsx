@@ -2,6 +2,12 @@ import React from "react";
 import { Row, Col, Card } from "react-bootstrap";
 
 const FinanceSummaryCards = ({ summary }) => {
+  console.log("===== FinanceSummaryCards RENDER =====");
+  console.log("summary prop:", summary);
+  console.log("total_receipts:", summary?.total_receipts);
+  console.log("total_payments:", summary?.total_payments);
+  console.log("net_profit:", summary?.net_profit);
+
   return (
     <Row className="g-4 mb-4">
       <Col md={4}>

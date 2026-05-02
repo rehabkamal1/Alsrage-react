@@ -49,25 +49,53 @@ const SettingsPage = () => {
         api.get("/settings/order-statuses"),
       ]);
       setPriorityLevels(
-        priorityRes.data.data.map((item) => ({ ...item, isNew: false })),
+        priorityRes.data.data.map((item) => ({
+          ...item,
+          isNew: false,
+          uniqueId: Date.now() + Math.random(),
+        })),
       );
       setPassportStatuses(
-        passportRes.data.data.map((item) => ({ ...item, isNew: false })),
+        passportRes.data.data.map((item) => ({
+          ...item,
+          isNew: false,
+          uniqueId: Date.now() + Math.random(),
+        })),
       );
       setTransferStatuses(
-        transferRes.data.data.map((item) => ({ ...item, isNew: false })),
+        transferRes.data.data.map((item) => ({
+          ...item,
+          isNew: false,
+          uniqueId: Date.now() + Math.random(),
+        })),
       );
       setPaymentMethods(
-        paymentRes.data.data.map((item) => ({ ...item, isNew: false })),
+        paymentRes.data.data.map((item) => ({
+          ...item,
+          isNew: false,
+          uniqueId: Date.now() + Math.random(),
+        })),
       );
       setBankNames(
-        bankRes.data.data.map((item) => ({ ...item, isNew: false })),
+        bankRes.data.data.map((item) => ({
+          ...item,
+          isNew: false,
+          uniqueId: Date.now() + Math.random(),
+        })),
       );
       setMarketingStatuses(
-        marketingRes.data.data.map((item) => ({ ...item, isNew: false })),
+        marketingRes.data.data.map((item) => ({
+          ...item,
+          isNew: false,
+          uniqueId: Date.now() + Math.random(),
+        })),
       );
       setOrderStatuses(
-        orderRes.data.data.map((item) => ({ ...item, isNew: false })),
+        orderRes.data.data.map((item) => ({
+          ...item,
+          isNew: false,
+          uniqueId: Date.now() + Math.random(),
+        })),
       );
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -87,6 +115,7 @@ const SettingsPage = () => {
         sort_order: prev.length + 1,
         is_active: true,
         isNew: true,
+        uniqueId: Date.now() + Math.random(),
       },
     ]);
   };
@@ -127,7 +156,7 @@ const SettingsPage = () => {
   const updateItem = (setter, index, field, value) => {
     setter((prev) => {
       const updated = [...prev];
-      updated[index][field] = value;
+      updated[index] = { ...updated[index], [field]: value };
       if (
         field === "label" &&
         value &&
