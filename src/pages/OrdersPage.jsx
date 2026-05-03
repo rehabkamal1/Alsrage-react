@@ -162,7 +162,26 @@ const OrdersPage = () => {
   };
 
 
+  const handleStatusChange = async (order, newStatus) => {
+    setLoading(true);
+    try {
+      const response = await updateOrder(order.id, { status: newStatus });
+      showSuccess("تم تحديث الحالة!", "تم تغيير حالة الطلب بنجاح");
+      
+      const updatedOrder = response.data?.data || { ...order, status: newStatus };
+      handleWhatsAppNotification(updatedOrder, newStatus);
+      
+      fetchAllData();
+    } catch (error) {
+      console.error("Error updating status:", error);
+      showError("خطأ!", "حدث خطأ أثناء تحديث الحالة");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (formData) => {
+
     setLoading(true);
     setSubmitError(null);
     try {
@@ -277,9 +296,9 @@ const OrdersPage = () => {
         }}
       >
         <Container fluid>
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
             <h1 className="h3 mb-0 fw-bold">الطلبات</h1>
-            <Button variant="dark" disabled>
+            <Button variant="dark" disabled className="w-fit">
               + طلب جديد
             </Button>
           </div>
@@ -302,9 +321,9 @@ const OrdersPage = () => {
       }}
     >
       <Container fluid>
-        <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
           <h1 className="h3 mb-0 fw-bold">الطلبات</h1>
-          <div className="d-flex gap-2">
+          <div className="d-flex flex-wrap gap-2">
             <Button
               variant="light"
               onClick={handleExport}
@@ -358,6 +377,7 @@ const OrdersPage = () => {
                   orders={orders}
                   onEdit={handleEditOrder}
                   onDelete={handleDeleteOrder}
+                  onStatusChange={handleStatusChange}
                   statusOptions={orderStatuses}
                 />
                 {totalPages > 1 && (

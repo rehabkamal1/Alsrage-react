@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Button } from "react-bootstrap";
 import Sidebar from "./Sidebar";
 import ClientsPage from "../pages/ClientsPage";
 import SaudiOfficesPage from "../pages/SaudiOfficesPage";
@@ -14,6 +15,7 @@ import MarketingPage from "../pages/MarketingPage";
 
 const DashboardLayout = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -45,13 +47,39 @@ const DashboardLayout = ({ user, onLogout }) => {
   };
 
   return (
-    <div className="dashboard-container">
+    <div className={`dashboard-container ${isSidebarOpen ? "sidebar-open" : ""}`}>
       <Sidebar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          setIsSidebarOpen(false); // Close on mobile after selection
+        }}
         onLogout={onLogout}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
-      <main className="content-area">{renderContent()}</main>
+      <main className="content-area">
+        <div className="mobile-top-bar d-lg-none shadow-sm mb-3">
+          <Button 
+            variant="link" 
+            className="text-dark p-0" 
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            <i className="fa-solid fa-bars fs-4"></i>
+          </Button>
+          <div className="fw-bold text-primary fs-5">السراج</div>
+          <div style={{ width: '24px' }}></div> {/* Spacer */}
+        </div>
+        {renderContent()}
+      </main>
+      
+      {/* Overlay for mobile */}
+      {isSidebarOpen && (
+        <div 
+          className="sidebar-overlay d-lg-none" 
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
     </div>
   );
 };

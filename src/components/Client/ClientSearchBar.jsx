@@ -19,54 +19,44 @@ const ClientSearchBar = ({
     control: (base) => ({
       ...base,
       borderRadius: "8px",
-      minWidth: "180px",
+      minWidth: window.innerWidth < 768 ? "100%" : "180px",
     }),
   };
 
   return (
     <Form onSubmit={handleSubmit} className="mb-4">
-      <InputGroup>
+      <InputGroup className="shadow-sm rounded-3 overflow-hidden">
         <Form.Control
           type="text"
           placeholder="ابحث باسم العميل أو رقم الهاتف..."
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
-          className="rounded-3"
+          className="border-0 py-2 px-3"
         />
         {searchQuery && (
           <Button
-            variant="outline-secondary"
+            variant="white"
             onClick={onClear}
-            className="rounded-3"
+            className="border-0 text-muted"
           >
-            مسح
+            <i className="fa-solid fa-xmark"></i>
           </Button>
         )}
         <Button
           type="submit"
           variant="dark"
           disabled={loading}
-          className="rounded-3"
+          className="px-4 border-0"
         >
           {loading ? (
-            <>
-              <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-                className="me-1"
-              />
-              جاري البحث...
-            </>
+            <Spinner as="span" animation="border" size="sm" />
           ) : (
-            "بحث"
+            <i className="fa-solid fa-magnifying-glass"></i>
           )}
         </Button>
       </InputGroup>
-      <div className="d-flex gap-2 mt-2 flex-wrap align-items-center">
-        <div style={{ minWidth: "180px" }}>
+      <div className="d-flex flex-wrap gap-2 mt-3">
+        <div className="flex-grow-1" style={{ minWidth: "160px" }}>
           <Select
             options={[
               { value: "", label: "كل الأنواع" },
@@ -84,7 +74,7 @@ const ClientSearchBar = ({
           />
         </div>
 
-        <div style={{ minWidth: "180px" }}>
+        <div className="flex-grow-1" style={{ minWidth: "160px" }}>
           <Select
             options={[
               { value: "created_at", label: "ترتيب حسب تاريخ الإضافة" },
@@ -106,7 +96,7 @@ const ClientSearchBar = ({
           />
         </div>
 
-        <div style={{ minWidth: "180px" }}>
+        <div className="flex-grow-1" style={{ minWidth: "120px" }}>
           <Select
             options={[
               { value: "desc", label: "الأحدث/تنازلي" },
@@ -122,6 +112,7 @@ const ClientSearchBar = ({
           />
         </div>
       </div>
+
     </Form>
   );
 };
