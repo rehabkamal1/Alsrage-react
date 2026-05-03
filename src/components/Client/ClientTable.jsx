@@ -22,11 +22,11 @@ const ClientTable = ({ clients, onEdit, onDelete }) => {
             <tr key={client.id}>
               <td>
                 <span
-                  className={`badge ${client.client_type === "مكتب خدمات" ? "bg-warning rounded-pill px-3 py-2" : "bg-success rounded-pill px-3 py-2"}`}
+                  className={`badge ${client.client_type === "office" ? "bg-warning rounded-pill px-3 py-2" : "bg-success rounded-pill px-3 py-2"}`}
                 >
-                  {client.client_type === "مكتب خدمات"
-                    ? "مكتب خدمات"
-                    : "عميل فردي"}
+                  {client.client_type === "office"
+                    ? "🏢 مكتب خدمات"
+                    : "👤 عميل فردي"}
                 </span>
               </td>
               <td className="fw-semibold">{client.name}</td>

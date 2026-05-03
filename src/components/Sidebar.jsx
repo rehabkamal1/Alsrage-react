@@ -1,6 +1,7 @@
 import React from "react";
+import { Button } from "react-bootstrap";
 
-const Sidebar = ({ activeTab, onTabChange, onLogout }) => {
+const Sidebar = ({ activeTab, onTabChange, onLogout, isOpen, onClose }) => {
   const menuItems = [
     {
       id: "dashboard",
@@ -235,10 +236,21 @@ const Sidebar = ({ activeTab, onTabChange, onLogout }) => {
   ];
 
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isOpen ? "open" : ""}`}>
       <div className="sidebar-header">
-        <h2>السراج</h2>
-        <p>للإستقدام</p>
+        <div className="d-flex justify-content-between align-items-center w-100">
+          <div>
+            <h2>السراج</h2>
+            <p>للإستقدام</p>
+          </div>
+          <Button 
+            variant="link" 
+            className="text-white d-lg-none p-0" 
+            onClick={onClose}
+          >
+            <i className="fa-solid fa-xmark fs-4"></i>
+          </Button>
+        </div>
       </div>
       <nav className="sidebar-nav">
         {menuItems.map((item) => (

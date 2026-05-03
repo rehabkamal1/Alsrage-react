@@ -12,6 +12,7 @@ import {
   Filler
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
+import { Table, Badge, Button } from 'react-bootstrap';
 import { getClients, getOrders, getEmployees, getSaudiOffices, getExternalOffices } from '../services/apiService';
 
 // Register ChartJS components
@@ -66,6 +67,22 @@ const DashboardPage = () => {
 
     fetchDashboardData();
   }, []);
+
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      'pending': { label: 'قيد الانتظار', bg: 'warning' },
+      'processing': { label: 'تحت المعالجة', bg: 'info' },
+      'completed': { label: 'مكتمل', bg: 'success' },
+      'cancelled': { label: 'ملغي', bg: 'danger' },
+      'musaned_paid': { label: 'تم سداد مساند', bg: 'primary' },
+    };
+    const config = statusMap[status] || { label: status, bg: 'secondary' };
+    return (
+      <Badge bg={config.bg} className="rounded-pill px-3 py-2 fw-semibold shadow-sm" style={{ fontSize: '0.75rem' }}>
+        {config.label}
+      </Badge>
+    );
+  };
 
   // Chart Data
   const lineData = {
@@ -199,38 +216,58 @@ const DashboardPage = () => {
       </div>
 
       {/* Recent Activity */}
-      <div className="card">
-        <h3>آخر الطلبات المضافة</h3>
-        <div className="table-container">
-          <table>
-            <thead>
+      <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div className="card-header bg-white border-0 py-3 px-4 d-flex justify-content-between align-items-center">
+          <h3 className="h5 fw-bold mb-0 text-dark">آخر الطلبات المضافة</h3>
+          <Button variant="link" className="text-decoration-none text-primary fw-semibold p-0">عرض الكل</Button>
+        </div>
+        <div className="table-responsive">
+          <Table hover className="align-middle mb-0">
+            <thead className="bg-light">
               <tr>
-                <th>العميل</th>
-                <th>المكتب</th>
-                <th>الحالة</th>
-                <th>التاريخ</th>
+                <th className="border-0 px-4 py-3 text-muted small fw-bold">العميل</th>
+                <th className="border-0 px-4 py-3 text-muted small fw-bold">المكتب السعودي</th>
+                <th className="border-0 px-4 py-3 text-muted small fw-bold text-center">الحالة</th>
+                <th className="border-0 px-4 py-3 text-muted small fw-bold text-center">التاريخ</th>
+                <th className="border-0 px-4 py-3 text-muted small fw-bold text-end">الإجراء</th>
               </tr>
             </thead>
             <tbody>
               {recentOrders.map(order => (
-                <tr key={order.id}>
-                  <td>{order.client?.name}</td>
-                  <td>{order.saudi_office?.name || '-'}</td>
-                  <td>
-                    <span className={`badge badge-${order.status}`}>
-                      {order.status === 'pending' ? 'قيد الانتظار' : order.status}
-                    </span>
+                <tr key={order.id} className="transition-all hover-bg-light">
+                  <td className="px-4 py-3 border-light">
+                    <div className="fw-bold text-dark">{order.client?.name || '-'}</div>
+                    <div className="text-muted small">{order.client?.phone || ''}</div>
                   </td>
-                  <td>{new Date(order.created_at).toLocaleDateString('ar-EG')}</td>
+                  <td className="px-4 py-3 border-light fw-medium text-secondary">
+                    {order.saudi_office?.name || '-'}
+                  </td>
+                  <td className="px-4 py-3 border-light text-center">
+                    {getStatusBadge(order.status)}
+                  </td>
+                  <td className="px-4 py-3 border-light text-center small text-muted">
+                    {new Date(order.created_at).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
+                  </td>
+                  <td className="px-4 py-3 border-light text-end">
+                    <Button 
+                      variant="light" 
+                      size="sm" 
+                      className="rounded-circle shadow-sm border"
+                      style={{ width: '32px', height: '32px', padding: 0 }}
+                      title="عرض التفاصيل"
+                    >
+                      <i className="fa-solid fa-eye text-primary small"></i>
+                    </Button>
+                  </td>
                 </tr>
               ))}
               {recentOrders.length === 0 && (
                 <tr>
-                  <td colSpan="4" style={{ textAlign: 'center' }}>لا يوجد طلبات حديثة</td>
+                  <td colSpan="5" className="text-center py-5 text-muted">لا يوجد طلبات حديثة</td>
                 </tr>
               )}
             </tbody>
-          </table>
+          </Table>
         </div>
       </div>
     </div>

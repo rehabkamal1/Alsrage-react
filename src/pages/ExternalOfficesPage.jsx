@@ -207,9 +207,9 @@ const ExternalOfficesPage = () => {
       }}
     >
       <Container fluid>
-        <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
           <h1 className="h3 mb-0 fw-bold">المكاتب الخارجية</h1>
-          <div className="d-flex gap-2">
+          <div className="d-flex flex-wrap gap-2">
             <Button
               variant="light"
               onClick={handleExport}
