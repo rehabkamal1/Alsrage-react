@@ -10,6 +10,7 @@ import {
 } from "../services/apiService";
 import api from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
+import { sendWhatsAppNotification } from "../utils/sendWhatsAppNotification";
 import FinanceFormModal from "../components/Finance/FinanceFormModal";
 import FinanceTable from "../components/Finance/FinanceTable";
 import FinanceSummaryCards from "../components/Finance/FinanceSummaryCards";
@@ -45,17 +46,16 @@ const FinancePage = () => {
   const [sortDirection, setSortDirection] = useState("desc");
   const [filterFromDate, setFilterFromDate] = useState("");
   const [filterToDate, setFilterToDate] = useState("");
+  const [allTransactionsData, setAllTransactionsData] = useState([]);
   const itemsPerPage = 10;
 
   useEffect(() => {
     fetchAllData();
     fetchSettings();
-    fetchSummary();
   }, []);
 
   useEffect(() => {
     fetchTransactions();
-    fetchSummary();
   }, [
     searchQuery,
     filters,
@@ -70,7 +70,6 @@ const FinancePage = () => {
     setInitialLoading(true);
     try {
       const ordersRes = await getOrders();
-      console.log("fetchAllData - Orders response:", ordersRes.data);
       setOrders(ordersRes.data.data || []);
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -89,27 +88,83 @@ const FinancePage = () => {
           api.get("/settings/transfer-statuses"),
         ],
       );
-      setPaymentMethods(paymentRes.data.data || []);
-      setBankNames(bankRes.data.data || []);
-      setPriorityLevels(priorityRes.data.data || []);
-      setTransferStatuses(transferRes.data.data || []);
-      console.log("Settings loaded:", {
-        paymentMethods,
-        bankNames,
-        priorityLevels,
-        transferStatuses,
-      });
+
+      setPaymentMethods(
+        (paymentRes.data.data || []).map((item) => ({
+          value: item.value || item.key,
+          label: item.label,
+          color: item.color || "#6c757d",
+        })),
+      );
+
+      setBankNames(
+        (bankRes.data.data || []).map((item) => ({
+          value: item.value || item.key,
+          label: item.label,
+          color: item.color || "#6c757d",
+        })),
+      );
+
+      setPriorityLevels(
+        (priorityRes.data.data || []).map((item) => ({
+          value: item.value || item.key,
+          label: item.label,
+          color: item.color || "#6c757d",
+        })),
+      );
+
+      setTransferStatuses(
+        (transferRes.data.data || []).map((item) => ({
+          value: item.value || item.key,
+          label: item.label,
+          color: item.color || "#6c757d",
+        })),
+      );
     } catch (error) {
       console.error("Error fetching settings:", error);
     }
+  };
+
+  const enrichTransactionWithOrderData = (transactionsData) => {
+    console.log("========== enrichTransactionWithOrderData ==========");
+    console.log("Orders available:", orders);
+
+    return transactionsData.map((item) => {
+      const order = orders.find((o) => o.id === item.order_id);
+      console.log(
+        `Processing transaction ${item.id}, order_id: ${item.order_id}`,
+      );
+      console.log(`Found order:`, order);
+
+      if (order) {
+        const enriched = {
+          ...item,
+          visa_holder_name:
+            order.visa_holder_name || order.client?.visa_holder_name || "-",
+          visa_number: order.visa_number || "-",
+          client_name: order.client?.name,
+          client_phone: order.client?.phone || order.client?.mobile,
+          order_number: order.id,
+        };
+        console.log(`Enriched visa_holder_name:`, enriched.visa_holder_name);
+        console.log(`Enriched transfer_number:`, enriched.transfer_number);
+        return enriched;
+      }
+      return {
+        ...item,
+        visa_holder_name: "-",
+        visa_number: "-",
+        order_number: item.order_id,
+      };
+    });
   };
 
   const fetchTransactions = async () => {
     setLoading(true);
     try {
       const params = {
-        per_page: itemsPerPage,
-        page: currentPage,
+        per_page: 1000,
+        page: 1,
         sort_field: sortField,
         sort_direction: sortDirection,
       };
@@ -136,11 +191,44 @@ const FinancePage = () => {
         params.to_date = filterToDate;
       }
 
-      console.log("fetchTransactions - Params:", params);
       const response = await getTransactions(params);
-      console.log("fetchTransactions - Response:", response.data);
-      setTransactions(response.data.data || []);
-      setFilteredTransactions(response.data.data || []);
+      const transactionsData = response.data.data || [];
+      console.log("Raw transactions data from API:", transactionsData);
+
+      if (transactionsData.length > 0) {
+        console.log("First transaction:", transactionsData[0]);
+        console.log(
+          "transfer_number in API:",
+          transactionsData[0].transfer_number,
+        );
+        console.log(
+          "visa_holder_name in API:",
+          transactionsData[0].visa_holder_name,
+        );
+      }
+
+      const enrichedData = enrichTransactionWithOrderData(transactionsData);
+      console.log("Enriched transactions data:", enrichedData);
+
+      if (enrichedData.length > 0) {
+        console.log("First enriched transaction:", enrichedData[0]);
+        console.log(
+          "transfer_number after enrich:",
+          enrichedData[0].transfer_number,
+        );
+        console.log(
+          "visa_holder_name after enrich:",
+          enrichedData[0].visa_holder_name,
+        );
+      }
+
+      setAllTransactionsData(enrichedData);
+
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const paginatedData = enrichedData.slice(start, end);
+      setTransactions(paginatedData);
+      setFilteredTransactions(paginatedData);
     } catch (error) {
       console.error("Error fetching transactions:", error);
     } finally {
@@ -157,17 +245,8 @@ const FinancePage = () => {
       if (filterToDate && filterToDate.trim() !== "") {
         params.to_date = filterToDate;
       }
-      console.log("===== fetchSummary START =====");
-      console.log("Params:", params);
-      console.log("filterFromDate:", filterFromDate);
-      console.log("filterToDate:", filterToDate);
 
       const response = await getFinanceSummary(params);
-
-      console.log("Raw response:", response);
-      console.log("response.data:", response.data);
-      console.log("response.data.data:", response.data?.data);
-      console.log("===== fetchSummary END =====");
 
       if (response.data && response.data.data) {
         setSummary(response.data.data);
@@ -176,6 +255,61 @@ const FinancePage = () => {
       }
     } catch (error) {
       console.error("Error fetching summary:", error);
+    }
+  };
+
+  const getFieldLabel = (field) => {
+    const labels = {
+      payment_method: "طريقة الدفع",
+      bank_name: "بنك المستفيد",
+      status: "حالة الحوالة",
+      priority_level: "درجة الأهمية",
+    };
+    return labels[field] || field;
+  };
+
+  const handleUpdateField = async (transactionId, field, value) => {
+    setLoading(true);
+    try {
+      const oldTransaction = allTransactionsData.find(
+        (t) => t.id === transactionId,
+      );
+      const oldStatus = oldTransaction?.status;
+
+      const response = await updateTransaction(transactionId, {
+        [field]: value,
+      });
+      showSuccess("تم", `تم تحديث ${getFieldLabel(field)} بنجاح`);
+
+      const updatedTransaction = response.data?.data || {
+        ...oldTransaction,
+        [field]: value,
+      };
+
+      await fetchTransactions();
+      await fetchSummary();
+
+      if (field === "status" && oldStatus && oldStatus !== value) {
+        const updated = allTransactionsData.find((t) => t.id === transactionId);
+        if (updated) {
+          await sendWhatsAppNotification(
+            updated,
+            oldStatus,
+            value,
+            orders,
+            paymentMethods,
+            transferStatuses,
+            allTransactionsData,
+          );
+        }
+      }
+    } catch (error) {
+      showError(
+        "خطأ",
+        error.response?.data?.message || "حدث خطأ أثناء التحديث",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -215,44 +349,80 @@ const FinancePage = () => {
   };
 
   const handleEditTransaction = (transaction) => {
+    console.log("========== handleEditTransaction ==========");
+    console.log("Original transaction from table:", transaction);
+    console.log("transaction.transfer_number:", transaction.transfer_number);
+    console.log("transaction.visa_holder_name:", transaction.visa_holder_name);
+
     setEditingTransaction(transaction);
     setSubmitError(null);
     setShowModal(true);
   };
 
-  const handleSubmit = async (formData) => {
-    setLoading(true);
-    setSubmitError(null);
-    try {
-      if (editingTransaction) {
-        const response = await updateTransaction(
-          editingTransaction.id,
-          formData,
+const handleSubmit = async (formData) => {
+  setLoading(true);
+  setSubmitError(null);
+  try {
+    if (editingTransaction) {
+      const oldTransaction = allTransactionsData.find(
+        (t) => t.id === editingTransaction.id,
+      );
+      const oldStatus = oldTransaction?.status;
+      const newStatus = formData.status;
+
+      const response = await updateTransaction(editingTransaction.id, formData);
+      showSuccess("تم التحديث!", "تم تحديث الحوالة بنجاح");
+
+      await fetchTransactions();
+      await fetchSummary();
+
+      if (oldStatus && newStatus && oldStatus !== newStatus) {
+        const updated = allTransactionsData.find(
+          (t) => t.id === editingTransaction.id,
         );
-        console.log("Update transaction response:", response.data);
-        showSuccess("تم التحديث!", "تم تحديث الحوالة بنجاح");
-      } else {
-        const response = await createTransaction(formData);
-        console.log("Create transaction response:", response.data);
-        showSuccess("تمت الإضافة!", "تم إضافة الحوالة بنجاح");
+        if (updated) {
+          await sendWhatsAppNotification(
+            updated,
+            oldStatus,
+            newStatus,
+            orders,
+            paymentMethods,
+            transferStatuses,
+            allTransactionsData,
+          );
+        }
       }
-      setShowModal(false);
-      setEditingTransaction(null);
-      setCurrentPage(1);
+    } else {
+      const response = await createTransaction(formData);
+      showSuccess("تمت الإضافة!", "تم إضافة الحوالة بنجاح");
+
       await fetchTransactions();
       await fetchSummary();
       await fetchAllData();
-    } catch (error) {
-      console.error("Submit error:", error.response?.data || error.message);
-      setSubmitError(error.response?.data);
-      showError(
-        "خطأ!",
-        error.response?.data?.message || "حدث خطأ أثناء العملية",
-      );
-    } finally {
-      setLoading(false);
+
+      const newTransaction = response.data?.data;
+      if (newTransaction && newTransaction.status) {
+        await sendWhatsAppNotification(
+          newTransaction,
+          null,
+          newTransaction.status,
+          orders,
+          paymentMethods,
+          transferStatuses,
+          allTransactionsData,
+        );
+      }
     }
-  };
+    setShowModal(false);
+    setEditingTransaction(null);
+    setCurrentPage(1);
+  } catch (error) {
+    setSubmitError(error.response?.data);
+    showError("خطأ!", error.response?.data?.message || "حدث خطأ أثناء العملية");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDeleteTransaction = async (id) => {
     const result = await showConfirm(
@@ -264,10 +434,9 @@ const FinancePage = () => {
       try {
         await deleteTransaction(id);
         showSuccess("تم الحذف", "تم حذف الحوالة بنجاح");
-        fetchTransactions();
-        fetchSummary();
+        await fetchTransactions();
+        await fetchSummary();
       } catch (error) {
-        console.error("Delete error:", error);
         showError("خطأ", "حدث خطأ أثناء الحذف");
       } finally {
         setLoading(false);
@@ -282,8 +451,13 @@ const FinancePage = () => {
   };
 
   const handleExportExcel = () => {
+    const exportData =
+      allTransactionsData.length > 0
+        ? allTransactionsData
+        : filteredTransactions;
     const columns = [
       { header: "رقم الطلب", key: "order_id" },
+      { header: "صاحب التأشيرة", key: "visa_holder_name" },
       {
         header: "المبلغ",
         key: "amount",
@@ -327,12 +501,17 @@ const FinancePage = () => {
       },
       { header: "الملاحظات", key: "notes" },
     ];
-    exportToExcel(filteredTransactions, columns, "الحسابات_والحوالات.xlsx");
+    exportToExcel(exportData, columns, "الحسابات_والحوالات.xlsx");
   };
 
   const handleExportPDF = () => {
+    const exportData =
+      allTransactionsData.length > 0
+        ? allTransactionsData
+        : filteredTransactions;
     const columns = [
       { header: "رقم الطلب", key: "order_id" },
+      { header: "صاحب التأشيرة", key: "visa_holder_name" },
       {
         header: "المبلغ",
         key: "amount",
@@ -375,10 +554,15 @@ const FinancePage = () => {
         },
       },
     ];
-    exportToPDF(filteredTransactions, columns, "الحسابات_والحوالات.pdf");
+    exportToPDF(exportData, columns, "الحسابات_والحوالات.pdf");
   };
 
-  const totalPages = Math.ceil(transactions.length / itemsPerPage);
+  const totalPages = Math.ceil(allTransactionsData.length / itemsPerPage);
+  const currentData = transactions;
+
+  useEffect(() => {
+    fetchSummary();
+  }, [filterFromDate, filterToDate]);
 
   if (initialLoading) {
     return (
@@ -390,7 +574,7 @@ const FinancePage = () => {
         }}
       >
         <Container fluid>
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <h1 className="h3 mb-0 fw-bold">الحسابات والحوالات</h1>
             <Button variant="dark" disabled>
               + حوالة جديدة
@@ -398,7 +582,9 @@ const FinancePage = () => {
           </div>
           <Card className="shadow-sm border-0 rounded-4">
             <Card.Body className="p-0">
-              <TableSkeleton rows={5} columns={12} />
+              <div className="table-responsive">
+                <TableSkeleton rows={5} columns={12} />
+              </div>
             </Card.Body>
           </Card>
         </Container>
@@ -415,13 +601,13 @@ const FinancePage = () => {
       }}
     >
       <Container fluid>
-        <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
           <h1 className="h3 mb-0 fw-bold">الحسابات والحوالات</h1>
-          <div className="d-flex gap-2">
+          <div className="d-flex gap-2 flex-wrap">
             <Button
               variant="light"
               onClick={handleExportExcel}
-              disabled={filteredTransactions.length === 0}
+              disabled={allTransactionsData.length === 0}
               className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
             >
               <i className="fa-solid fa-file-excel fs-5"></i>
@@ -430,7 +616,7 @@ const FinancePage = () => {
             <Button
               variant="light"
               onClick={handleExportPDF}
-              disabled={filteredTransactions.length === 0}
+              disabled={allTransactionsData.length === 0}
               className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
             >
               <i className="fa-solid fa-file-pdf fs-5"></i>
@@ -447,50 +633,64 @@ const FinancePage = () => {
           </div>
         </div>
 
-        {summary && <FinanceSummaryCards summary={summary} />}
+        {summary && (
+          <div className="mb-4">
+            <FinanceSummaryCards summary={summary} />
+          </div>
+        )}
 
-        <FinanceSearchBar
-          searchQuery={searchQuery}
-          onSearch={handleSearch}
-          onClear={handleClearSearch}
-          loading={loading}
-          paymentMethods={paymentMethods}
-          transferStatuses={transferStatuses}
-          priorityLevels={priorityLevels}
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          sortField={sortField}
-          sortDirection={sortDirection}
-          onSortChange={handleSortChange}
-          filterFromDate={filterFromDate}
-          filterToDate={filterToDate}
-          setFilterFromDate={setFilterFromDate}
-          setFilterToDate={setFilterToDate}
-          onDateFilter={handleDateFilter}
-        />
+        <div className="mb-4">
+          <FinanceSearchBar
+            searchQuery={searchQuery}
+            onSearch={handleSearch}
+            onClear={handleClearSearch}
+            loading={loading}
+            paymentMethods={paymentMethods}
+            transferStatuses={transferStatuses}
+            priorityLevels={priorityLevels}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSortChange={handleSortChange}
+            filterFromDate={filterFromDate}
+            filterToDate={filterToDate}
+            setFilterFromDate={setFilterFromDate}
+            setFilterToDate={setFilterToDate}
+            onDateFilter={handleDateFilter}
+          />
+        </div>
 
-        <Card className="shadow-sm border-0 rounded-4">
+        <Card className="shadow-sm border-0 rounded-4 overflow-hidden">
           <Card.Body className="p-0">
             {loading ? (
               <div className="text-center py-5">
-                <TableSkeleton rows={3} columns={12} />
+                <div className="table-responsive">
+                  <TableSkeleton rows={5} columns={12} />
+                </div>
               </div>
             ) : (
               <>
-                <FinanceTable
-                  transactions={filteredTransactions}
-                  onEdit={handleEditTransaction}
-                  onDelete={handleDeleteTransaction}
-                  paymentMethods={paymentMethods}
-                  transferStatuses={transferStatuses}
-                  priorityLevels={priorityLevels}
-                />
-                {totalPages > 1 && (
-                  <PaginationComponent
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
+                <div className="table-responsive">
+                  <FinanceTable
+                    transactions={currentData}
+                    onEdit={handleEditTransaction}
+                    onDelete={handleDeleteTransaction}
+                    onUpdateField={handleUpdateField}
+                    paymentMethods={paymentMethods}
+                    transferStatuses={transferStatuses}
+                    priorityLevels={priorityLevels}
+                    bankNames={bankNames}
                   />
+                </div>
+                {totalPages > 1 && (
+                  <div className="d-flex justify-content-center py-3">
+                    <PaginationComponent
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                    />
+                  </div>
                 )}
               </>
             )}

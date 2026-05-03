@@ -134,21 +134,15 @@ const SettingsPage = () => {
       setter(updated);
       showSuccess("تم", "تم الحذف بنجاح");
     } else if (id) {
-      const result = await showConfirm(
-        "هل أنت متأكد؟",
-        `سيتم حذف هذا العنصر من ${groupName} نهائياً`,
-      );
-      if (result.isConfirmed) {
-        try {
-          await deleteApiFunction(id);
-          showSuccess("تم", "تم الحذف بنجاح");
-          await fetchSettings();
-        } catch (error) {
-          showError(
-            "خطأ",
-            error.response?.data?.message || "حدث خطأ أثناء الحذف",
-          );
-        }
+      try {
+        await deleteApiFunction(id);
+        showSuccess("تم", "تم الحذف بنجاح");
+        await fetchSettings();
+      } catch (error) {
+        showError(
+          "خطأ",
+          error.response?.data?.message || "حدث خطأ أثناء الحذف",
+        );
       }
     }
   };
@@ -205,7 +199,9 @@ const SettingsPage = () => {
       >
         <Container fluid>
           <h1 className="h3 mb-4 fw-bold">الإعدادات</h1>
-          <TableSkeleton rows={3} columns={3} />
+          <div className="table-responsive">
+            <TableSkeleton rows={3} columns={3} />
+          </div>
         </Container>
       </div>
     );
@@ -223,7 +219,7 @@ const SettingsPage = () => {
         <h1 className="h3 mb-4 fw-bold">الإعدادات</h1>
 
         <Row className="g-4">
-          <Col md={6}>
+          <Col xs={12} md={6}>
             <SettingsCard
               title="درجات الأهمية"
               items={priorityLevels}
@@ -255,7 +251,7 @@ const SettingsPage = () => {
             />
           </Col>
 
-          <Col md={6}>
+          <Col xs={12} md={6}>
             <SettingsCard
               title="حالات ترشيح الجواز"
               items={passportStatuses}
@@ -289,7 +285,7 @@ const SettingsPage = () => {
         </Row>
 
         <Row className="mt-4">
-          <Col md={6}>
+          <Col xs={12} md={6}>
             <SettingsCard
               title="حالات التحويل"
               items={transferStatuses}
@@ -321,7 +317,7 @@ const SettingsPage = () => {
             />
           </Col>
 
-          <Col md={6}>
+          <Col xs={12} md={6}>
             <SettingsCard
               title="طرق الدفع"
               items={paymentMethods}
@@ -355,7 +351,7 @@ const SettingsPage = () => {
         </Row>
 
         <Row className="mt-4">
-          <Col md={6}>
+          <Col xs={12} md={6}>
             <SettingsCard
               title="أسماء البنوك"
               items={bankNames}
@@ -387,7 +383,7 @@ const SettingsPage = () => {
             />
           </Col>
 
-          <Col md={6}>
+          <Col xs={12} md={6}>
             <SettingsCard
               title="حالات التسويق"
               items={marketingStatuses}
@@ -418,7 +414,10 @@ const SettingsPage = () => {
               emptyMessage="لا توجد حالات تسويق"
             />
           </Col>
-          <Col md={6}>
+        </Row>
+
+        <Row className="mt-4">
+          <Col xs={12} md={6}>
             <SettingsCard
               title="حالات الطلبات"
               items={orderStatuses}

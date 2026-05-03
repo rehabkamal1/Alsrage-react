@@ -1,62 +1,161 @@
 import React from "react";
-import { Table, Button, Badge } from "react-bootstrap";
+import { Table, Button, Form } from "react-bootstrap";
 
 const MarketingTable = ({
   leads,
   onEdit,
   onDelete,
+  onUpdateField,
   statuses,
   priorityLevels,
 }) => {
-  const getStatusBadge = (status) => {
+  console.log("========== MarketingTable RENDER ==========");
+  console.log("leads data:", leads);
+  console.log("statuses:", statuses);
+  console.log("priorityLevels:", priorityLevels);
+
+  leads?.forEach((lead, index) => {
+    console.log(`Lead ${index} (ID: ${lead.id}):`, {
+      name: lead.name,
+      phone: lead.phone,
+      source_name: lead.source_name,
+      source_id: lead.source_id,
+      source_type: lead.source_type,
+      status: lead.status,
+      priority_level: lead.priority_level,
+      contact_date: lead.contact_date,
+      next_followup_date: lead.next_followup_date,
+    });
+  });
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    return date.toLocaleDateString("ar-EG", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  };
+
+  const getStatusColor = (status) => {
     const found = statuses?.find((s) => s.key === status);
-    if (found) {
-      return (
-        <Badge
-          style={{ backgroundColor: found.color }}
-          className="rounded-pill px-3 py-2"
-        >
-          {found.label}
-        </Badge>
-      );
-    }
-    return (
-      <Badge bg="secondary" className="rounded-pill px-3 py-2">
-        {status}
-      </Badge>
-    );
+    return found?.color || "#6c757d";
   };
 
-  const getPriorityBadge = (level) => {
+  const getStatusLabel = (status) => {
+    const found = statuses?.find((s) => s.key === status);
+    return found?.label || status || "-";
+  };
+
+  const getPriorityColor = (level) => {
     const found = priorityLevels?.find((p) => p.key === level);
-    if (found) {
-      return (
-        <Badge
-          style={{ backgroundColor: found.color }}
-          className="rounded-pill px-2 py-1"
-        >
-          {found.label}
-        </Badge>
-      );
+    return found?.color || "#6c757d";
+  };
+
+  const getPriorityLabel = (level) => {
+    const found = priorityLevels?.find((p) => p.key === level);
+    return found?.label || level || "-";
+  };
+
+  const handleInlineUpdate = async (leadId, field, value) => {
+    console.log(
+      `handleInlineUpdate: leadId=${leadId}, field=${field}, value=${value}`,
+    );
+    if (onUpdateField) {
+      await onUpdateField(leadId, field, value);
     }
+  };
+
+  const renderStatusDropdown = (lead) => {
+    const currentColor = getStatusColor(lead.status);
+
+    if (!statuses || statuses.length === 0) {
+      return <span className="text-muted">{getStatusLabel(lead.status)}</span>;
+    }
+
     return (
-      <Badge bg="secondary" className="rounded-pill px-2 py-1">
-        {level}
-      </Badge>
+      <div className="d-flex justify-content-center">
+        <Form.Select
+          size="sm"
+          value={lead.status || ""}
+          onChange={(e) =>
+            handleInlineUpdate(lead.id, "status", e.target.value)
+          }
+          className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select"
+          style={{
+            backgroundColor: currentColor,
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: "0.85rem",
+            width: "fit-content",
+            minWidth: "130px",
+            transition: "all 0.2s ease-in-out",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          }}
+          title="اضغط لتغيير الحالة"
+        >
+          <option value="">-- اختر --</option>
+          {statuses.map((status) => (
+            <option
+              key={status.key}
+              value={status.key}
+              style={{ backgroundColor: status.color, color: "#fff" }}
+            >
+              {status.label}
+            </option>
+          ))}
+        </Form.Select>
+      </div>
     );
   };
 
-  const getTypeLabel = (type) => {
-    switch (type) {
-      case "saudi_office":
-        return "مكتب سعودي";
-      case "external_office":
-        return "مكتب خارجي";
-      case "service_office":
-        return "مكتب خدمات";
-      default:
-        return type;
+  const renderPriorityDropdown = (lead) => {
+    const currentColor = getPriorityColor(lead.priority_level);
+
+    if (!priorityLevels || priorityLevels.length === 0) {
+      return (
+        <span className="text-muted">
+          {getPriorityLabel(lead.priority_level)}
+        </span>
+      );
     }
+
+    return (
+      <div className="d-flex justify-content-center">
+        <Form.Select
+          size="sm"
+          value={lead.priority_level || ""}
+          onChange={(e) =>
+            handleInlineUpdate(lead.id, "priority_level", e.target.value)
+          }
+          className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 priority-select"
+          style={{
+            backgroundColor: currentColor,
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: "0.85rem",
+            width: "fit-content",
+            minWidth: "130px",
+            transition: "all 0.2s ease-in-out",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          }}
+          title="اضغط لتغيير درجة الأهمية"
+        >
+          <option value="">-- اختر --</option>
+          {priorityLevels.map((priority) => (
+            <option
+              key={priority.key}
+              value={priority.key}
+              style={{ backgroundColor: priority.color, color: "#fff" }}
+            >
+              {priority.label}
+            </option>
+          ))}
+        </Form.Select>
+      </div>
+    );
   };
 
   return (
@@ -68,7 +167,6 @@ const MarketingTable = ({
             <th>اسم العميل</th>
             <th>رقم الهاتف</th>
             <th>المصدر</th>
-            <th>النوع</th>
             <th>الحالة</th>
             <th>درجة الأهمية</th>
             <th>تاريخ التواصل</th>
@@ -82,14 +180,15 @@ const MarketingTable = ({
             leads.map((lead) => (
               <tr key={lead.id}>
                 <td className="fw-semibold">#{lead.id}</td>
-                <td>{lead.name}</td>
-                <td dir="ltr">{lead.phone}</td>
-                <td>{lead.source_name || "-"}</td>
-                <td>{getTypeLabel(lead.type)}</td>
-                <td>{getStatusBadge(lead.status)}</td>
-                <td>{getPriorityBadge(lead.priority_level)}</td>
-                <td>{lead.contact_date || "-"}</td>
-                <td>{lead.next_followup_date || "-"}</td>
+                <td>{lead.name || "-"}</td>
+                <td dir="ltr">{lead.phone || "-"}</td>
+                <td>
+                  {lead.source_name || lead.source_id || "-"}
+                </td>
+                <td>{renderStatusDropdown(lead)}</td>
+                <td>{renderPriorityDropdown(lead)}</td>
+                <td>{formatDate(lead.contact_date)}</td>
+                <td>{formatDate(lead.next_followup_date)}</td>
                 <td
                   style={{
                     maxWidth: "150px",
@@ -155,13 +254,24 @@ const MarketingTable = ({
             ))}
           {(!leads || leads.length === 0) && (
             <tr>
-              <td colSpan="11" className="text-center py-5 text-muted">
+              <td colSpan="10" className="text-center py-5 text-muted">
                 لا توجد بيانات تسويقية
               </td>
             </tr>
           )}
         </tbody>
       </Table>
+      <style>{`
+        .status-select:hover, .priority-select:hover {
+          transform: translateY(-1px);
+          filter: brightness(1.1);
+          box-shadow: 0 4px 6px rgba(0,0,0,0.15) !important;
+        }
+        .status-select:focus, .priority-select:focus {
+          box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+          outline: 0;
+        }
+      `}</style>
     </div>
   );
 };

@@ -2,6 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import Select from "react-select";
 
+const formatDateForInput = (val) => {
+  if (!val) return "";
+  if (val.includes("T")) return val.split("T")[0];
+  return val.substring(0, 10);
+};
+
 const MarketingFormModal = ({
   show,
   onHide,
@@ -18,8 +24,8 @@ const MarketingFormModal = ({
 }) => {
   const [formData, setFormData] = useState({
     source_id: "",
-    source_type: "saudi_office",
-    type: "saudi_office",
+    source_type: "service_office",
+    type: "service_office",
     status: "new",
     priority_level: "medium",
     notes: "",
@@ -36,20 +42,20 @@ const MarketingFormModal = ({
     if (initialData) {
       setFormData({
         source_id: initialData.source_id || "",
-        source_type: initialData.source_type || "saudi_office",
-        type: initialData.type || "saudi_office",
+        source_type: initialData.source_type || "service_office",
+        type: initialData.type || "service_office",
         status: initialData.status || "new",
         priority_level: initialData.priority_level || "medium",
         notes: initialData.notes || "",
-        contact_date: initialData.contact_date || "",
-        next_followup_date: initialData.next_followup_date || "",
+        contact_date: formatDateForInput(initialData.contact_date),
+        next_followup_date: formatDateForInput(initialData.next_followup_date),
         assigned_to: initialData.assigned_to || "",
       });
     } else {
       setFormData({
         source_id: "",
-        source_type: "saudi_office",
-        type: "saudi_office",
+        source_type: "service_office",
+        type: "service_office",
         status: "new",
         priority_level: "medium",
         notes: "",
@@ -88,6 +94,17 @@ const MarketingFormModal = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!formData.source_id) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        source_id: ["يرجى اختيار المصدر"],
+      }));
+      e.stopPropagation();
+      setValidated(true);
+      return;
+    }
+
     const form = e.currentTarget;
     if (form.checkValidity() === false) {
       e.stopPropagation();
@@ -108,6 +125,24 @@ const MarketingFormModal = ({
     if (formData.source_type === "saudi_office") return "المكتب السعودي";
     if (formData.source_type === "external_office") return "المكتب الخارجي";
     return "مكتب الخدمات";
+  };
+
+  const statusOptions = (statuses || []).map((s) => ({
+    value: s.key,
+    label: s.label,
+    color: s.color,
+  }));
+
+  const priorityOptions = (priorityLevels || []).map((l) => ({
+    value: l.key,
+    label: l.label,
+    color: l.color,
+  }));
+
+  const getSelectedOption = (options, value) => {
+    if (!value || !options || options.length === 0) return null;
+    const found = options.find((opt) => opt.value === value);
+    return found ? { value: found.value, label: found.label } : null;
   };
 
   return (
@@ -131,7 +166,7 @@ const MarketingFormModal = ({
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
-                  نوع المصدر
+                  نوع المصدر <span className="text-danger">*</span>
                 </Form.Label>
                 <Select
                   options={[
@@ -149,7 +184,7 @@ const MarketingFormModal = ({
                   onChange={(opt) =>
                     setFormData((prev) => ({
                       ...prev,
-                      source_type: opt ? opt.value : "saudi_office",
+                      source_type: opt ? opt.value : "service_office",
                       source_id: "",
                     }))
                   }
@@ -160,7 +195,7 @@ const MarketingFormModal = ({
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
-                  {getSourceLabel()}
+                  {getSourceLabel()} <span className="text-danger">*</span>
                 </Form.Label>
                 <Select
                   options={sourceOptions.map((opt) => ({
@@ -191,69 +226,56 @@ const MarketingFormModal = ({
                   isClearable
                   isRtl
                 />
-                {getFieldError("source_id") && (
+                {(validated && !formData.source_id) ||
+                getFieldError("source_id") ? (
                   <div className="text-danger small mt-1">
-                    {getFieldError("source_id")}
+                    {getFieldError("source_id") || "يرجى اختيار المصدر"}
                   </div>
-                )}
+                ) : null}
               </Form.Group>
             </Col>
           </Row>
 
           <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold small text-secondary">
-                  نوع العميل
-                </Form.Label>
-                <Select
-                  options={[
-                    { value: "saudi_office", label: "مكتب سعودي" },
-                    { value: "external_office", label: "مكتب خارجي" },
-                    { value: "service_office", label: "مكتب خدمات" },
-                  ]}
-                  value={
-                    formData.type === "saudi_office"
-                      ? { value: "saudi_office", label: "مكتب سعودي" }
-                      : formData.type === "external_office"
-                        ? { value: "external_office", label: "مكتب خارجي" }
-                        : { value: "service_office", label: "مكتب خدمات" }
-                  }
-                  onChange={(opt) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      type: opt ? opt.value : "",
-                    }))
-                  }
-                  isRtl
-                />
-              </Form.Group>
-            </Col>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
                   الحالة
                 </Form.Label>
                 <Select
-                  options={(statuses || []).map((s) => ({
-                    value: s.key,
-                    label: s.label,
-                  }))}
-                  value={
-                    statuses?.find((s) => s.key === formData.status)
-                      ? {
-                          value: formData.status,
-                          label: statuses.find((s) => s.key === formData.status)
-                            .label,
-                        }
-                      : null
-                  }
+                  options={statusOptions}
+                  value={getSelectedOption(statusOptions, formData.status)}
                   onChange={(opt) =>
                     setFormData((prev) => ({
                       ...prev,
                       status: opt ? opt.value : "",
                     }))
                   }
+                  placeholder="-- اختر --"
+                  isClearable
+                  isRtl
+                />
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  درجة الأهمية
+                </Form.Label>
+                <Select
+                  options={priorityOptions}
+                  value={getSelectedOption(
+                    priorityOptions,
+                    formData.priority_level,
+                  )}
+                  onChange={(opt) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      priority_level: opt ? opt.value : "",
+                    }))
+                  }
+                  placeholder="-- اختر --"
+                  isClearable
                   isRtl
                 />
               </Form.Group>
@@ -261,38 +283,6 @@ const MarketingFormModal = ({
           </Row>
 
           <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold small text-secondary">
-                  درجة الأهمية
-                </Form.Label>
-                <Select
-                  options={(priorityLevels || []).map((l) => ({
-                    value: l.key,
-                    label: l.label,
-                  }))}
-                  value={
-                    priorityLevels?.find(
-                      (l) => l.key === formData.priority_level,
-                    )
-                      ? {
-                          value: formData.priority_level,
-                          label: priorityLevels.find(
-                            (l) => l.key === formData.priority_level,
-                          ).label,
-                        }
-                      : null
-                  }
-                  onChange={(opt) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      priority_level: opt ? opt.value : "",
-                    }))
-                  }
-                  isRtl
-                />
-              </Form.Group>
-            </Col>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
@@ -308,9 +298,6 @@ const MarketingFormModal = ({
                 />
               </Form.Group>
             </Col>
-          </Row>
-
-          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
@@ -325,6 +312,9 @@ const MarketingFormModal = ({
                 />
               </Form.Group>
             </Col>
+          </Row>
+
+          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
@@ -352,8 +342,12 @@ const MarketingFormModal = ({
               value={formData.notes}
               onChange={handleChange}
               placeholder="أدخل ملاحظات إضافية..."
+              isInvalid={!!getFieldError("notes")}
               className="rounded-3"
             />
+            <Form.Control.Feedback type="invalid">
+              {getFieldError("notes")}
+            </Form.Control.Feedback>
           </Form.Group>
         </Modal.Body>
 

@@ -26,6 +26,7 @@ import { exportToPDF } from "../utils/pdfHelper";
 
 const MarketingPage = () => {
   const [leads, setLeads] = useState([]);
+  const [allLeads, setAllLeads] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -109,11 +110,29 @@ const MarketingPage = () => {
         to_date: filterToDate,
         sort_field: sortField,
         sort_direction: sortDirection,
-        per_page: itemsPerPage,
-        page: currentPage,
+        per_page: 1000,
+        page: 1,
       };
       const response = await getMarketingLeads(params);
-      setLeads(response.data.data);
+      const leadsData = response.data.data || [];
+
+      console.log("========== fetchLeads API Response ==========");
+      console.log("Raw leads data from API:", leadsData);
+
+      leadsData.forEach((lead, index) => {
+        console.log(`Lead ${index} (ID: ${lead.id}):`, {
+          source_name: lead.source_name,
+          source_id: lead.source_id,
+          source_type: lead.source_type,
+        });
+      });
+
+      setAllLeads(leadsData);
+
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const paginatedData = leadsData.slice(start, end);
+      setLeads(paginatedData);
     } catch (error) {
       console.error("Error fetching leads:", error);
     } finally {
@@ -157,9 +176,30 @@ const MarketingPage = () => {
   };
 
   const handleEditLead = (lead) => {
+    console.log("========== handleEditLead ==========");
+    console.log("Editing lead:", lead);
     setEditingLead(lead);
     setSubmitError(null);
     setShowModal(true);
+  };
+
+  const handleUpdateField = async (leadId, field, value) => {
+    setLoading(true);
+    try {
+      await updateMarketingLead(leadId, { [field]: value });
+      showSuccess(
+        "تم",
+        `تم تحديث ${field === "status" ? "الحالة" : "درجة الأهمية"} بنجاح`,
+      );
+      await fetchLeads();
+    } catch (error) {
+      showError(
+        "خطأ",
+        error.response?.data?.message || "حدث خطأ أثناء التحديث",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmitLead = async (formData) => {
@@ -175,8 +215,8 @@ const MarketingPage = () => {
       }
       setShowModal(false);
       setEditingLead(null);
-      fetchLeads();
-      fetchAllData();
+      await fetchLeads();
+      await fetchAllData();
     } catch (error) {
       setSubmitError(error.response?.data);
       showError(
@@ -198,7 +238,7 @@ const MarketingPage = () => {
       try {
         await deleteMarketingLead(id);
         showSuccess("تم الحذف", "تم حذف العميل التسويقي بنجاح");
-        fetchLeads();
+        await fetchLeads();
       } catch (error) {
         showError("خطأ", "حدث خطأ أثناء الحذف");
       } finally {
@@ -222,7 +262,7 @@ const MarketingPage = () => {
       }
       setShowAddOfficeModal(false);
       setAddOfficeType(null);
-      fetchAllData();
+      await fetchAllData();
     } catch (error) {
       showError(
         "خطأ",
@@ -234,18 +274,11 @@ const MarketingPage = () => {
   };
 
   const handleExportExcel = () => {
+    const exportData = allLeads.length > 0 ? allLeads : leads;
     const columns = [
       { header: "اسم العميل", key: "name" },
       { header: "رقم الهاتف", key: "phone" },
       { header: "المصدر", key: "source_name" },
-      {
-        header: "النوع",
-        key: "type",
-        format: (item) => {
-          const found = types.find((t) => t.value === item.type);
-          return found?.label || item.type || "-";
-        },
-      },
       {
         header: "الحالة",
         key: "status",
@@ -268,22 +301,15 @@ const MarketingPage = () => {
       { header: "تاريخ المتابعة", key: "next_followup_date" },
       { header: "الملاحظات", key: "notes" },
     ];
-    exportToExcel(leads, columns, "التسويق.xlsx");
+    exportToExcel(exportData, columns, "التسويق.xlsx");
   };
 
   const handleExportPDF = () => {
+    const exportData = allLeads.length > 0 ? allLeads : leads;
     const columns = [
       { header: "اسم العميل", key: "name" },
       { header: "رقم الهاتف", key: "phone" },
       { header: "المصدر", key: "source_name" },
-      {
-        header: "النوع",
-        key: "type",
-        format: (item) => {
-          const found = types.find((t) => t.value === item.type);
-          return found?.label || item.type || "-";
-        },
-      },
       {
         header: "الحالة",
         key: "status",
@@ -305,10 +331,11 @@ const MarketingPage = () => {
       { header: "تاريخ التواصل", key: "contact_date" },
       { header: "تاريخ المتابعة", key: "next_followup_date" },
     ];
-    exportToPDF(leads, columns, "التسويق.pdf");
+    exportToPDF(exportData, columns, "التسويق.pdf");
   };
 
-  const totalPages = Math.ceil(leads.length / itemsPerPage);
+  const totalPages = Math.ceil(allLeads.length / itemsPerPage);
+  const currentData = leads;
 
   if (initialLoading) {
     return (
@@ -320,7 +347,7 @@ const MarketingPage = () => {
         }}
       >
         <Container fluid>
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <h1 className="h3 mb-0 fw-bold">التسويق</h1>
             <Button variant="dark" disabled>
               + عميل جديد
@@ -328,7 +355,9 @@ const MarketingPage = () => {
           </div>
           <Card className="shadow-sm border-0 rounded-4">
             <Card.Body className="p-0">
-              <TableSkeleton rows={5} columns={10} />
+              <div className="table-responsive">
+                <TableSkeleton rows={5} columns={10} />
+              </div>
             </Card.Body>
           </Card>
         </Container>
@@ -345,14 +374,14 @@ const MarketingPage = () => {
       }}
     >
       <Container fluid>
-        <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
           <h1 className="h3 mb-0 fw-bold">التسويق</h1>
-          <div className="d-flex gap-2">
+          <div className="d-flex gap-2 flex-wrap">
             <Button
               variant="light"
               onClick={handleExportExcel}
               className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
-              disabled={leads.length === 0}
+              disabled={allLeads.length === 0}
             >
               <i className="fa-solid fa-file-excel fs-5"></i>
               <span>إكسيل</span>
@@ -361,16 +390,20 @@ const MarketingPage = () => {
               variant="light"
               onClick={handleExportPDF}
               className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
-              disabled={leads.length === 0}
+              disabled={allLeads.length === 0}
             >
               <i className="fa-solid fa-file-pdf fs-5"></i>
               <span>بي دي اف</span>
             </Button>
             <Dropdown>
-              <Dropdown.Toggle variant="dark" id="dropdown-basic">
+              <Dropdown.Toggle
+                variant="dark"
+                id="dropdown-basic"
+                className="rounded-3"
+              >
                 + إضافة
               </Dropdown.Toggle>
-              <Dropdown.Menu>
+              <Dropdown.Menu align="end">
                 <Dropdown.Item
                   onClick={() => {
                     setAddOfficeType("saudi");
@@ -404,47 +437,56 @@ const MarketingPage = () => {
           </div>
         </div>
 
-        <MarketingSearchBar
-          searchQuery={searchQuery}
-          onSearch={handleSearch}
-          onClear={handleClearSearch}
-          loading={loading}
-          statuses={statuses}
-          priorityLevels={priorityLevels}
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          sortField={sortField}
-          sortDirection={sortDirection}
-          onSortChange={handleSortChange}
-          filterFromDate={filterFromDate}
-          filterToDate={filterToDate}
-          setFilterFromDate={setFilterFromDate}
-          setFilterToDate={setFilterToDate}
-          onDateFilter={handleDateFilter}
-          types={types}
-        />
+        <div className="mb-4">
+          <MarketingSearchBar
+            searchQuery={searchQuery}
+            onSearch={handleSearch}
+            onClear={handleClearSearch}
+            loading={loading}
+            statuses={statuses}
+            priorityLevels={priorityLevels}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSortChange={handleSortChange}
+            filterFromDate={filterFromDate}
+            filterToDate={filterToDate}
+            setFilterFromDate={setFilterFromDate}
+            setFilterToDate={setFilterToDate}
+            onDateFilter={handleDateFilter}
+            types={types}
+          />
+        </div>
 
-        <Card className="shadow-sm border-0 rounded-4">
+        <Card className="shadow-sm border-0 rounded-4 overflow-hidden">
           <Card.Body className="p-0">
             {loading ? (
               <div className="text-center py-5">
-                <TableSkeleton rows={3} columns={10} />
+                <div className="table-responsive">
+                  <TableSkeleton rows={5} columns={10} />
+                </div>
               </div>
             ) : (
               <>
-                <MarketingTable
-                  leads={leads}
-                  onEdit={handleEditLead}
-                  onDelete={handleDeleteLead}
-                  statuses={statuses}
-                  priorityLevels={priorityLevels}
-                />
-                {totalPages > 1 && (
-                  <PaginationComponent
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
+                <div className="table-responsive">
+                  <MarketingTable
+                    leads={currentData}
+                    onEdit={handleEditLead}
+                    onDelete={handleDeleteLead}
+                    onUpdateField={handleUpdateField}
+                    statuses={statuses}
+                    priorityLevels={priorityLevels}
                   />
+                </div>
+                {totalPages > 1 && (
+                  <div className="d-flex justify-content-center py-3">
+                    <PaginationComponent
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                    />
+                  </div>
                 )}
               </>
             )}

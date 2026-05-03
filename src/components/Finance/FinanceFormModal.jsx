@@ -34,22 +34,108 @@ const FinanceFormModal = ({
   const [validated, setValidated] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
+  // دالة لتنسيق التاريخ من API إلى صيغة YYYY-MM-DD
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return "";
+    if (dateString.includes("T")) {
+      return dateString.split("T")[0];
+    }
+    return dateString;
+  };
+
+  // دالة للبحث عن القيمة الصحيحة (مقارنة بالـ label أو الـ value)
+  const findValueByLabelOrValue = (list, searchValue, defaultValue = "") => {
+    if (!searchValue || !list || list.length === 0) return defaultValue;
+
+    // البحث بالـ value
+    const foundByValue = list.find((item) => item.value === searchValue);
+    if (foundByValue) return foundByValue.value;
+
+    // البحث بالـ label
+    const foundByLabel = list.find((item) => item.label === searchValue);
+    if (foundByLabel) return foundByLabel.value;
+
+    return defaultValue;
+  };
+
   useEffect(() => {
+    console.log("========== FinanceFormModal useEffect ==========");
+    console.log("show:", show);
+    console.log("isEdit:", isEdit);
+    console.log("initialData:", initialData);
+    console.log("paymentMethods:", paymentMethods);
+    console.log("bankNames:", bankNames);
+    console.log("priorityLevels:", priorityLevels);
+    console.log("transferStatuses:", transferStatuses);
+
     if (initialData) {
+      // تنسيق التاريخ
+      const formattedTransferDate = formatDateForInput(
+        initialData.transfer_date,
+      );
+
+      // البحث عن القيم الصحيحة
+      const paymentMethodValue = findValueByLabelOrValue(
+        paymentMethods,
+        initialData.payment_method,
+        "",
+      );
+
+      const bankNameValue = findValueByLabelOrValue(
+        bankNames,
+        initialData.bank_name,
+        "",
+      );
+
+      const statusValue = findValueByLabelOrValue(
+        transferStatuses,
+        initialData.status,
+        "pending",
+      );
+
+      const priorityValue = findValueByLabelOrValue(
+        priorityLevels,
+        initialData.priority_level,
+        "medium",
+      );
+
+      console.log("Converted values:");
+      console.log(
+        "- payment_method:",
+        initialData.payment_method,
+        "->",
+        paymentMethodValue,
+      );
+      console.log("- bank_name:", initialData.bank_name, "->", bankNameValue);
+      console.log("- status:", initialData.status, "->", statusValue);
+      console.log(
+        "- priority_level:",
+        initialData.priority_level,
+        "->",
+        priorityValue,
+      );
+      console.log(
+        "- transfer_date:",
+        initialData.transfer_date,
+        "->",
+        formattedTransferDate,
+      );
+
       setFormData({
         type: initialData.type || "receipt",
         amount: initialData.amount || "",
         order_id: initialData.order_id || "",
         client_id: initialData.client_id || "",
-        payment_method: initialData.payment_method || "",
-        bank_name: initialData.bank_name || "",
-        transfer_date: initialData.transfer_date || "",
+        payment_method: paymentMethodValue,
+        bank_name: bankNameValue,
+        transfer_date: formattedTransferDate,
         transfer_number: initialData.transfer_number || "",
-        status: initialData.status || "pending",
-        priority_level: initialData.priority_level || "medium",
+        status: statusValue,
+        priority_level: priorityValue,
         notes: initialData.notes || "",
       });
     } else {
+      console.log("No initialData, using default values");
       setFormData({
         type: "receipt",
         amount: "",
@@ -66,13 +152,25 @@ const FinanceFormModal = ({
     }
     setValidated(false);
     setFieldErrors({});
-  }, [initialData, show]);
+  }, [
+    initialData,
+    show,
+    paymentMethods,
+    bankNames,
+    priorityLevels,
+    transferStatuses,
+  ]);
 
   useEffect(() => {
     if (error && error.errors) {
+      console.log("Error received:", error);
       setFieldErrors(error.errors);
     }
   }, [error]);
+
+  useEffect(() => {
+    console.log("Current formData state:", formData);
+  }, [formData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -89,6 +187,7 @@ const FinanceFormModal = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     const form = e.currentTarget;
+    console.log("Submitting formData:", formData);
     if (form.checkValidity() === false) {
       e.stopPropagation();
       setValidated(true);
@@ -102,6 +201,13 @@ const FinanceFormModal = ({
       return fieldErrors[fieldName][0];
     }
     return null;
+  };
+
+  // دالة للحصول على الـ label المناسب للـ Select
+  const getSelectedOption = (options, value) => {
+    if (!value || !options || options.length === 0) return null;
+    const found = options.find((opt) => opt.value === value);
+    return found ? { value: found.value, label: found.label } : null;
   };
 
   return (
@@ -145,9 +251,6 @@ const FinanceFormModal = ({
                   }
                   isRtl
                 />
-                <Form.Control.Feedback type="invalid">
-                  {getFieldError("type")}
-                </Form.Control.Feedback>
               </Form.Group>
             </Col>
             <Col md={6}>
@@ -230,6 +333,10 @@ const FinanceFormModal = ({
                 <span className="text-muted">رقم التأشيرة:</span>
                 <span>{selectedOrder.visa_number || "-"}</span>
               </div>
+              <div className="d-flex justify-content-between mt-2">
+                <span className="text-muted">رقم الهوية:</span>
+                <span>{selectedOrder.id_number || "-"}</span>
+              </div>
             </div>
           )}
 
@@ -244,18 +351,10 @@ const FinanceFormModal = ({
                     value: m.value,
                     label: m.label,
                   }))}
-                  value={
-                    paymentMethods.find(
-                      (m) => m.value === formData.payment_method,
-                    )
-                      ? {
-                          value: formData.payment_method,
-                          label: paymentMethods.find(
-                            (m) => m.value === formData.payment_method,
-                          ).label,
-                        }
-                      : null
-                  }
+                  value={getSelectedOption(
+                    paymentMethods,
+                    formData.payment_method,
+                  )}
                   onChange={(opt) =>
                     setFormData((prev) => ({
                       ...prev,
@@ -283,16 +382,7 @@ const FinanceFormModal = ({
                     value: b.value,
                     label: b.label,
                   }))}
-                  value={
-                    bankNames.find((b) => b.value === formData.bank_name)
-                      ? {
-                          value: formData.bank_name,
-                          label: bankNames.find(
-                            (b) => b.value === formData.bank_name,
-                          ).label,
-                        }
-                      : null
-                  }
+                  value={getSelectedOption(bankNames, formData.bank_name)}
                   onChange={(opt) =>
                     setFormData((prev) => ({
                       ...prev,
@@ -363,16 +453,7 @@ const FinanceFormModal = ({
                     value: s.value,
                     label: s.label,
                   }))}
-                  value={
-                    transferStatuses.find((s) => s.value === formData.status)
-                      ? {
-                          value: formData.status,
-                          label: transferStatuses.find(
-                            (s) => s.value === formData.status,
-                          ).label,
-                        }
-                      : null
-                  }
+                  value={getSelectedOption(transferStatuses, formData.status)}
                   onChange={(opt) =>
                     setFormData((prev) => ({
                       ...prev,
@@ -400,18 +481,10 @@ const FinanceFormModal = ({
                     value: l.value,
                     label: l.label,
                   }))}
-                  value={
-                    priorityLevels.find(
-                      (l) => l.value === formData.priority_level,
-                    )
-                      ? {
-                          value: formData.priority_level,
-                          label: priorityLevels.find(
-                            (l) => l.value === formData.priority_level,
-                          ).label,
-                        }
-                      : null
-                  }
+                  value={getSelectedOption(
+                    priorityLevels,
+                    formData.priority_level,
+                  )}
                   onChange={(opt) =>
                     setFormData((prev) => ({
                       ...prev,
