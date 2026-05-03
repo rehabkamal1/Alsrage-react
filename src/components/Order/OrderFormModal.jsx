@@ -242,9 +242,10 @@ const OrderFormModal = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     const form = e.currentTarget;
-    if (form.checkValidity() === false) {
+    setValidated(true);
+    // Also check saudi_office_id manually (React Select not covered by HTML5 validation)
+    if (form.checkValidity() === false || !formData.saudi_office_id) {
       e.stopPropagation();
-      setValidated(true);
       return;
     }
 
@@ -331,25 +332,44 @@ const OrderFormModal = ({
             >
               <Tab eventKey="basic" title="معلومات الطلب">
                 <div className="mt-3">
-                  <Form.Group className="mb-3">
-                    <Form.Label className="fw-semibold small text-secondary">
-                      اسم صاحب التأشيرة <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="visa_holder_name"
-                      value={formData.visa_holder_name}
-                      onChange={handleChange}
-                      required
-                      placeholder="أدخل اسم صاحب التأشيرة"
-                      isInvalid={!!getFieldError("visa_holder_name")}
-                      className="rounded-3"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      {getFieldError("visa_holder_name") ||
-                        "يرجى إدخال اسم صاحب التأشيرة"}
-                    </Form.Control.Feedback>
-                  </Form.Group>
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          المكتب السعودي <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Select
+                          className="react-select-container"
+                          classNamePrefix="react-select"
+                          options={saudiOffices.map((office) => ({ value: office.id, label: office.name }))}
+                          value={saudiOffices.find((o) => o.id === formData.saudi_office_id) ? { value: formData.saudi_office_id, label: saudiOffices.find((o) => o.id === formData.saudi_office_id).name } : null}
+                          onChange={(option) => setFormData((prev) => ({ ...prev, saudi_office_id: option ? option.value : "" }))}
+                          placeholder="اختر المكتب السعودي..."
+                          isClearable
+                          isRtl
+                          styles={{ control: (base) => ({ ...base, borderColor: validated && !formData.saudi_office_id ? '#dc3545' : base.borderColor }) }}
+                        />
+                        {validated && !formData.saudi_office_id && (<div className="text-danger small mt-1">يرجى اختيار المكتب السعودي</div>)}
+                        {getFieldError("saudi_office_id") && (<div className="text-danger small mt-1">{getFieldError("saudi_office_id")}</div>)}
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">المكتب الخارجي</Form.Label>
+                        <Select
+                          className="react-select-container"
+                          classNamePrefix="react-select"
+                          options={externalOffices.map((office) => ({ value: office.id, label: office.name }))}
+                          value={externalOffices.find((o) => o.id === formData.external_office_id) ? { value: formData.external_office_id, label: externalOffices.find((o) => o.id === formData.external_office_id).name } : null}
+                          onChange={(option) => setFormData((prev) => ({ ...prev, external_office_id: option ? option.value : "" }))}
+                          placeholder="اختر المكتب الخارجي..."
+                          isClearable
+                          isRtl
+                        />
+                        {getFieldError("external_office_id") && (<div className="text-danger small mt-1">{getFieldError("external_office_id")}</div>)}
+                      </Form.Group>
+                    </Col>
+                  </Row>
 
                   <Form.Group className="mb-3">
                     <Form.Label className="fw-semibold small text-secondary">
@@ -436,11 +456,31 @@ const OrderFormModal = ({
                     </Form.Control.Feedback>
                   </Form.Group>
 
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-semibold small text-secondary">
+                      اسم صاحب التأشيرة <span className="text-danger">*</span>
+                    </Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="visa_holder_name"
+                      value={formData.visa_holder_name}
+                      onChange={handleChange}
+                      required
+                      placeholder="أدخل اسم صاحب التأشيرة"
+                      isInvalid={!!getFieldError("visa_holder_name")}
+                      className="rounded-3"
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      {getFieldError("visa_holder_name") || "يرجى إدخال اسم صاحب التأشيرة"}
+                    </Form.Control.Feedback>
+                  </Form.Group>
+
+
                   <Row>
                     <Col md={12}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                          رقم الهوية / رقم التأشيرة
+                          رقم الهوية / رقم التأشيرة <span className="text-danger">*</span>
                         </Form.Label>
                         <InputGroup>
                           <Form.Control
@@ -449,6 +489,7 @@ const OrderFormModal = ({
                             placeholder="رقم الهوية"
                             value={formData.id_number}
                             onChange={handleChange}
+                            required
                             isInvalid={!!getFieldError("id_number")}
                             className="rounded-start-3"
                           />
@@ -458,6 +499,7 @@ const OrderFormModal = ({
                             placeholder="رقم التأشيرة"
                             value={formData.visa_number}
                             onChange={handleChange}
+                            required
                             isInvalid={!!getFieldError("visa_number")}
                             className="rounded-end-3"
                           />
@@ -469,6 +511,11 @@ const OrderFormModal = ({
                               getFieldError("visa_number")}
                           </div>
                         )}
+                        {validated && (!formData.id_number || !formData.visa_number) && (
+                          <div className="text-danger small mt-1">
+                            يرجى إدخال رقم الهوية ورقم التأشيرة
+                          </div>
+                        )}
                       </Form.Group>
                     </Col>
                   </Row>
@@ -477,38 +524,40 @@ const OrderFormModal = ({
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                          رقم الجواز
+                          رقم الجواز <span className="text-danger">*</span>
                         </Form.Label>
                         <Form.Control
                           type="text"
                           name="passport_number"
                           value={formData.passport_number}
                           onChange={handleChange}
+                          required
                           isInvalid={!!getFieldError("passport_number")}
                           placeholder="أدخل رقم الجواز"
                           className="rounded-3"
                         />
                         <Form.Control.Feedback type="invalid">
-                          {getFieldError("passport_number")}
+                          {getFieldError("passport_number") || "يرجى إدخال رقم الجواز"}
                         </Form.Control.Feedback>
                       </Form.Group>
                     </Col>
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                          الجنسية
+                          الجنسية <span className="text-danger">*</span>
                         </Form.Label>
                         <Form.Control
                           type="text"
                           name="nationality"
                           value={formData.nationality}
                           onChange={handleChange}
+                          required
                           isInvalid={!!getFieldError("nationality")}
                           placeholder="أدخل الجنسية"
                           className="rounded-3"
                         />
                         <Form.Control.Feedback type="invalid">
-                          {getFieldError("nationality")}
+                          {getFieldError("nationality") || "يرجى إدخال الجنسية"}
                         </Form.Control.Feedback>
                       </Form.Group>
                     </Col>
@@ -518,19 +567,20 @@ const OrderFormModal = ({
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                          جهة القدوم
+                          جهة القدوم <span className="text-danger">*</span>
                         </Form.Label>
                         <Form.Control
                           type="text"
                           name="arrival_destination"
                           value={formData.arrival_destination}
                           onChange={handleChange}
+                          required
                           isInvalid={!!getFieldError("arrival_destination")}
                           placeholder="أدخل جهة القدوم"
                           className="rounded-3"
                         />
                         <Form.Control.Feedback type="invalid">
-                          {getFieldError("arrival_destination")}
+                          {getFieldError("arrival_destination") || "يرجى إدخال جهة القدوم"}
                         </Form.Control.Feedback>
                       </Form.Group>
                     </Col>
@@ -576,90 +626,6 @@ const OrderFormModal = ({
                     </Col>
                   </Row>
 
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="fw-semibold small text-secondary">
-                          المكتب السعودي
-                        </Form.Label>
-                        <Select
-                          className="react-select-container"
-                          classNamePrefix="react-select"
-                          options={saudiOffices.map((office) => ({
-                            value: office.id,
-                            label: office.name,
-                          }))}
-                          value={
-                            saudiOffices.find(
-                              (o) => o.id === formData.saudi_office_id,
-                            )
-                              ? {
-                                  value: formData.saudi_office_id,
-                                  label: saudiOffices.find(
-                                    (o) => o.id === formData.saudi_office_id,
-                                  ).name,
-                                }
-                              : null
-                          }
-                          onChange={(option) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              saudi_office_id: option ? option.value : "",
-                            }))
-                          }
-                          placeholder="اختر المكتب السعودي..."
-                          isClearable
-                          isRtl
-                        />
-                        {getFieldError("saudi_office_id") && (
-                          <div className="text-danger small mt-1">
-                            {getFieldError("saudi_office_id")}
-                          </div>
-                        )}
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="fw-semibold small text-secondary">
-                          المكتب الخارجي
-                        </Form.Label>
-                        <Select
-                          className="react-select-container"
-                          classNamePrefix="react-select"
-                          options={externalOffices.map((office) => ({
-                            value: office.id,
-                            label: office.name,
-                          }))}
-                          value={
-                            externalOffices.find(
-                              (o) => o.id === formData.external_office_id,
-                            )
-                              ? {
-                                  value: formData.external_office_id,
-                                  label: externalOffices.find(
-                                    (o) => o.id === formData.external_office_id,
-                                  ).name,
-                                }
-                              : null
-                          }
-                          onChange={(option) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              external_office_id: option ? option.value : "",
-                            }))
-                          }
-                          placeholder="اختر المكتب الخارجي..."
-                          isClearable
-                          isRtl
-                        />
-                        {getFieldError("external_office_id") && (
-                          <div className="text-danger small mt-1">
-                            {getFieldError("external_office_id")}
-                          </div>
-                        )}
-                      </Form.Group>
-                    </Col>
-                  </Row>
 
                   <Row>
                     <Col md={12}>

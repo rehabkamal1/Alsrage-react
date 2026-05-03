@@ -115,45 +115,43 @@ const OrdersPage = () => {
 
   const handleWhatsAppNotification = (order, newStatus) => {
     const statusLabel = orderStatuses.find(s => (s.key || s.id) === newStatus)?.label || newStatus;
-    
-    // Status translation mapping
-    const statusTranslations = {
-      'pending': 'Pending',
-      'processing': 'Processing',
-      'completed': 'Completed',
-      'canceled': 'Canceled'
-    };
-    const statusEn = statusTranslations[newStatus] || newStatus;
 
     const message = `تحديث بخصوص الطلب رقم: ${order.id} / Update for Order No: ${order.id}\n` +
                     `الاسم: ${order.visa_holder_name || "غير محدد"} / Name: ${order.visa_holder_name || "N/A"}\n` +
                     `رقم التأشيرة: ${order.visa_number || "غير محدد"} / Visa No: ${order.visa_number || "N/A"}\n` +
                     `رقم الجواز: ${order.passport_number || "غير محدد"} / Passport No: ${order.passport_number || "N/A"}\n` +
-                    `آخر تحديث للحالة: ${statusLabel} / Latest Status: ${statusEn}`;
+                    `آخر تحديث للحالة: ${statusLabel} / Latest Status: ${statusLabel}`;
     const encodedMessage = encodeURIComponent(message);
 
     const saudiOffice = saudiOffices.find(o => String(o.id) === String(order.saudi_office_id));
     const supplier = saudiOffices.find(o => String(o.id) === String(order.supplier_id));
+    const externalOffice = externalOffices.find(o => String(o.id) === String(order.external_office_id));
 
-    const buttons = {};
-    if (saudiOffice?.mobile) buttons.saudi = { text: "المكتب السعودي", className: "btn btn-dark" };
-    if (supplier?.mobile) buttons.supplier = { text: "المورد", className: "btn btn-success" };
-
-    if (Object.keys(buttons).length === 0) return;
+    const hasAny = saudiOffice?.mobile || supplier?.mobile || externalOffice?.phone;
+    if (!hasAny) return;
 
     Swal.fire({
       title: "تم تحديث الحالة بنجاح",
       text: "هل ترغب في إرسال تنبيه عبر الواتساب؟",
       icon: "question",
       showCancelButton: true,
-      showDenyButton: !!buttons.supplier,
-      showConfirmButton: !!buttons.saudi,
-      confirmButtonText: buttons.saudi?.text,
-      denyButtonText: buttons.supplier?.text,
+      showDenyButton: !!supplier?.mobile,
+      showConfirmButton: !!saudiOffice?.mobile,
+      confirmButtonText: "المكتب السعودي",
+      denyButtonText: "المورد",
       cancelButtonText: "لا، شكراً",
       confirmButtonColor: "#212529",
       denyButtonColor: "#198754",
       reverseButtons: true,
+      footer: externalOffice?.phone
+        ? `<button id="wa-external-btn" style="background:#0d6efd;color:#fff;border:none;border-radius:6px;padding:6px 16px;cursor:pointer;">🌍 المكتب الخارجي</button>`
+        : undefined,
+      didOpen: () => {
+        document.getElementById("wa-external-btn")?.addEventListener("click", () => {
+          window.open(`https://wa.me/${externalOffice.phone.replace(/\D/g, "")}?text=${encodedMessage}`, "_blank");
+          Swal.close();
+        });
+      },
     }).then((result) => {
       if (result.isConfirmed && saudiOffice?.mobile) {
         window.open(`https://wa.me/${saudiOffice.mobile.replace(/\D/g, "")}?text=${encodedMessage}`, "_blank");
@@ -162,6 +160,7 @@ const OrdersPage = () => {
       }
     });
   };
+
 
   const handleSubmit = async (formData) => {
     setLoading(true);
@@ -174,23 +173,35 @@ const OrdersPage = () => {
       if (editingOrder) {
         const response = await updateOrder(editingOrder.id, formData);
         showSuccess("تم التحديث!", "تم تحديث الطلب بنجاح");
-        
         if (isStatusChanged) {
-          // Extract data from response or use editingOrder with new status
-          const updatedOrder = response.data?.data || { 
-            ...editingOrder, 
+          const updatedOrder = response.data?.data || {
+            ...editingOrder,
             status: newStatus,
             visa_holder_name: formData.get("visa_holder_name") || editingOrder.visa_holder_name,
             visa_number: formData.get("visa_number") || editingOrder.visa_number,
             passport_number: formData.get("passport_number") || editingOrder.passport_number,
             saudi_office_id: formData.get("saudi_office_id"),
-            supplier_id: formData.get("supplier_id")
+            supplier_id: formData.get("supplier_id"),
+            external_office_id: formData.get("external_office_id"),
           };
           handleWhatsAppNotification(updatedOrder, newStatus);
         }
       } else {
-        await createOrder(formData);
+        const response = await createOrder(formData);
         showSuccess("تمت الإضافة!", "تم إضافة الطلب بنجاح");
+        // Show WhatsApp notification for new orders that have a status set
+        if (newStatus) {
+          const createdOrder = response.data?.data || {
+            id: "?",
+            visa_holder_name: formData.get("visa_holder_name"),
+            visa_number: formData.get("visa_number"),
+            passport_number: formData.get("passport_number"),
+            saudi_office_id: formData.get("saudi_office_id"),
+            supplier_id: formData.get("supplier_id"),
+            external_office_id: formData.get("external_office_id"),
+          };
+          handleWhatsAppNotification(createdOrder, newStatus);
+        }
       }
       setShowModal(false);
       setEditingOrder(null);

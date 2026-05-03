@@ -28,10 +28,13 @@ const OrderTable = ({ orders, onEdit, onDelete, statusOptions = [] }) => {
         <thead className="table-light">
           <tr>
             <th>#</th>
+            <th>المكتب السعودي</th>
+            <th>المندوب</th>
             <th>صاحب التأشيرة</th>
             <th>رقم التأشيرة</th>
             <th>رقم عقد مساند</th>
             <th>إجمالي السعر</th>
+            <th>سداد مساند</th>
             <th>الرصيد المتبقي</th>
             <th>حالة سداد مساند</th>
             <th>التاريخ</th>
@@ -43,6 +46,15 @@ const OrderTable = ({ orders, onEdit, onDelete, statusOptions = [] }) => {
             orders.map((order) => (
               <tr key={order.id}>
                 <td className="fw-semibold">#{order.id}</td>
+                <td className="fw-semibold text-primary">
+                  {order.saudi_office?.name || "-"}
+                </td>
+                <td>
+                  {order.client?.name || "-"}
+                  {order.client?.phone && (
+                    <div className="text-muted small">{order.client.phone}</div>
+                  )}
+                </td>
                 <td>
                   {order.visa_holder_name ||
                     order.client?.visa_holder_name ||
@@ -50,14 +62,15 @@ const OrderTable = ({ orders, onEdit, onDelete, statusOptions = [] }) => {
                 </td>
                 <td>{order.visa_number || "-"}</td>
                 <td>{order.musaned_contract_number || "-"}</td>
-                <td>{order.total_price ? `${order.total_price} ر.س` : "-"}</td>
+                <td>{order.total_price != null ? `${Number(order.total_price).toFixed(2)} ر.س` : "-"}</td>
+                <td>{order.musaned_paid != null ? `${Number(order.musaned_paid).toFixed(2)} ر.س` : "-"}</td>
                 <td
                   className={
-                    order.price_difference >= 0 ? "text-success" : "text-danger"
+                    order.price_difference >= 0 ? "text-success fw-semibold" : "text-danger fw-semibold"
                   }
                 >
-                  {order.price_difference
-                    ? `${order.price_difference} ر.س`
+                  {order.price_difference != null
+                    ? `${Number(order.price_difference).toFixed(2)} ر.س`
                     : "-"}
                 </td>
                 <td>{getStatusBadge(order.status)}</td>
@@ -118,7 +131,7 @@ const OrderTable = ({ orders, onEdit, onDelete, statusOptions = [] }) => {
             ))}
           {(!orders || orders.length === 0) && (
             <tr>
-              <td colSpan="9" className="text-center py-5 text-muted">
+              <td colSpan="12" className="text-center py-5 text-muted">
                 لا يوجد طلبات
               </td>
             </tr>
