@@ -128,7 +128,7 @@ const ClientFormModal = ({
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
-                  رقم الهاتف <span className="text-danger">*</span>
+                  رقم هاتف المندوب <span className="text-danger">*</span>
                 </Form.Label>
                 <Form.Control
                   type="tel"
@@ -136,11 +136,11 @@ const ClientFormModal = ({
                   value={formData.phone}
                   onChange={handleChange}
                   required
-                  placeholder="رقم الهاتف الأساسي"
+                  placeholder="رقم هاتف المندوب"
                   className="rounded-3"
                 />
                 <Form.Control.Feedback type="invalid">
-                  يرجى إدخال رقم الهاتف
+                  يرجى إدخال رقم هاتف المندوب
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
@@ -165,7 +165,7 @@ const ClientFormModal = ({
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
-                  اسم الموظف
+                  اسم صاحب التأشيرة
                 </Form.Label>
                 <Select
                   className="react-select-container"
@@ -175,7 +175,7 @@ const ClientFormModal = ({
                   onChange={(option) => {
                     setFormData(prev => ({ ...prev, employee_id: option ? option.value : "" }));
                   }}
-                  placeholder="اختر الموظف..."
+                  placeholder="اختر صاحب التأشيرة..."
                   isClearable
                   isRtl
                 />

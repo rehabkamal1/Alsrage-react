@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Card, Button } from "react-bootstrap";
+import RefreshButton from "../components/common/RefreshButton";
 import {
   getClients,
   createClient,
@@ -136,9 +137,9 @@ const ClientsPage = () => {
   const handleExport = () => {
     const columns = [
       { header: "نوع العميل", key: "client_type" },
+      { header: "رقم هاتف المندوب", key: "phone" },
       { header: "المندوب", key: "name" },
-      { header: "اسم الموظف", format: (client) => client.employee?.name || "-" },
-      { header: "رقم الهاتف", key: "phone" },
+      { header: "اسم صاحب التأشيرة", format: (client) => client.employee?.name || "-" },
       { header: "رقم هاتف إضافي", key: "additional_phone" },
       { header: "المدينة", key: "city" },
       { header: "العنوان", key: "address" },
@@ -149,9 +150,9 @@ const ClientsPage = () => {
   const handleExportPDF = () => {
     const columns = [
       { header: "نوع العميل", key: "client_type" },
+      { header: "رقم هاتف المندوب", key: "phone" },
       { header: "المندوب", key: "name" },
-      { header: "اسم الموظف", format: (client) => client.employee?.name || "-" },
-      { header: "رقم الهاتف", key: "phone" },
+      { header: "اسم صاحب التأشيرة", format: (client) => client.employee?.name || "-" },
       { header: "رقم هاتف إضافي", key: "additional_phone" },
       { header: "المدينة", key: "city" },
       { header: "العنوان", key: "address" },
@@ -171,6 +172,11 @@ const ClientsPage = () => {
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
           <h1 className="h3 mb-0 fw-bold">العملاء</h1>
           <div className="d-flex flex-wrap gap-2">
+            <RefreshButton 
+              onClick={fetchClients} 
+              loading={loading} 
+              className="border shadow-sm text-primary fw-semibold"
+            />
             <Button
               variant="light"
               onClick={handleExport}

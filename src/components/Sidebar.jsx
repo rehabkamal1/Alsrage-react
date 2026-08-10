@@ -214,6 +214,11 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, isOpen, onClose }) => {
       ),
     },
     {
+      id: "whatsapp-template",
+      label: "قوالب الواتساب",
+      icon: <i className="fa-brands fa-whatsapp fs-5 text-success"></i>,
+    },
+    {
       id: "settings",
       label: "الإعدادات",
       icon: (

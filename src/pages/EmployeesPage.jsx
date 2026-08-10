@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button } from "react-bootstrap";
+import RefreshButton from "../components/common/RefreshButton";
 import {
   getEmployees,
   createEmployee,
@@ -192,6 +193,11 @@ const EmployeesPage = () => {
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">الموظفين</h1>
           <div className="d-flex gap-2">
+            <RefreshButton 
+              onClick={fetchEmployees} 
+              loading={loading} 
+              className="border shadow-sm text-primary fw-semibold"
+            />
             <Button
               variant="light"
               onClick={handleExport}

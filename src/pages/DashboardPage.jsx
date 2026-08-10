@@ -14,6 +14,7 @@ import {
 } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import { Table, Badge, Button, Form, Row, Col, Spinner, ProgressBar } from 'react-bootstrap';
+import RefreshButton from '../components/common/RefreshButton';
 import { getClients, getOrders, getEmployees, getSaudiOffices, getExternalOffices } from '../services/apiService';
 
 // Register ChartJS components
@@ -327,15 +328,7 @@ const DashboardPage = () => {
         </div>
 
         <div className="d-flex align-items-center gap-3">
-          <Button
-            variant="light"
-            className="rounded-pill px-4 py-2.5 fw-bold text-primary shadow-lg hover-lift d-flex align-items-center gap-2 border-0"
-            onClick={fetchDashboardData}
-            disabled={loading}
-          >
-            <i className={`fa-solid fa-rotate-right ${loading ? 'fa-spin text-primary' : ''}`}></i>
-            <span>{loading ? 'تحديث...' : 'تحديث البيانات'}</span>
-          </Button>
+          <RefreshButton onClick={fetchDashboardData} loading={loading} />
 
           <Button
             variant="outline-light"
@@ -437,7 +430,7 @@ const DashboardPage = () => {
 
       {/* Elevated Stats Grid */}
       <Row className="g-4 mb-4">
-        <Col xs={12} sm={6} lg={3}>
+        <Col xs={12} md={4}>
           <div className="dash-stat-box glow-ring-box">
             <div className="d-flex justify-content-between align-items-start mb-3">
               <div>
@@ -457,7 +450,7 @@ const DashboardPage = () => {
           </div>
         </Col>
 
-        <Col xs={12} sm={6} lg={3}>
+        <Col xs={12} md={4}>
           <div className="dash-stat-box glow-ring-box">
             <div className="d-flex justify-content-between align-items-start mb-3">
               <div>
@@ -477,27 +470,7 @@ const DashboardPage = () => {
           </div>
         </Col>
 
-        <Col xs={12} sm={6} lg={3}>
-          <div className="dash-stat-box glow-ring-box">
-            <div className="d-flex justify-content-between align-items-start mb-3">
-              <div>
-                <span className="text-muted small fw-bold d-block mb-1">الموظفين</span>
-                <h2 className="display-6 fw-extrabold text-dark mb-0">{stats.employees}</h2>
-              </div>
-              <div className="dash-stat-icon-wrapper warning">
-                <i className="fa-solid fa-user-tie"></i>
-              </div>
-            </div>
-            <div className="d-flex align-items-center justify-content-between pt-2 border-top">
-              <span className="badge bg-warning bg-opacity-10 text-dark rounded-pill px-2.5 py-1 small fw-semibold">
-                <i className="fa-solid fa-shield-halved me-1"></i> صلاحيات مفعلة
-              </span>
-              <span className="text-muted small">فريق العمل</span>
-            </div>
-          </div>
-        </Col>
-
-        <Col xs={12} sm={6} lg={3}>
+        <Col xs={12} md={4}>
           <div className="dash-stat-box glow-ring-box">
             <div className="d-flex justify-content-between align-items-start mb-3">
               <div>
@@ -686,9 +659,10 @@ const DashboardPage = () => {
             <Table hover className="dash-table align-middle mb-0">
               <thead>
                 <tr>
-                  <th>اسم العميل</th>
-                  <th>رقم الهاتف</th>
                   <th>نوع العميل</th>
+                  <th>رقم هاتف المندوب</th>
+                  <th>المندوب</th>
+                  <th>اسم صاحب التأشيرة</th>
                   <th className="text-center">تاريخ التسجيل</th>
                   <th className="text-end">الإجراء</th>
                 </tr>
@@ -697,20 +671,23 @@ const DashboardPage = () => {
                 {recentClients.map(client => (
                   <tr key={client.id}>
                     <td>
-                      <div className="d-flex align-items-center gap-3">
-                        <div className="rounded-circle bg-success bg-opacity-10 text-success fw-bold d-flex align-items-center justify-content-center shadow-sm" style={{ width: '42px', height: '42px', fontSize: '1rem' }}>
-                          {client.name ? client.name.charAt(0) : 'ع'}
-                        </div>
-                        <div className="fw-bold text-dark">{client.name}</div>
-                      </div>
+                      <Badge bg={client.client_type === 'office' ? 'info' : 'secondary'} className="rounded-pill px-3 py-1.5">
+                        {client.client_type === 'office' ? 'مكتب' : 'فرد'}
+                      </Badge>
                     </td>
                     <td>
                       <span className="text-muted font-monospace dir-ltr">{client.phone}</span>
                     </td>
                     <td>
-                      <Badge bg={client.client_type === 'office' ? 'info' : 'secondary'} className="rounded-pill px-3 py-1.5">
-                        {client.client_type === 'office' ? 'مكتب' : 'فرد'}
-                      </Badge>
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="rounded-circle bg-success bg-opacity-10 text-success fw-bold d-flex align-items-center justify-content-center shadow-sm" style={{ width: '32px', height: '32px', fontSize: '0.85rem' }}>
+                          {client.name ? client.name.charAt(0) : 'م'}
+                        </div>
+                        <span className="fw-semibold text-dark">{client.name || '-'}</span>
+                      </div>
+                    </td>
+                    <td className="fw-bold text-dark">
+                      {client.employee?.name || '-'}
                     </td>
                     <td className="text-center">
                       <span className="badge bg-light text-secondary border px-3 py-1.5 rounded-pill font-monospace small">
@@ -722,7 +699,7 @@ const DashboardPage = () => {
                         href={`tel:${client.phone}`}
                         className="btn btn-light btn-sm rounded-circle shadow-sm border text-success hover-bg-success hover-text-white transition-all me-1"
                         style={{ width: '36px', height: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                        title="اتصال بالعميل"
+                        title="اتصال بالمندوب"
                       >
                         <i className="fa-solid fa-phone"></i>
                       </a>
