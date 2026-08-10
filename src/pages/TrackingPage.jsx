@@ -221,7 +221,6 @@ const TrackingPage = () => {
           return found?.label || item.priority_level || "-";
         },
       },
-      { header: "الملاحظات", key: "notes" },
     ];
     exportToExcel(filteredTracking, columns, "متابعة_الطلبات.xlsx");
   };

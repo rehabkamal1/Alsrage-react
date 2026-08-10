@@ -267,7 +267,6 @@ const OrdersPage = () => {
     ];
     exportToExcel(orders, columns, "الطلبات.xlsx");
   };
-
   const handleExportPDF = () => {
     const columns = [
       { header: "رقم الطلب", key: "id" },
@@ -279,9 +278,15 @@ const OrdersPage = () => {
       { header: "الرصيد المتبقي", key: "price_difference" },
       {
         header: "الحالة",
-        format: (order) => orderStatuses.find(s => (s.key || s.id) === order.status)?.label || order.status
+        format: (order) =>
+          orderStatuses.find((s) => (s.key || s.id) === order.status)?.label ||
+          order.status,
       },
-      { header: "التاريخ", format: (order) => new Date(order.created_at).toLocaleDateString("ar-SA") },
+      {
+        header: "التاريخ",
+        format: (order) =>
+          new Date(order.created_at).toLocaleDateString("ar-SA"),
+      },
     ];
     exportToPDF(orders, columns, "الطلبات.pdf");
   };

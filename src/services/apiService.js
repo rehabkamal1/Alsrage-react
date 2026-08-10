@@ -38,14 +38,14 @@ export const searchClients = (query) =>
 export const quickCreateClient = (data) => api.post("/clients/quick", data);
 
 // =============== Saudi Offices ===============
-export const getSaudiOffices = () => api.get("/saudi-offices");
+export const getSaudiOffices = (params = {}) => api.get("/saudi-offices", { params });
 export const createSaudiOffice = (data) => api.post("/saudi-offices", data);
 export const updateSaudiOffice = (id, data) =>
   api.put(`/saudi-offices/${id}`, data);
 export const deleteSaudiOffice = (id) => api.delete(`/saudi-offices/${id}`);
 
 // =============== External Offices ===============
-export const getExternalOffices = () => api.get("/external-offices");
+export const getExternalOffices = (params = {}) => api.get("/external-offices", { params });
 export const createExternalOffice = (data) =>
   api.post("/external-offices", data);
 export const updateExternalOffice = (id, data) =>

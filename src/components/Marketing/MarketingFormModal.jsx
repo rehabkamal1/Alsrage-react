@@ -165,19 +165,13 @@ const MarketingFormModal = ({
                 <Select
                   options={sourceOptions.map((opt) => ({
                     value: opt.id,
-                    label: opt.name || opt.office_name,
+                    label: opt.name,
                   }))}
                   value={
                     sourceOptions.find((opt) => opt.id === formData.source_id)
                       ? {
                           value: formData.source_id,
-                          label:
-                            sourceOptions.find(
-                              (opt) => opt.id === formData.source_id,
-                            ).name ||
-                            sourceOptions.find(
-                              (opt) => opt.id === formData.source_id,
-                            ).office_name,
+                          label: sourceOptions.find((opt) => opt.id === formData.source_id).name,
                         }
                       : null
                   }

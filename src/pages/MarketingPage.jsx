@@ -270,7 +270,6 @@ const MarketingPage = () => {
     ];
     exportToExcel(leads, columns, "التسويق.xlsx");
   };
-
   const handleExportPDF = () => {
     const columns = [
       { header: "اسم العميل", key: "name" },
