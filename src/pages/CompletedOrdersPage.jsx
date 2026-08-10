@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button } from "react-bootstrap";
+import RefreshButton from "../components/common/RefreshButton";
 import {
   getOrders,
   updateOrder,
@@ -19,6 +20,7 @@ import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
+import { showWhatsAppNotificationModal } from "../utils/whatsappHelper";
 
 const CompletedOrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -189,6 +191,11 @@ const CompletedOrdersPage = () => {
             <p className="text-muted small mb-0">إجمالي الطلبات المكتملة: {totalOrders}</p>
           </div>
           <div className="d-flex gap-2">
+            <RefreshButton 
+              onClick={fetchOrders} 
+              loading={loading} 
+              className="border shadow-sm text-primary fw-semibold"
+            />
             <Button
               variant="light"
               onClick={handleExport}
@@ -245,6 +252,14 @@ const CompletedOrdersPage = () => {
                   orders={orders}
                   onEdit={handleEditOrder}
                   onDelete={handleDeleteOrder}
+                  onWhatsApp={(order) =>
+                    showWhatsAppNotificationModal({
+                      order,
+                      orderStatuses,
+                      saudiOffices,
+                      externalOffices,
+                    })
+                  }
                   statusOptions={orderStatuses}
                 />
                 {totalPages > 1 && (

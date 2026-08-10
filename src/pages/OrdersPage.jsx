@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 /* global Swal */
 import { Container, Card, Button } from "react-bootstrap";
+import RefreshButton from "../components/common/RefreshButton";
 import {
   getOrders,
   createOrder,
@@ -22,6 +23,7 @@ import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
+import { showWhatsAppNotificationModal } from "../utils/whatsappHelper";
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -114,50 +116,13 @@ const OrdersPage = () => {
   };
 
   const handleWhatsAppNotification = (order, newStatus) => {
-    const statusLabel = orderStatuses.find(s => (s.key || s.id) === newStatus)?.label || newStatus;
-
-    const message = `تحديث بخصوص الطلب رقم: ${order.id} / Update for Order No: ${order.id}\n` +
-                    `الاسم: ${order.visa_holder_name || "غير محدد"} / Name: ${order.visa_holder_name || "N/A"}\n` +
-                    `رقم التأشيرة: ${order.visa_number || "غير محدد"} / Visa No: ${order.visa_number || "N/A"}\n` +
-                    `رقم الجواز: ${order.passport_number || "غير محدد"} / Passport No: ${order.passport_number || "N/A"}\n` +
-                    `آخر تحديث للحالة: ${statusLabel} / Latest Status: ${statusLabel}`;
-    const encodedMessage = encodeURIComponent(message);
-
-    const saudiOffice = saudiOffices.find(o => String(o.id) === String(order.saudi_office_id));
-    const supplier = saudiOffices.find(o => String(o.id) === String(order.supplier_id));
-    const externalOffice = externalOffices.find(o => String(o.id) === String(order.external_office_id));
-
-    const hasAny = saudiOffice?.mobile || supplier?.mobile || externalOffice?.phone;
-    if (!hasAny) return;
-
-    Swal.fire({
-      title: "تم تحديث الحالة بنجاح",
-      text: "هل ترغب في إرسال تنبيه عبر الواتساب؟",
-      icon: "question",
-      showCancelButton: true,
-      showDenyButton: !!supplier?.mobile,
-      showConfirmButton: !!saudiOffice?.mobile,
-      confirmButtonText: "المكتب السعودي",
-      denyButtonText: "المورد",
-      cancelButtonText: "لا، شكراً",
-      confirmButtonColor: "#212529",
-      denyButtonColor: "#198754",
-      reverseButtons: true,
-      footer: externalOffice?.phone
-        ? `<button id="wa-external-btn" style="background:#0d6efd;color:#fff;border:none;border-radius:6px;padding:6px 16px;cursor:pointer;">🌍 المكتب الخارجي</button>`
-        : undefined,
-      didOpen: () => {
-        document.getElementById("wa-external-btn")?.addEventListener("click", () => {
-          window.open(`https://wa.me/${externalOffice.phone.replace(/\D/g, "")}?text=${encodedMessage}`, "_blank");
-          Swal.close();
-        });
-      },
-    }).then((result) => {
-      if (result.isConfirmed && saudiOffice?.mobile) {
-        window.open(`https://wa.me/${saudiOffice.mobile.replace(/\D/g, "")}?text=${encodedMessage}`, "_blank");
-      } else if (result.isDenied && supplier?.mobile) {
-        window.open(`https://wa.me/${supplier.mobile.replace(/\D/g, "")}?text=${encodedMessage}`, "_blank");
-      }
+    showWhatsAppNotificationModal({
+      order,
+      newStatus,
+      orderStatuses,
+      saudiOffices,
+      externalOffices,
+      clients,
     });
   };
 
@@ -267,7 +232,6 @@ const OrdersPage = () => {
     ];
     exportToExcel(orders, columns, "الطلبات.xlsx");
   };
-
   const handleExportPDF = () => {
     const columns = [
       { header: "رقم الطلب", key: "id" },
@@ -279,9 +243,15 @@ const OrdersPage = () => {
       { header: "الرصيد المتبقي", key: "price_difference" },
       {
         header: "الحالة",
-        format: (order) => orderStatuses.find(s => (s.key || s.id) === order.status)?.label || order.status
+        format: (order) =>
+          orderStatuses.find((s) => (s.key || s.id) === order.status)?.label ||
+          order.status,
       },
-      { header: "التاريخ", format: (order) => new Date(order.created_at).toLocaleDateString("ar-SA") },
+      {
+        header: "التاريخ",
+        format: (order) =>
+          new Date(order.created_at).toLocaleDateString("ar-SA"),
+      },
     ];
     exportToPDF(orders, columns, "الطلبات.pdf");
   };
@@ -324,6 +294,11 @@ const OrdersPage = () => {
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
           <h1 className="h3 mb-0 fw-bold">الطلبات</h1>
           <div className="d-flex flex-wrap gap-2">
+            <RefreshButton 
+              onClick={fetchAllData} 
+              loading={loading} 
+              className="border shadow-sm text-primary fw-semibold"
+            />
             <Button
               variant="light"
               onClick={handleExport}
@@ -378,6 +353,7 @@ const OrdersPage = () => {
                   onEdit={handleEditOrder}
                   onDelete={handleDeleteOrder}
                   onStatusChange={handleStatusChange}
+                  onWhatsApp={(order) => handleWhatsAppNotification(order)}
                   statusOptions={orderStatuses}
                 />
                 {totalPages > 1 && (

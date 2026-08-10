@@ -12,7 +12,6 @@ export const exportToExcel = (data, columns, filename = "export.xlsx") => {
   const formattedData = data.map((item) => {
     const row = {};
     columns.forEach((col) => {
-      // Handle nested or computed values by checking if the col object provides a render or format function
       if (col.format && typeof col.format === "function") {
         row[col.header] = col.format(item);
       } else {
@@ -25,6 +24,25 @@ export const exportToExcel = (data, columns, filename = "export.xlsx") => {
   // Create a new workbook and a worksheet
   const worksheet = XLSX.utils.json_to_sheet(formattedData);
   const workbook = XLSX.utils.book_new();
+
+  // --- Auto-calculate column widths ---
+  const colWidths = columns.map((col) => {
+    // Start with the header length
+    let maxWidth = col.header.length;
+    
+    // Check all data rows for this column
+    formattedData.forEach((row) => {
+      const cellValue = String(row[col.header] || "");
+      if (cellValue.length > maxWidth) {
+        maxWidth = cellValue.length;
+      }
+    });
+    
+    // Add a bit of padding (average character width in Excel is roughly 1 unit)
+    return { wch: maxWidth + 5 };
+  });
+  
+  worksheet["!cols"] = colWidths;
 
   // Make worksheet RTL
   if (!worksheet["!views"]) {

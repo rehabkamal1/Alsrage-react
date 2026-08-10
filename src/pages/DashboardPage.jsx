@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -6,13 +6,15 @@ import {
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend,
   Filler
 } from 'chart.js';
-import { Line, Bar } from 'react-chartjs-2';
-import { Table, Badge, Button } from 'react-bootstrap';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { Table, Badge, Button, Form, Row, Col, Spinner, ProgressBar } from 'react-bootstrap';
+import RefreshButton from '../components/common/RefreshButton';
 import { getClients, getOrders, getEmployees, getSaudiOffices, getExternalOffices } from '../services/apiService';
 
 // Register ChartJS components
@@ -22,6 +24,7 @@ ChartJS.register(
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend,
@@ -36,239 +39,687 @@ const DashboardPage = () => {
     offices: 0
   });
   const [recentOrders, setRecentOrders] = useState([]);
+  const [recentClients, setRecentClients] = useState([]);
+  const [activeTab, setActiveTab] = useState('orders'); // 'orders' | 'clients'
+
+  const [orderStatusCounts, setOrderStatusCounts] = useState({
+    pending: 0,
+    processing: 0,
+    completed: 0,
+    cancelled: 0,
+    musaned_paid: 0
+  });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const [clientsRes, ordersRes, employeesRes, saudiRes, externalRes] = await Promise.all([
-          getClients(),
-          getOrders(),
-          getEmployees(),
-          getSaudiOffices(),
-          getExternalOffices()
-        ]);
-        
-        setStats({
-          clients: clientsRes.data.meta?.total || clientsRes.data.total || clientsRes.data.data?.length || 0,
-          orders: ordersRes.data.meta?.total || ordersRes.data.total || ordersRes.data.data?.length || 0,
-          employees: employeesRes.data.total || employeesRes.data.data?.length || 0,
-          offices: (saudiRes.data.meta?.total || saudiRes.data.total || saudiRes.data.data?.length || 0) + 
-                   (externalRes.data.meta?.total || externalRes.data.total || externalRes.data.data?.length || 0)
-        });
-        
-        setRecentOrders(ordersRes.data.data.slice(0, 5));
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Date Filtering State
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [activePreset, setActivePreset] = useState('all');
 
+  // Chart datasets
+  const [monthlyOrders, setMonthlyOrders] = useState({
+    labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+    data: [0, 0, 0, 0, 0, 0]
+  });
+  const [monthlyClients, setMonthlyClients] = useState({
+    labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+    data: [0, 0, 0, 0, 0, 0]
+  });
+
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = {};
+      if (fromDate) params.from_date = fromDate;
+      if (toDate) params.to_date = toDate;
+
+      const [clientsRes, ordersRes, employeesRes, saudiRes, externalRes] = await Promise.all([
+        getClients(params),
+        getOrders(params),
+        getEmployees(params),
+        getSaudiOffices(params),
+        getExternalOffices(params)
+      ]);
+
+      const clientList = clientsRes.data?.data || clientsRes.data || [];
+      const orderList = ordersRes.data?.data || ordersRes.data || [];
+      const employeeList = employeesRes.data?.data || employeesRes.data || [];
+      const saudiList = saudiRes.data?.data || saudiRes.data || [];
+      const externalList = externalRes.data?.data || externalRes.data || [];
+
+      setStats({
+        clients: clientsRes.data?.meta?.total ?? clientsRes.data?.total ?? clientList.length,
+        orders: ordersRes.data?.meta?.total ?? ordersRes.data?.total ?? orderList.length,
+        employees: employeesRes.data?.total ?? employeeList.length,
+        offices: (saudiRes.data?.meta?.total ?? saudiRes.data?.total ?? saudiList.length) +
+                 (externalRes.data?.meta?.total ?? externalRes.data?.total ?? externalList.length)
+      });
+
+      setRecentOrders(orderList.slice(0, 6));
+      setRecentClients(clientList.slice(0, 6));
+
+      // Calculate Status Distribution
+      const statusCounts = { pending: 0, processing: 0, completed: 0, cancelled: 0, musaned_paid: 0 };
+      orderList.forEach(order => {
+        if (order.status && statusCounts[order.status] !== undefined) {
+          statusCounts[order.status]++;
+        } else if (order.status === 'canceled') {
+          statusCounts.cancelled++;
+        }
+      });
+      setOrderStatusCounts(statusCounts);
+
+      // Calculate monthly order counts for line chart
+      const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+      const orderCounts = Array(12).fill(0);
+      orderList.forEach(order => {
+        if (order.created_at) {
+          const monthIndex = new Date(order.created_at).getMonth();
+          orderCounts[monthIndex]++;
+        }
+      });
+      const currentMonth = new Date().getMonth();
+      const last6MonthsIndices = [];
+      for (let i = 5; i >= 0; i--) {
+        last6MonthsIndices.push((currentMonth - i + 12) % 12);
+      }
+      setMonthlyOrders({
+        labels: last6MonthsIndices.map(i => monthNames[i]),
+        data: last6MonthsIndices.map(i => orderCounts[i])
+      });
+
+      // Calculate monthly clients for bar chart
+      const clientCounts = Array(12).fill(0);
+      clientList.forEach(client => {
+        if (client.created_at) {
+          const monthIndex = new Date(client.created_at).getMonth();
+          clientCounts[monthIndex]++;
+        }
+      });
+      setMonthlyClients({
+        labels: last6MonthsIndices.map(i => monthNames[i]),
+        data: last6MonthsIndices.map(i => clientCounts[i])
+      });
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [fromDate, toDate]);
+
+  useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [fetchDashboardData]);
+
+  // Handle Preset Button Clicks
+  const handlePresetSelect = (presetKey) => {
+    setActivePreset(presetKey);
+    const today = new Date();
+    const formatDate = (d) => d.toISOString().split('T')[0];
+
+    if (presetKey === 'all') {
+      setFromDate('');
+      setToDate('');
+    } else if (presetKey === 'today') {
+      const todayStr = formatDate(today);
+      setFromDate(todayStr);
+      setToDate(todayStr);
+    } else if (presetKey === 'week') {
+      const dayOfWeek = today.getDay(); // 0 = Sun
+      const firstDayOfWeek = new Date(today);
+      firstDayOfWeek.setDate(today.getDate() - dayOfWeek);
+      setFromDate(formatDate(firstDayOfWeek));
+      setToDate(formatDate(today));
+    } else if (presetKey === 'month') {
+      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      setFromDate(formatDate(firstDayOfMonth));
+      setToDate(formatDate(today));
+    } else if (presetKey === 'year') {
+      const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
+      setFromDate(formatDate(firstDayOfYear));
+      setToDate(formatDate(today));
+    }
+  };
+
+  const handleResetFilters = () => {
+    setActivePreset('all');
+    setFromDate('');
+    setToDate('');
+  };
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      'pending': { label: 'قيد الانتظار', bg: 'warning' },
-      'processing': { label: 'تحت المعالجة', bg: 'info' },
-      'completed': { label: 'مكتمل', bg: 'success' },
-      'cancelled': { label: 'ملغي', bg: 'danger' },
-      'musaned_paid': { label: 'تم سداد مساند', bg: 'primary' },
+      'pending': { label: 'قيد الانتظار', bg: 'warning', text: 'dark', pulse: 'warning' },
+      'processing': { label: 'تحت المعالجة', bg: 'info', text: 'white', pulse: 'info' },
+      'completed': { label: 'مكتمل', bg: 'success', text: 'white', pulse: 'success' },
+      'cancelled': { label: 'ملغي', bg: 'danger', text: 'white', pulse: 'danger' },
+      'canceled': { label: 'ملغي', bg: 'danger', text: 'white', pulse: 'danger' },
+      'musaned_paid': { label: 'تم سداد مساند', bg: 'primary', text: 'white', pulse: 'primary' },
     };
-    const config = statusMap[status] || { label: status, bg: 'secondary' };
+    const config = statusMap[status] || { label: status, bg: 'secondary', text: 'white', pulse: 'secondary' };
     return (
-      <Badge bg={config.bg} className="rounded-pill px-3 py-2 fw-semibold shadow-sm" style={{ fontSize: '0.75rem' }}>
-        {config.label}
-      </Badge>
+      <div className="d-inline-flex align-items-center gap-1.5 px-3 py-1.5 rounded-pill border bg-light shadow-sm">
+        <span className={`pulse-dot ${config.pulse}`}></span>
+        <span className="fw-semibold small text-dark">{config.label}</span>
+      </div>
     );
   };
 
-  // Chart Data
+  // Line Chart Data
   const lineData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    labels: monthlyOrders.labels,
     datasets: [
       {
         label: 'الطلبات',
-        data: [12, 19, 3, 5, 2, 3],
+        data: monthlyOrders.data,
         fill: true,
-        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        backgroundColor: 'rgba(99, 102, 241, 0.15)',
         borderColor: '#6366f1',
+        borderWidth: 3,
+        pointBackgroundColor: '#4f46e5',
+        pointBorderColor: '#fff',
+        pointHoverRadius: 7,
         tension: 0.4,
       },
     ],
   };
 
+  // Bar Chart Data
   const barData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    labels: monthlyClients.labels,
     datasets: [
       {
         label: 'العملاء الجدد',
-        data: [5, 10, 8, 15, 12, 20],
-        backgroundColor: '#4f46e5',
-        borderRadius: 8,
+        data: monthlyClients.data,
+        backgroundColor: 'rgba(16, 185, 129, 0.85)',
+        hoverBackgroundColor: '#10b981',
+        borderRadius: 10,
+        barThickness: 22,
       },
     ],
   };
 
-  const options = {
+  // Doughnut Chart Data for Status Distribution
+  const doughnutData = {
+    labels: ['قيد الانتظار', 'تحت المعالجة', 'مكتمل', 'سداد مساند', 'ملغي'],
+    datasets: [
+      {
+        data: [
+          orderStatusCounts.pending,
+          orderStatusCounts.processing,
+          orderStatusCounts.completed,
+          orderStatusCounts.musaned_paid,
+          orderStatusCounts.cancelled
+        ],
+        backgroundColor: ['#f59e0b', '#06b6d4', '#10b981', '#6366f1', '#ef4444'],
+        borderWidth: 0,
+        hoverOffset: 6
+      }
+    ]
+  };
+
+  const chartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: false,
-      },
+      legend: { display: false },
       tooltip: {
-        titleFont: { size: 16 },
-        bodyFont: { size: 14 },
+        backgroundColor: '#0f172a',
+        padding: 12,
+        cornerRadius: 10,
+        titleFont: { size: 14, family: 'Cairo' },
+        bodyFont: { size: 13, family: 'Cairo' },
       }
     },
     scales: {
       y: {
         beginAtZero: true,
-        grid: {
-          display: false,
-        },
-        ticks: {
-          font: { size: 14, weight: '600' }
-        }
+        grid: { color: 'rgba(226, 232, 240, 0.6)' },
+        ticks: { font: { size: 12, family: 'Cairo', weight: '600' }, color: '#64748b' }
       },
       x: {
-        grid: {
-          display: false,
-        },
-        ticks: {
-          font: { size: 14, weight: '600' }
-        }
+        grid: { display: false },
+        ticks: { font: { size: 12, family: 'Cairo', weight: '600' }, color: '#64748b' }
       },
     },
   };
 
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '72%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0f172a',
+        padding: 12,
+        cornerRadius: 10,
+        titleFont: { size: 14, family: 'Cairo' },
+        bodyFont: { size: 13, family: 'Cairo' },
+      }
+    }
+  };
+
   return (
-    <div className="page-container" style={{ animation: 'none' }}>
-      <div className="page-header">
-        <div className="page-title">
-          <h1>لوحة التحكم</h1>
+    <div className="page-container pb-5">
+      {/* Hero Welcome Banner */}
+      <div className="dash-hero-card p-4 p-md-5 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-4">
+        <div>
+          <div className="d-flex align-items-center gap-2 mb-2">
+            <span 
+              className="badge rounded-pill px-3 py-1.5 small fw-bold d-inline-flex align-items-center gap-1 shadow-sm"
+              style={{ 
+                backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+                color: '#ffffff', 
+                border: '1px solid rgba(255, 255, 255, 0.35)',
+                backdropFilter: 'blur(6px)',
+                fontSize: '0.85rem'
+              }}
+            >
+              <i className="fa-solid fa-sparkles text-warning me-1"></i> مرحباً بك مجدداً 👋
+            </span>
+            <span className="text-white-50 small">| {new Date().toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+          </div>
+          <h1 className="display-6 fw-bold mb-2 text-white">مركز قيادة النظام والمعلومات</h1>
+          <p className="mb-0 text-white-50" style={{ maxWidth: '640px', fontSize: '0.95rem' }}>
+            رؤية بانورامية شاملة لكافة أنشطة المؤسسة والعمليات مع أدوات فلترة زمنية فورية ومتقدمة.
+          </p>
+        </div>
+
+        <div className="d-flex align-items-center gap-3">
+          <RefreshButton onClick={fetchDashboardData} loading={loading} />
+
+          <Button
+            variant="outline-light"
+            className="rounded-pill px-3 py-2.5 fw-semibold border-white border-opacity-25 text-white"
+            onClick={() => window.print()}
+            title="طباعة التقرير"
+          >
+            <i className="fa-solid fa-print"></i>
+          </Button>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="stats-grid">
-        <div className="stat-card primary">
-          <div className="stat-info">
-            <span className="stat-label">إجمالي العملاء</span>
-            <span className="stat-value">{stats.clients}</span>
-          </div>
-          <div className="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </div>
-        </div>
-        
-        <div className="stat-card success">
-          <div className="stat-info">
-            <span className="stat-label">الطلبات النشطة</span>
-            <span className="stat-value">{stats.orders}</span>
-          </div>
-          <div className="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          </div>
-        </div>
+      {/* Glassmorphism Date Filter Bar */}
+      <div className="dash-glass-card p-3 p-md-4 mb-4">
+        <Row className="g-3 align-items-center">
+          {/* Quick Presets */}
+          <Col xs={12} xl={7} className="d-flex align-items-center flex-wrap gap-2">
+            <span className="fw-bold text-dark small me-2 d-flex align-items-center gap-1">
+              <i className="fa-solid fa-sliders text-primary"></i> التصفية الزمنية:
+            </span>
+            {[
+              { key: 'all', label: 'الكل' },
+              { key: 'today', label: 'اليوم' },
+              { key: 'week', label: 'هذا الأسبوع' },
+              { key: 'month', label: 'هذا الشهر' },
+              { key: 'year', label: 'هذه السنة' },
+            ].map(preset => (
+              <button
+                key={preset.key}
+                className={`preset-pill-btn ${activePreset === preset.key ? 'active' : ''}`}
+                onClick={() => handlePresetSelect(preset.key)}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </Col>
 
-        <div className="stat-card warning">
-          <div className="stat-info">
-            <span className="stat-label">الموظفين</span>
-            <span className="stat-value">{stats.employees}</span>
-          </div>
-          <div className="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-        </div>
+          {/* Custom Date Inputs */}
+          <Col xs={12} xl={5}>
+            <div className="d-flex align-items-center gap-2 justify-content-xl-end flex-wrap">
+              <div className="d-flex align-items-center gap-2 bg-light p-1.5 rounded-3 border">
+                <Form.Group className="mb-0 d-flex align-items-center gap-1">
+                  <span className="text-muted small px-1 fw-bold">من:</span>
+                  <Form.Control
+                    type="date"
+                    size="sm"
+                    value={fromDate}
+                    onChange={(e) => {
+                      setFromDate(e.target.value);
+                      setActivePreset('custom');
+                    }}
+                    className="border-0 bg-transparent shadow-none px-1 small font-monospace"
+                  />
+                </Form.Group>
+                <span className="text-muted opacity-50">|</span>
+                <Form.Group className="mb-0 d-flex align-items-center gap-1">
+                  <span className="text-muted small px-1 fw-bold">إلى:</span>
+                  <Form.Control
+                    type="date"
+                    size="sm"
+                    value={toDate}
+                    onChange={(e) => {
+                      setToDate(e.target.value);
+                      setActivePreset('custom');
+                    }}
+                    className="border-0 bg-transparent shadow-none px-1 small font-monospace"
+                  />
+                </Form.Group>
+              </div>
 
-        <div className="stat-card danger">
-          <div className="stat-info">
-            <span className="stat-label">المكاتب المسجلة</span>
-            <span className="stat-value">{stats.offices}</span>
-          </div>
-          <div className="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts Grid */}
-      <div className="charts-grid">
-        <div className="card chart-card">
-          <div className="card-header">
-            <h3>تحليل الطلبات الشهري</h3>
-          </div>
-          <div className="chart-wrapper">
-            <Line data={lineData} options={options} />
-          </div>
-        </div>
-        
-        <div className="card chart-card">
-          <div className="card-header">
-            <h3>معدل نمو العملاء</h3>
-          </div>
-          <div className="chart-wrapper">
-            <Bar data={barData} options={options} />
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="card border-0 shadow-sm rounded-4 overflow-hidden">
-        <div className="card-header bg-white border-0 py-3 px-4 d-flex justify-content-between align-items-center">
-          <h3 className="h5 fw-bold mb-0 text-dark">آخر الطلبات المضافة</h3>
-          <Button variant="link" className="text-decoration-none text-primary fw-semibold p-0">عرض الكل</Button>
-        </div>
-        <div className="table-responsive">
-          <Table hover className="align-middle mb-0">
-            <thead className="bg-light">
-              <tr>
-                <th className="border-0 px-4 py-3 text-muted small fw-bold">العميل</th>
-                <th className="border-0 px-4 py-3 text-muted small fw-bold">المكتب السعودي</th>
-                <th className="border-0 px-4 py-3 text-muted small fw-bold text-center">الحالة</th>
-                <th className="border-0 px-4 py-3 text-muted small fw-bold text-center">التاريخ</th>
-                <th className="border-0 px-4 py-3 text-muted small fw-bold text-end">الإجراء</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentOrders.map(order => (
-                <tr key={order.id} className="transition-all hover-bg-light">
-                  <td className="px-4 py-3 border-light">
-                    <div className="fw-bold text-dark">{order.client?.name || '-'}</div>
-                    <div className="text-muted small">{order.client?.phone || ''}</div>
-                  </td>
-                  <td className="px-4 py-3 border-light fw-medium text-secondary">
-                    {order.saudi_office?.name || '-'}
-                  </td>
-                  <td className="px-4 py-3 border-light text-center">
-                    {getStatusBadge(order.status)}
-                  </td>
-                  <td className="px-4 py-3 border-light text-center small text-muted">
-                    {new Date(order.created_at).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
-                  </td>
-                  <td className="px-4 py-3 border-light text-end">
-                    <Button 
-                      variant="light" 
-                      size="sm" 
-                      className="rounded-circle shadow-sm border"
-                      style={{ width: '32px', height: '32px', padding: 0 }}
-                      title="عرض التفاصيل"
-                    >
-                      <i className="fa-solid fa-eye text-primary small"></i>
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {recentOrders.length === 0 && (
-                <tr>
-                  <td colSpan="5" className="text-center py-5 text-muted">لا يوجد طلبات حديثة</td>
-                </tr>
+              {(fromDate || toDate || activePreset !== 'all') && (
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  className="rounded-circle p-0 d-flex align-items-center justify-content-center border-0 bg-danger bg-opacity-10 text-danger"
+                  style={{ width: '34px', height: '34px' }}
+                  onClick={handleResetFilters}
+                  title="إعادة ضبط الفلتر"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </Button>
               )}
-            </tbody>
-          </Table>
+            </div>
+          </Col>
+        </Row>
+
+        {(fromDate || toDate) && (
+          <div className="mt-3 pt-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div className="d-flex align-items-center gap-2">
+              <Badge bg="primary" className="rounded-pill px-3 py-1.5 fw-medium shadow-sm">
+                <i className="fa-regular fa-calendar-check me-1"></i>
+                الفترة المحددة: {fromDate || 'من البداية'} ⬅️ {toDate || 'حتى الآن'}
+              </Badge>
+            </div>
+            <span className="text-muted small fw-semibold">يتم عرض البيانات والرسوم البيانية بناءً على الفلتر الحالي</span>
+          </div>
+        )}
+      </div>
+
+      {/* Elevated Stats Grid */}
+      <Row className="g-4 mb-4">
+        <Col xs={12} md={4}>
+          <div className="dash-stat-box glow-ring-box">
+            <div className="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <span className="text-muted small fw-bold d-block mb-1">إجمالي العملاء</span>
+                <h2 className="display-6 fw-extrabold text-dark mb-0">{stats.clients}</h2>
+              </div>
+              <div className="dash-stat-icon-wrapper primary">
+                <i className="fa-solid fa-users"></i>
+              </div>
+            </div>
+            <div className="d-flex align-items-center justify-content-between pt-2 border-top">
+              <span className="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2.5 py-1 small fw-semibold">
+                <i className="fa-solid fa-arrow-trend-up me-1"></i> +12% نمو
+              </span>
+              <span className="text-muted small">عملاء مسجلين</span>
+            </div>
+          </div>
+        </Col>
+
+        <Col xs={12} md={4}>
+          <div className="dash-stat-box glow-ring-box">
+            <div className="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <span className="text-muted small fw-bold d-block mb-1">الطلبات النشطة</span>
+                <h2 className="display-6 fw-extrabold text-dark mb-0">{stats.orders}</h2>
+              </div>
+              <div className="dash-stat-icon-wrapper success">
+                <i className="fa-solid fa-file-invoice"></i>
+              </div>
+            </div>
+            <div className="d-flex align-items-center justify-content-between pt-2 border-top">
+              <span className="badge bg-success bg-opacity-10 text-success rounded-pill px-2.5 py-1 small fw-semibold">
+                <i className="fa-solid fa-circle-check me-1"></i> متابعة مباشرة
+              </span>
+              <span className="text-muted small">طلبات جارية</span>
+            </div>
+          </div>
+        </Col>
+
+        <Col xs={12} md={4}>
+          <div className="dash-stat-box glow-ring-box">
+            <div className="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <span className="text-muted small fw-bold d-block mb-1">المكاتب المسجلة</span>
+                <h2 className="display-6 fw-extrabold text-dark mb-0">{stats.offices}</h2>
+              </div>
+              <div className="dash-stat-icon-wrapper danger">
+                <i className="fa-solid fa-building"></i>
+              </div>
+            </div>
+            <div className="d-flex align-items-center justify-content-between pt-2 border-top">
+              <span className="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2.5 py-1 small fw-semibold">
+                <i className="fa-solid fa-earth-americas me-1"></i> شبكة المكاتب
+              </span>
+              <span className="text-muted small">داخل وخارج السعودية</span>
+            </div>
+          </div>
+        </Col>
+      </Row>
+
+      {/* 3-Column Analytics Grid */}
+      <Row className="g-4 mb-4">
+        {/* Line Chart */}
+        <Col xs={12} lg={4}>
+          <div className="dash-glass-card p-4 h-100">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h6 className="fw-bold text-dark mb-1">حركة الطلبات الشهرية</h6>
+                <span className="text-muted small">تتبع الإنشاء على مدى الأشهر</span>
+              </div>
+              <span className="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1 small">خطّي</span>
+            </div>
+            <div style={{ height: '230px' }}>
+              <Line data={lineData} options={chartOptions} />
+            </div>
+          </div>
+        </Col>
+
+        {/* Bar Chart */}
+        <Col xs={12} lg={4}>
+          <div className="dash-glass-card p-4 h-100">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h6 className="fw-bold text-dark mb-1">نمو قاعدة العملاء</h6>
+                <span className="text-muted small">معدل الانضمام الشهري</span>
+              </div>
+              <span className="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 small">أعمدة</span>
+            </div>
+            <div style={{ height: '230px' }}>
+              <Bar data={barData} options={chartOptions} />
+            </div>
+          </div>
+        </Col>
+
+        {/* Doughnut Chart */}
+        <Col xs={12} lg={4}>
+          <div className="dash-glass-card p-4 h-100">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h6 className="fw-bold text-dark mb-1">نسب توزيع الحالات</h6>
+                <span className="text-muted small">توزيع الطلبات حسب الحالة</span>
+              </div>
+              <span className="badge bg-info-subtle text-info rounded-pill px-2.5 py-1 small">دائري</span>
+            </div>
+            <div style={{ height: '180px' }} className="position-relative">
+              <Doughnut data={doughnutData} options={doughnutOptions} />
+              <div className="position-absolute top-50 start-50 translate-middle text-center pointer-events-none">
+                <span className="d-block display-7 fw-bold text-dark">{stats.orders}</span>
+                <span className="text-muted small" style={{ fontSize: '0.75rem' }}>طلب</span>
+              </div>
+            </div>
+            <div className="d-flex flex-wrap justify-content-center gap-2 mt-3 pt-2 border-top">
+              {[
+                { label: 'انتظار', color: '#f59e0b' },
+                { label: 'معالجة', color: '#06b6d4' },
+                { label: 'مكتمل', color: '#10b981' },
+                { label: 'مساند', color: '#6366f1' },
+                { label: 'ملغي', color: '#ef4444' },
+              ].map((st, i) => (
+                <span key={i} className="badge bg-light text-dark border rounded-pill px-2.5 py-1 small d-flex align-items-center gap-1">
+                  <span className="rounded-circle" style={{ width: '8px', height: '8px', backgroundColor: st.color }}></span>
+                  {st.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </Col>
+      </Row>
+
+      {/* Recent Activity Table with Interactive Tabs */}
+      <div className="dash-glass-card overflow-hidden">
+        <div className="p-4 bg-white border-bottom d-flex justify-content-between align-items-center flex-wrap gap-3">
+          <div className="d-flex align-items-center gap-2 bg-light p-1 rounded-3 border">
+            <button
+              className={`activity-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
+              onClick={() => setActiveTab('orders')}
+            >
+              <i className="fa-solid fa-file-lines me-1.5"></i> أحدث الطلبات ({recentOrders.length})
+            </button>
+            <button
+              className={`activity-tab-btn ${activeTab === 'clients' ? 'active' : ''}`}
+              onClick={() => setActiveTab('clients')}
+            >
+              <i className="fa-solid fa-users me-1.5"></i> أحدث العملاء ({recentClients.length})
+            </button>
+          </div>
+
+          <span className="text-muted small fw-semibold">
+            {activeTab === 'orders' ? 'أحدث 6 طلبات مسجلة' : 'أحدث 6 عملاء مسجلين'}
+          </span>
         </div>
+
+        {/* Tab 1: Orders Table */}
+        {activeTab === 'orders' && (
+          <div className="table-responsive">
+            <Table hover className="dash-table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>اسم العميل</th>
+                  <th>المكتب السعودي</th>
+                  <th className="text-center">حالة الطلب</th>
+                  <th className="text-center">تاريخ الإضافة</th>
+                  <th className="text-end">الإجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.map(order => (
+                  <tr key={order.id}>
+                    <td>
+                      <div className="d-flex align-items-center gap-3">
+                        <div className="rounded-circle bg-primary bg-opacity-10 text-primary fw-bold d-flex align-items-center justify-content-center shadow-sm" style={{ width: '42px', height: '42px', fontSize: '1rem' }}>
+                          {order.client?.name ? order.client.name.charAt(0) : 'ع'}
+                        </div>
+                        <div>
+                          <div className="fw-bold text-dark">{order.client?.name || 'غير محدد'}</div>
+                          <div className="text-muted small dir-ltr text-end">{order.client?.phone || '-'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="fw-medium text-secondary">
+                        <i className="fa-regular fa-building me-1 text-muted"></i>
+                        {order.saudi_office?.name || '-'}
+                      </span>
+                    </td>
+                    <td className="text-center">
+                      {getStatusBadge(order.status)}
+                    </td>
+                    <td className="text-center">
+                      <span className="badge bg-light text-secondary border px-3 py-1.5 rounded-pill font-monospace small">
+                        {new Date(order.created_at).toLocaleDateString('ar-EG', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </span>
+                    </td>
+                    <td className="text-end">
+                      <Button 
+                        variant="light" 
+                        size="sm" 
+                        className="rounded-circle shadow-sm border text-primary hover-bg-primary hover-text-white transition-all"
+                        style={{ width: '36px', height: '36px' }}
+                        title="عرض التفاصيل"
+                      >
+                        <i className="fa-solid fa-eye"></i>
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+                {recentOrders.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="text-center py-5 text-muted">
+                      <div className="py-4">
+                        <i className="fa-regular fa-folder-open display-4 text-muted opacity-50 mb-3 d-block"></i>
+                        <p className="fw-bold mb-1">لا توجد طلبات حديثة في هذه الفترة الزمنية</p>
+                        <span className="small text-muted">جرّب اختيار نطاق زمني أكبر من شريط الفلترة أعلاه.</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          </div>
+        )}
+
+        {/* Tab 2: Clients Table */}
+        {activeTab === 'clients' && (
+          <div className="table-responsive">
+            <Table hover className="dash-table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>نوع العميل</th>
+                  <th>رقم هاتف المندوب</th>
+                  <th>المندوب</th>
+                  <th>اسم صاحب التأشيرة</th>
+                  <th className="text-center">تاريخ التسجيل</th>
+                  <th className="text-end">الإجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentClients.map(client => (
+                  <tr key={client.id}>
+                    <td>
+                      <Badge bg={client.client_type === 'office' ? 'info' : 'secondary'} className="rounded-pill px-3 py-1.5">
+                        {client.client_type === 'office' ? 'مكتب' : 'فرد'}
+                      </Badge>
+                    </td>
+                    <td>
+                      <span className="text-muted font-monospace dir-ltr">{client.phone}</span>
+                    </td>
+                    <td>
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="rounded-circle bg-success bg-opacity-10 text-success fw-bold d-flex align-items-center justify-content-center shadow-sm" style={{ width: '32px', height: '32px', fontSize: '0.85rem' }}>
+                          {client.name ? client.name.charAt(0) : 'م'}
+                        </div>
+                        <span className="fw-semibold text-dark">{client.name || '-'}</span>
+                      </div>
+                    </td>
+                    <td className="fw-bold text-dark">
+                      {client.employee?.name || '-'}
+                    </td>
+                    <td className="text-center">
+                      <span className="badge bg-light text-secondary border px-3 py-1.5 rounded-pill font-monospace small">
+                        {new Date(client.created_at).toLocaleDateString('ar-EG', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </span>
+                    </td>
+                    <td className="text-end">
+                      <a 
+                        href={`tel:${client.phone}`}
+                        className="btn btn-light btn-sm rounded-circle shadow-sm border text-success hover-bg-success hover-text-white transition-all me-1"
+                        style={{ width: '36px', height: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                        title="اتصال بالمندوب"
+                      >
+                        <i className="fa-solid fa-phone"></i>
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+                {recentClients.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="text-center py-5 text-muted">
+                      <div className="py-4">
+                        <i className="fa-regular fa-user display-4 text-muted opacity-50 mb-3 d-block"></i>
+                        <p className="fw-bold mb-1">لا يوجد عملاء مسجلين في هذه الفترة</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          </div>
+        )}
       </div>
     </div>
   );

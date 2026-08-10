@@ -28,7 +28,7 @@ const ClientSearchBar = ({
       <InputGroup className="shadow-sm rounded-3 overflow-hidden">
         <Form.Control
           type="text"
-          placeholder="ابحث باسم العميل أو رقم الهاتف..."
+          placeholder="ابحث باسم المندوب، صاحب التأشيرة، أو هاتف المندوب..."
           value={searchQuery}
           onChange={(e) => onSearch(e.target.value)}
           className="border-0 py-2 px-3"
@@ -78,8 +78,8 @@ const ClientSearchBar = ({
           <Select
             options={[
               { value: "created_at", label: "ترتيب حسب تاريخ الإضافة" },
-              { value: "name", label: "ترتيب حسب الاسم" },
-              { value: "phone", label: "ترتيب حسب الهاتف" },
+              { value: "name", label: "ترتيب حسب المندوب" },
+              { value: "phone", label: "ترتيب حسب هاتف المندوب" },
             ]}
             value={{
               value: filters.sort_by,
@@ -87,8 +87,8 @@ const ClientSearchBar = ({
                 filters.sort_by === "created_at"
                   ? "ترتيب حسب تاريخ الإضافة"
                   : filters.sort_by === "name"
-                  ? "ترتيب حسب الاسم"
-                  : "ترتيب حسب الهاتف",
+                  ? "ترتيب حسب المندوب"
+                  : "ترتيب حسب هاتف المندوب",
             }}
             onChange={(opt) => onFilterChange("sort_by", opt ? opt.value : "created_at")}
             styles={customStyles}

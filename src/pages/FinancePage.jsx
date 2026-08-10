@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button } from "react-bootstrap";
+import RefreshButton from "../components/common/RefreshButton";
 import {
   getTransactions,
   createTransaction,
@@ -503,7 +504,6 @@ const handleSubmit = async (formData) => {
     ];
     exportToExcel(exportData, columns, "الحسابات_والحوالات.xlsx");
   };
-
   const handleExportPDF = () => {
     const exportData =
       allTransactionsData.length > 0
@@ -604,6 +604,11 @@ const handleSubmit = async (formData) => {
         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
           <h1 className="h3 mb-0 fw-bold">الحسابات والحوالات</h1>
           <div className="d-flex gap-2 flex-wrap">
+            <RefreshButton 
+              onClick={() => { fetchTransactions(); fetchSummary(); }} 
+              loading={loading} 
+              className="border shadow-sm text-primary fw-semibold"
+            />
             <Button
               variant="light"
               onClick={handleExportExcel}

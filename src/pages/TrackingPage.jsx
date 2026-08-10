@@ -336,7 +336,6 @@ const handleEditTracking = (item) => {
           return found?.label || item.priority_level || "-";
         },
       },
-      { header: "الملاحظات", key: "notes" },
     ];
     exportToExcel(exportData, columns, "متابعة_الطلبات.xlsx");
   };

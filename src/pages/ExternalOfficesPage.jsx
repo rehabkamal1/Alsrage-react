@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button } from "react-bootstrap";
+import RefreshButton from "../components/common/RefreshButton";
 import {
   getExternalOffices,
   createExternalOffice,
@@ -210,6 +211,11 @@ const ExternalOfficesPage = () => {
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
           <h1 className="h3 mb-0 fw-bold">المكاتب الخارجية</h1>
           <div className="d-flex flex-wrap gap-2">
+            <RefreshButton 
+              onClick={fetchOffices} 
+              loading={loading} 
+              className="border shadow-sm text-primary fw-semibold"
+            />
             <Button
               variant="light"
               onClick={handleExport}
