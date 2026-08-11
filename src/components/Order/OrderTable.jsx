@@ -1,9 +1,20 @@
 import { Table, Button, Form } from "react-bootstrap";
 
-const OrderTable = ({ orders, onEdit, onDelete, onStatusChange, onWhatsApp, statusOptions = [] }) => {
+const OrderTable = ({
+  orders,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  onServiceTypeChange,
+  onWhatsApp,
+  statusOptions = [],
+  serviceTypeOptions = [],
+}) => {
   const renderStatusDropdown = (order) => {
-    const currentStatus = statusOptions.find(s => String(s.key || s.id) === String(order.status));
-    
+    const currentStatus = statusOptions.find(
+      (s) => String(s.key || s.id) === String(order.status),
+    );
+
     return (
       <div className="d-flex justify-content-center">
         <Form.Select
@@ -12,22 +23,26 @@ const OrderTable = ({ orders, onEdit, onDelete, onStatusChange, onWhatsApp, stat
           onChange={(e) => onStatusChange(order, e.target.value)}
           className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select"
           style={{
-            backgroundColor: currentStatus?.color || '#6c757d',
-            color: '#fff',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            width: 'fit-content',
-            minWidth: '130px',
-            transition: 'all 0.2s ease-in-out',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            backgroundColor: currentStatus?.color || "#6c757d",
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: "0.85rem",
+            width: "fit-content",
+            minWidth: "130px",
+            transition: "all 0.2s ease-in-out",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           }}
           title="اضغط لتغيير الحالة"
         >
           {statusOptions.map((status) => (
-            <option 
-              key={status.key || status.id} 
+            <option
+              key={status.key || status.id}
               value={status.key || status.id}
-              style={{ backgroundColor: '#fff', color: '#000', fontWeight: 'normal' }}
+              style={{
+                backgroundColor: "#fff",
+                color: "#000",
+                fontWeight: "normal",
+              }}
             >
               {status.label}
             </option>
@@ -53,7 +68,74 @@ const OrderTable = ({ orders, onEdit, onDelete, onStatusChange, onWhatsApp, stat
     );
   };
 
+  const renderServiceTypeDropdown = (order) => {
+    if (
+      !serviceTypeOptions ||
+      serviceTypeOptions.length === 0 ||
+      !onServiceTypeChange
+    ) {
+      const matched = serviceTypeOptions.find(
+        (s) => String(s.key || s.label) === String(order.service_type),
+      );
+      if (matched) {
+        return (
+          <span
+            className="badge rounded-pill px-3 py-1 fw-bold"
+            style={{
+              backgroundColor: matched.color || "#6c757d",
+              color: "#fff",
+            }}
+          >
+            {matched.label}
+          </span>
+        );
+      }
+      return order.service_type || "-";
+    }
 
+    const currentType = serviceTypeOptions.find(
+      (s) => String(s.key || s.label) === String(order.service_type),
+    );
+
+    return (
+      <div className="d-flex justify-content-center">
+        <Form.Select
+          size="sm"
+          value={order.service_type || ""}
+          onChange={(e) => onServiceTypeChange(order, e.target.value)}
+          className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select"
+          style={{
+            backgroundColor: currentType?.color || "#6c757d",
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: "0.85rem",
+            width: "fit-content",
+            minWidth: "120px",
+            transition: "all 0.2s ease-in-out",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          }}
+          title="اضغط لتغيير نوع الخدمة"
+        >
+          <option value="" style={{ backgroundColor: "#fff", color: "#000" }}>
+            -- اختر الخدمة --
+          </option>
+          {serviceTypeOptions.map((st) => (
+            <option
+              key={st.key || st.id || st.label}
+              value={st.key || st.label}
+              style={{
+                backgroundColor: "#fff",
+                color: "#000",
+                fontWeight: "normal",
+              }}
+            >
+              {st.label}
+            </option>
+          ))}
+        </Form.Select>
+      </div>
+    );
+  };
 
   return (
     <div className="table-responsive">
@@ -64,7 +146,9 @@ const OrderTable = ({ orders, onEdit, onDelete, onStatusChange, onWhatsApp, stat
             <th>المكتب السعودي</th>
             <th>المندوب</th>
             <th>صاحب التأشيرة</th>
+            <th>رقم صاحب التأشيرة</th>
             <th>رقم التأشيرة</th>
+            <th>نوع الخدمة</th>
             <th>رقم عقد مساند</th>
             <th>إجمالي السعر</th>
             <th>سداد مساند</th>
@@ -88,18 +172,26 @@ const OrderTable = ({ orders, onEdit, onDelete, onStatusChange, onWhatsApp, stat
                     <div className="text-muted small">{order.client.phone}</div>
                   )}
                 </td>
-                <td>
-                  {order.visa_holder_name ||
-                    order.client?.visa_holder_name ||
-                    "-"}
-                </td>
+                <td>{order.visa_holder_name || "-"}</td>
+                <td>{order.visa_holder_phone || "-"}</td>
                 <td>{order.visa_number || "-"}</td>
+                <td>{renderServiceTypeDropdown(order)}</td>
                 <td>{order.musaned_contract_number || "-"}</td>
-                <td>{order.total_price != null ? `${Number(order.total_price).toFixed(2)} ر.س` : "-"}</td>
-                <td>{order.musaned_paid != null ? `${Number(order.musaned_paid).toFixed(2)} ر.س` : "-"}</td>
+                <td>
+                  {order.total_price != null
+                    ? `${Number(order.total_price).toFixed(2)} ر.س`
+                    : "-"}
+                </td>
+                <td>
+                  {order.musaned_paid != null
+                    ? `${Number(order.musaned_paid).toFixed(2)} ر.س`
+                    : "-"}
+                </td>
                 <td
                   className={
-                    order.price_difference >= 0 ? "text-success fw-semibold" : "text-danger fw-semibold"
+                    order.price_difference >= 0
+                      ? "text-success fw-semibold"
+                      : "text-danger fw-semibold"
                   }
                 >
                   {order.price_difference != null
@@ -144,7 +236,7 @@ const OrderTable = ({ orders, onEdit, onDelete, onStatusChange, onWhatsApp, stat
             ))}
           {(!orders || orders.length === 0) && (
             <tr>
-              <td colSpan="12" className="text-center py-5 text-muted">
+              <td colSpan="14" className="text-center py-5 text-muted">
                 لا يوجد طلبات
               </td>
             </tr>

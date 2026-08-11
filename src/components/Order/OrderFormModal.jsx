@@ -11,6 +11,7 @@ import {
 } from "react-bootstrap";
 import Select from "react-select";
 import { showSuccess, showError } from "../../utils/swalHelper";
+import { getSaudiOffices, getExternalOffices } from "../../services/apiService";
 import "../../styles/FormModal.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
@@ -24,19 +25,52 @@ const OrderFormModal = ({
   saudiOffices = [],
   externalOffices = [],
   statusOptions = [],
+  serviceTypeOptions = [],
   searchClients,
   quickCreateClient,
   loading,
   isEdit,
   error,
 }) => {
+  const [localSaudiOffices, setLocalSaudiOffices] = useState([]);
+  const [localExternalOffices, setLocalExternalOffices] = useState([]);
+
+  useEffect(() => {
+    if (show) {
+      getSaudiOffices({ all: 1, per_page: 500 })
+        .then((res) => {
+          const list = res.data?.data || res.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            setLocalSaudiOffices(list);
+          }
+        })
+        .catch((err) => console.error("Error fetching local saudi offices:", err));
+
+      getExternalOffices({ all: 1, per_page: 500 })
+        .then((res) => {
+          const list = res.data?.data || res.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            setLocalExternalOffices(list);
+          }
+        })
+        .catch((err) => console.error("Error fetching local external offices:", err));
+    }
+  }, [show]);
+
+  const effectiveSaudiOffices =
+    saudiOffices && saudiOffices.length > 0 ? saudiOffices : localSaudiOffices;
+  const effectiveExternalOffices =
+    externalOffices && externalOffices.length > 0
+      ? externalOffices
+      : localExternalOffices;
   const [formData, setFormData] = useState({
     client_id: "",
     visa_holder_name: "",
+    visa_holder_phone: "",
     saudi_office_id: "",
-    supplier_id: "",
     external_office_id: "",
     visa_number: "",
+    service_type: "",
     id_number: "",
     musaned_contract_number: "",
     nationality: "",
@@ -77,14 +111,13 @@ const OrderFormModal = ({
     if (initialData) {
       setFormData({
         client_id: initialData.client_id || "",
-        visa_holder_name:
-          initialData.visa_holder_name ||
-          initialData.client?.visa_holder_name ||
-          "",
+        visa_holder_name: initialData.visa_holder_name || "",
+        visa_holder_phone: initialData.visa_holder_phone || "",
         saudi_office_id: initialData.saudi_office_id || "",
         supplier_id: initialData.supplier_id || "",
         external_office_id: initialData.external_office_id || "",
         visa_number: initialData.visa_number || "",
+        service_type: initialData.service_type || "",
         id_number: initialData.id_number || "",
         musaned_contract_number: initialData.musaned_contract_number || "",
         nationality: initialData.nationality || "",
@@ -109,10 +142,12 @@ const OrderFormModal = ({
       setFormData({
         client_id: "",
         visa_holder_name: "",
+        visa_holder_phone: "",
         saudi_office_id: "",
         supplier_id: "",
         external_office_id: "",
         visa_number: "",
+        service_type: "",
         id_number: "",
         musaned_contract_number: "",
         nationality: "",
@@ -174,7 +209,6 @@ const OrderFormModal = ({
     setFormData((prev) => ({
       ...prev,
       client_id: client.id,
-      visa_holder_name: client.visa_holder_name || client.name,
     }));
     setSearchQuery(`${client.phone} (${client.name || "بدون اسم"})`);
     setShowSearchResults(false);
@@ -218,7 +252,6 @@ const OrderFormModal = ({
       setFormData((prev) => ({
         ...prev,
         client_id: newClient.id,
-        visa_holder_name: newClient.visa_holder_name || newClient.name,
       }));
       setSearchQuery(`${newClient.phone} (${newClient.name || "بدون اسم"})`);
       showSuccess("تمت الإضافة", "تم إضافة العميل بنجاح واختياره للطلب");
@@ -314,7 +347,6 @@ const OrderFormModal = ({
         centered
         size="lg"
         dir="rtl"
-        backdrop="static"
       >
         <Modal.Header closeButton className="border-0 pt-4 px-4">
           <Modal.Title className="fw-bold fs-5">
@@ -341,10 +373,18 @@ const OrderFormModal = ({
                         <Select
                           className="react-select-container"
                           classNamePrefix="react-select"
-                          options={saudiOffices.map((office) => ({ value: office.id, label: office.name }))}
-                          value={saudiOffices.find((o) => o.id === formData.saudi_office_id) ? { value: formData.saudi_office_id, label: saudiOffices.find((o) => o.id === formData.saudi_office_id).name } : null}
+                          options={(effectiveSaudiOffices || []).map((office) => ({ value: office.id, label: office.name }))}
+                          value={
+                            (effectiveSaudiOffices || []).find((o) => String(o.id) === String(formData.saudi_office_id))
+                              ? {
+                                  value: formData.saudi_office_id,
+                                  label: (effectiveSaudiOffices || []).find((o) => String(o.id) === String(formData.saudi_office_id)).name,
+                                }
+                              : null
+                          }
                           onChange={(option) => setFormData((prev) => ({ ...prev, saudi_office_id: option ? option.value : "" }))}
                           placeholder="اختر المكتب السعودي..."
+                          noOptionsMessage={() => "لا توجد خيارات"}
                           isClearable
                           isRtl
                           styles={{ control: (base) => ({ ...base, borderColor: validated && !formData.saudi_office_id ? '#dc3545' : base.borderColor }) }}
@@ -359,10 +399,18 @@ const OrderFormModal = ({
                         <Select
                           className="react-select-container"
                           classNamePrefix="react-select"
-                          options={externalOffices.map((office) => ({ value: office.id, label: office.name }))}
-                          value={externalOffices.find((o) => o.id === formData.external_office_id) ? { value: formData.external_office_id, label: externalOffices.find((o) => o.id === formData.external_office_id).name } : null}
+                          options={(effectiveExternalOffices || []).map((office) => ({ value: office.id, label: office.name }))}
+                          value={
+                            (effectiveExternalOffices || []).find((o) => String(o.id) === String(formData.external_office_id))
+                              ? {
+                                  value: formData.external_office_id,
+                                  label: (effectiveExternalOffices || []).find((o) => String(o.id) === String(formData.external_office_id)).name,
+                                }
+                              : null
+                          }
                           onChange={(option) => setFormData((prev) => ({ ...prev, external_office_id: option ? option.value : "" }))}
                           placeholder="اختر المكتب الخارجي..."
+                          noOptionsMessage={() => "لا توجد خيارات"}
                           isClearable
                           isRtl
                         />
@@ -456,64 +504,126 @@ const OrderFormModal = ({
                     </Form.Control.Feedback>
                   </Form.Group>
 
-                  <Form.Group className="mb-3">
-                    <Form.Label className="fw-semibold small text-secondary">
-                      اسم صاحب التأشيرة <span className="text-danger">*</span>
-                    </Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="visa_holder_name"
-                      value={formData.visa_holder_name}
-                      onChange={handleChange}
-                      required
-                      placeholder="أدخل اسم صاحب التأشيرة"
-                      isInvalid={!!getFieldError("visa_holder_name")}
-                      className="rounded-3"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      {getFieldError("visa_holder_name") || "يرجى إدخال اسم صاحب التأشيرة"}
-                    </Form.Control.Feedback>
-                  </Form.Group>
-
-
                   <Row>
-                    <Col md={12}>
+                    <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                          رقم الهوية / رقم التأشيرة <span className="text-danger">*</span>
+                          اسم صاحب التأشيرة <span className="text-danger">*</span>
                         </Form.Label>
-                        <InputGroup>
-                          <Form.Control
-                            type="text"
-                            name="id_number"
-                            placeholder="رقم الهوية"
-                            value={formData.id_number}
-                            onChange={handleChange}
-                            required
-                            isInvalid={!!getFieldError("id_number")}
-                            className="rounded-start-3"
-                          />
-                          <Form.Control
-                            type="text"
-                            name="visa_number"
-                            placeholder="رقم التأشيرة"
-                            value={formData.visa_number}
-                            onChange={handleChange}
-                            required
-                            isInvalid={!!getFieldError("visa_number")}
-                            className="rounded-end-3"
-                          />
-                        </InputGroup>
-                        {(getFieldError("id_number") ||
-                          getFieldError("visa_number")) && (
+                        <Form.Control
+                          type="text"
+                          name="visa_holder_name"
+                          value={formData.visa_holder_name}
+                          onChange={handleChange}
+                          required
+                          placeholder="أدخل اسم صاحب التأشيرة"
+                          isInvalid={!!getFieldError("visa_holder_name")}
+                          className="rounded-3"
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {getFieldError("visa_holder_name") || "يرجى إدخال اسم صاحب التأشيرة"}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          رقم هاتف صاحب التأشيرة
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="visa_holder_phone"
+                          value={formData.visa_holder_phone}
+                          onChange={handleChange}
+                          placeholder="أدخل رقم هاتف صاحب التأشيرة"
+                          isInvalid={!!getFieldError("visa_holder_phone")}
+                          className="rounded-3"
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {getFieldError("visa_holder_phone")}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          رقم الهوية <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="id_number"
+                          placeholder="أدخل رقم الهوية"
+                          value={formData.id_number}
+                          onChange={handleChange}
+                          required
+                          isInvalid={!!getFieldError("id_number")}
+                          className="rounded-3"
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {getFieldError("id_number") || "يرجى إدخال رقم الهوية"}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          رقم التأشيرة <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="visa_number"
+                          placeholder="أدخل رقم التأشيرة"
+                          value={formData.visa_number}
+                          onChange={handleChange}
+                          required
+                          isInvalid={!!getFieldError("visa_number")}
+                          className="rounded-3"
+                        />
+                        <Form.Control.Feedback type="invalid">
+                          {getFieldError("visa_number") || "يرجى إدخال رقم التأشيرة"}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          نوع الخدمة
+                        </Form.Label>
+                        <Select
+                          className="react-select-container"
+                          classNamePrefix="react-select"
+                          options={serviceTypeOptions.map((st) => ({
+                            value: st.key || st.label,
+                            label: st.label,
+                          }))}
+                          value={
+                            formData.service_type
+                              ? {
+                                  value: formData.service_type,
+                                  label:
+                                    serviceTypeOptions.find(
+                                      (st) =>
+                                        (st.key || st.label) === formData.service_type,
+                                    )?.label || formData.service_type,
+                                }
+                              : null
+                          }
+                          onChange={(option) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              service_type: option ? option.value : "",
+                            }))
+                          }
+                          placeholder="اختر نوع الخدمة..."
+                          isClearable
+                          isRtl
+                        />
+                        {getFieldError("service_type") && (
                           <div className="text-danger small mt-1">
-                            {getFieldError("id_number") ||
-                              getFieldError("visa_number")}
-                          </div>
-                        )}
-                        {validated && (!formData.id_number || !formData.visa_number) && (
-                          <div className="text-danger small mt-1">
-                            يرجى إدخال رقم الهوية ورقم التأشيرة
+                            {getFieldError("service_type")}
                           </div>
                         )}
                       </Form.Group>
@@ -627,51 +737,7 @@ const OrderFormModal = ({
                   </Row>
 
 
-                  <Row>
-                    <Col md={12}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="fw-semibold small text-secondary">
-                          المورد
-                        </Form.Label>
-                        <Select
-                          className="react-select-container"
-                          classNamePrefix="react-select"
-                          options={saudiOffices
-                            .filter((o) => o.is_supplier)
-                            .map((office) => ({
-                              value: office.id,
-                              label: office.name,
-                            }))}
-                          value={
-                            saudiOffices.find(
-                              (o) => o.id === formData.supplier_id,
-                            )
-                              ? {
-                                  value: formData.supplier_id,
-                                  label: saudiOffices.find(
-                                    (o) => o.id === formData.supplier_id,
-                                  ).name,
-                                }
-                              : null
-                          }
-                          onChange={(option) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              supplier_id: option ? option.value : "",
-                            }))
-                          }
-                          placeholder="اختر المورد..."
-                          isClearable
-                          isRtl
-                        />
-                        {getFieldError("supplier_id") && (
-                          <div className="text-danger small mt-1">
-                            {getFieldError("supplier_id")}
-                          </div>
-                        )}
-                      </Form.Group>
-                    </Col>
-                  </Row>
+
 
                   <Row>
                     <Col md={6}>
@@ -758,7 +824,7 @@ const OrderFormModal = ({
               <Tab eventKey="prices" title="الأسعار">
                 <div className="mt-3">
                   <Row>
-                    <Col md={6}>
+                    <Col md={4}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
                           إجمالي السعر (ر.س)
@@ -777,7 +843,7 @@ const OrderFormModal = ({
                         </Form.Control.Feedback>
                       </Form.Group>
                     </Col>
-                    <Col md={6}>
+                    <Col md={4}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
                           سداد مساند (ر.س)
@@ -794,6 +860,20 @@ const OrderFormModal = ({
                         <Form.Control.Feedback type="invalid">
                           {getFieldError("musaned_paid")}
                         </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          متبقي (ر.س)
+                        </Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={`${isNaN(priceDifference) ? "0.00" : priceDifference.toFixed(2)} ر.س`}
+                          readOnly
+                          disabled
+                          className={`rounded-3 fw-bold ${priceDifference >= 0 ? "text-success bg-success bg-opacity-10" : "text-danger bg-danger bg-opacity-10"}`}
+                        />
                       </Form.Group>
                     </Col>
                   </Row>

@@ -110,7 +110,6 @@ const ExternalOfficeFormModal = ({
       centered
       size="lg"
       dir="rtl"
-      backdrop="static"
     >
       <Modal.Header closeButton className="border-0 pt-4 px-4">
         <Modal.Title className="fw-bold fs-5">

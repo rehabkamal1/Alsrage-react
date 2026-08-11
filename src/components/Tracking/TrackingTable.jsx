@@ -11,6 +11,8 @@ const TrackingTable = ({
   priorityLevels,
   passportStatuses,
   transferStatuses,
+  authenticationStatuses = [],
+  authorizationStatuses = [],
   externalOffices,
 }) => {
   const [showImageModal, setShowImageModal] = useState(false);
@@ -195,6 +197,100 @@ const TrackingTable = ({
     );
   };
 
+  const renderAuthenticationStatusDropdown = (item) => {
+    const currentStatus = authenticationStatuses?.find(
+      (s) => (s.key || s.label) === item.authentication_status,
+    );
+    const currentColor = currentStatus?.color || "#6c757d";
+
+    return (
+      <div className="d-flex justify-content-center">
+        <Form.Select
+          size="sm"
+          value={item.authentication_status || ""}
+          onChange={(e) =>
+            handleInlineUpdate(item.id, "authentication_status", e.target.value)
+          }
+          className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select"
+          style={{
+            backgroundColor: currentColor,
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: "0.85rem",
+            width: "fit-content",
+            minWidth: "130px",
+            transition: "all 0.2s ease-in-out",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          }}
+          title="اضغط لتغيير حالة التوثيق"
+        >
+          <option value="" style={{ backgroundColor: "#fff", color: "#000" }}>
+            -- اختر --
+          </option>
+          {authenticationStatuses.map((status) => (
+            <option
+              key={status.key || status.label}
+              value={status.key || status.label}
+              style={{
+                backgroundColor: status.color || "#6c757d",
+                color: "#fff",
+              }}
+            >
+              {status.label}
+            </option>
+          ))}
+        </Form.Select>
+      </div>
+    );
+  };
+
+  const renderAuthorizationStatusDropdown = (item) => {
+    const currentStatus = authorizationStatuses?.find(
+      (s) => (s.key || s.label) === item.authorization_status,
+    );
+    const currentColor = currentStatus?.color || "#6c757d";
+
+    return (
+      <div className="d-flex justify-content-center">
+        <Form.Select
+          size="sm"
+          value={item.authorization_status || ""}
+          onChange={(e) =>
+            handleInlineUpdate(item.id, "authorization_status", e.target.value)
+          }
+          className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select"
+          style={{
+            backgroundColor: currentColor,
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: "0.85rem",
+            width: "fit-content",
+            minWidth: "130px",
+            transition: "all 0.2s ease-in-out",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          }}
+          title="اضغط لتغيير حالة التفويض"
+        >
+          <option value="" style={{ backgroundColor: "#fff", color: "#000" }}>
+            -- اختر --
+          </option>
+          {authorizationStatuses.map((status) => (
+            <option
+              key={status.key || status.label}
+              value={status.key || status.label}
+              style={{
+                backgroundColor: status.color || "#6c757d",
+                color: "#fff",
+              }}
+            >
+              {status.label}
+            </option>
+          ))}
+        </Form.Select>
+      </div>
+    );
+  };
+
   const handleDrag = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -296,16 +392,17 @@ const TrackingTable = ({
     <div className="table-responsive">
       <Table
         hover
-        className="mb-0 align-middle"
+        className="mb-0 align-middle tracking-table"
         style={{ fontSize: "0.85rem" }}
       >
         <thead className="table-light">
           <tr>
+            <th style={{ minWidth: "5px", width: "5px", padding: "0" }}></th>
             <th style={{ minWidth: "70px" }}># الطلب</th>
             <th style={{ minWidth: "170px" }}>صاحب التأشيرة</th>
             <th style={{ minWidth: "90px" }}>التأشيرة</th>
             <th style={{ minWidth: "80px" }}>الهوية</th>
-            <th style={{ minWidth: "80px" }}>الكفيل</th>
+            <th style={{ minWidth: "80px" }}>رقم المندوب</th>
             <th style={{ minWidth: "80px" }}>رقم الجواز</th>
             <th style={{ minWidth: "90px" }}>رقم التفويض</th>
             <th style={{ minWidth: "80px" }}>رقم التوثيق</th>
@@ -315,6 +412,8 @@ const TrackingTable = ({
             <th style={{ minWidth: "120px" }}>المكتب الخارجي</th>
             <th style={{ minWidth: "150px" }}>حالة ترشيح الجواز</th>
             <th style={{ minWidth: "150px" }}>حالة التحويل</th>
+            <th style={{ minWidth: "150px" }}>حالة التوثيق</th>
+            <th style={{ minWidth: "150px" }}>حالة التفويض</th>
             <th style={{ minWidth: "150px" }}>درجة الأهمية</th>
             <th style={{ minWidth: "130px" }}>الصور</th>
             <th style={{ minWidth: "80px" }}>إجراءات</th>
@@ -326,11 +425,20 @@ const TrackingTable = ({
             return (
               <tr
                 key={item.id}
+                className="tracking-row"
                 style={{
-                  borderRight: `4px solid ${priorityColor}`,
-                  backgroundColor: `${priorityColor}10`,
+                  "--priority-color": priorityColor,
                 }}
               >
+                <td
+                  className="priority-strip"
+                  style={{
+                    padding: "0",
+                    width: "5px",
+                    minWidth: "5px",
+                    backgroundColor: priorityColor,
+                  }}
+                ></td>
                 <td className="fw-semibold">
                   #{item.order_number || item.order_id}
                 </td>
@@ -348,8 +456,10 @@ const TrackingTable = ({
                 </td>
                 <td dir="ltr">{item.visa_number || "-"}</td>
                 <td dir="ltr">{item.id_number || "-"}</td>
+                <td dir="ltr">
+                  {item.delegate_phone || item.sponsor_number || "-"}
+                </td>
                 <td dir="ltr">{item.passport_number || "-"}</td>
-                <td dir="ltr">{item.sponsor_number || "-"}</td>
                 <td dir="ltr">{item.authorization_number || "-"}</td>
                 <td dir="ltr">{item.authentication_number || "-"}</td>
                 <td>{formatDate(item.authentication_date)}</td>
@@ -365,6 +475,8 @@ const TrackingTable = ({
                 </td>
                 <td>{renderPassportStatusDropdown(item)}</td>
                 <td>{renderTransferStatusDropdown(item)}</td>
+                <td>{renderAuthenticationStatusDropdown(item)}</td>
+                <td>{renderAuthorizationStatusDropdown(item)}</td>
                 <td>{renderPriorityDropdown(item)}</td>
                 <td className="align-middle">
                   <div className="d-flex flex-wrap gap-1 mb-1">
@@ -492,7 +604,7 @@ const TrackingTable = ({
           })}
           {(!tracking || tracking.length === 0) && (
             <tr>
-              <td colSpan="17" className="text-center py-5 text-muted">
+              <td colSpan="20" className="text-center py-5 text-muted">
                 لا توجد متابعات
               </td>
             </tr>
@@ -509,6 +621,23 @@ const TrackingTable = ({
         .status-select:focus, .priority-select:focus {
           box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
           outline: 0;
+        }
+
+        .tracking-table tbody tr {
+          transition: background-color 0.2s ease;
+        }
+
+        .tracking-table tbody tr:hover {
+          background-color: var(--priority-color, #6c757d) !important;
+          background-color: color-mix(in srgb, var(--priority-color, #6c757d) 15%, white) !important;
+        }
+
+        .tracking-table tbody tr .priority-strip {
+          transition: none !important;
+        }
+
+        .tracking-table tbody tr:hover .priority-strip {
+          background-color: var(--priority-color, #6c757d) !important;
         }
       `}</style>
 

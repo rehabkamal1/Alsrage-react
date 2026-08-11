@@ -250,9 +250,10 @@ const FinanceTable = ({
 
   return (
     <div className="table-responsive">
-      <Table hover className="mb-0 align-middle">
+      <Table hover className="mb-0 align-middle finance-table">
         <thead className="table-light">
           <tr>
+            <th style={{ minWidth: "5px", width: "5px", padding: "0" }}></th>
             <th>#</th>
             <th>النوع</th>
             <th>المبلغ</th>
@@ -270,61 +271,83 @@ const FinanceTable = ({
         </thead>
         <tbody>
           {transactions &&
-            transactions.map((transaction) => (
-              <tr key={transaction.id}>
-                <td className="fw-semibold">#{transaction.id}</td>
-                <td>
-                  <span
-                    className={
-                      transaction.type === "receipt"
-                        ? "text-success"
-                        : "text-danger"
-                    }
-                  >
-                    {transaction.type === "receipt"
-                      ? "📥 مقبوضات"
-                      : "📤 مصروفات"}
-                  </span>
-                </td>
-                <td className="fw-semibold">
-                  {Number(transaction.amount).toFixed(2)} ر.س
-                </td>
-                <td>#{transaction.order_number || transaction.order_id}</td>
-                <td>{transaction.visa_holder_name || "-"}</td>
-                <td>{transaction.transfer_number || "-"}</td>
-                <td>{renderPaymentMethodDropdown(transaction)}</td>
-                <td>{renderBankNameDropdown(transaction)}</td>
-                <td>{formatDate(transaction.transfer_date)}</td>
-                <td>{renderStatusDropdown(transaction)}</td>
-                <td>{renderPriorityDropdown(transaction)}</td>
-                <td>
-                  {new Date(transaction.created_at).toLocaleDateString("ar-SA")}
-                </td>
-                <td className="text-center">
-                  <div className="d-flex align-items-center justify-content-center gap-2">
-                    <Button
-                      variant="link"
-                      className="table-action-btn edit-btn"
-                      onClick={() => onEdit(transaction)}
-                      title="تعديل"
+            transactions.map((transaction) => {
+              const priorityColor = getPriorityColor(
+                transaction.priority_level,
+              );
+              return (
+                <tr
+                  key={transaction.id}
+                  className="finance-row"
+                  style={{
+                    "--priority-color": priorityColor,
+                  }}
+                >
+                  <td
+                    className="priority-strip"
+                    style={{
+                      padding: "0",
+                      width: "5px",
+                      minWidth: "5px",
+                      backgroundColor: priorityColor,
+                    }}
+                  ></td>
+                  <td className="fw-semibold">#{transaction.id}</td>
+                  <td>
+                    <span
+                      className={
+                        transaction.type === "receipt"
+                          ? "text-success"
+                          : "text-danger"
+                      }
                     >
-                      <i className="fa-solid fa-pen-to-square"></i>
-                    </Button>
-                    <Button
-                      variant="link"
-                      className="table-action-btn delete-btn"
-                      onClick={() => onDelete(transaction.id)}
-                      title="حذف"
-                    >
-                      <i className="fa-solid fa-trash-can"></i>
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                      {transaction.type === "receipt"
+                        ? "📥 مقبوضات"
+                        : "📤 مصروفات"}
+                    </span>
+                  </td>
+                  <td className="fw-semibold">
+                    {Number(transaction.amount).toFixed(2)} ر.س
+                  </td>
+                  <td>#{transaction.order_number || transaction.order_id}</td>
+                  <td>{transaction.visa_holder_name || "-"}</td>
+                  <td>{transaction.transfer_number || "-"}</td>
+                  <td>{renderPaymentMethodDropdown(transaction)}</td>
+                  <td>{renderBankNameDropdown(transaction)}</td>
+                  <td>{formatDate(transaction.transfer_date)}</td>
+                  <td>{renderStatusDropdown(transaction)}</td>
+                  <td>{renderPriorityDropdown(transaction)}</td>
+                  <td>
+                    {new Date(transaction.created_at).toLocaleDateString(
+                      "ar-SA",
+                    )}
+                  </td>
+                  <td className="text-center">
+                    <div className="d-flex align-items-center justify-content-center gap-2">
+                      <Button
+                        variant="link"
+                        className="table-action-btn edit-btn"
+                        onClick={() => onEdit(transaction)}
+                        title="تعديل"
+                      >
+                        <i className="fa-solid fa-pen-to-square"></i>
+                      </Button>
+                      <Button
+                        variant="link"
+                        className="table-action-btn delete-btn"
+                        onClick={() => onDelete(transaction.id)}
+                        title="حذف"
+                      >
+                        <i className="fa-solid fa-trash-can"></i>
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           {(!transactions || transactions.length === 0) && (
             <tr>
-              <td colSpan="13" className="text-center py-5 text-muted">
+              <td colSpan="14" className="text-center py-5 text-muted">
                 لا توجد حوالات
               </td>
             </tr>
@@ -340,6 +363,23 @@ const FinanceTable = ({
         .status-select:focus, .priority-select:focus, .payment-select:focus, .bank-select:focus {
           box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
           outline: 0;
+        }
+
+        .finance-table tbody tr {
+          transition: background-color 0.2s ease;
+        }
+
+        .finance-table tbody tr:hover {
+          background-color: var(--priority-color, #6c757d) !important;
+          background-color: color-mix(in srgb, var(--priority-color, #6c757d) 15%, white) !important;
+        }
+
+        .finance-table tbody tr .priority-strip {
+          transition: none !important;
+        }
+
+        .finance-table tbody tr:hover .priority-strip {
+          background-color: var(--priority-color, #6c757d) !important;
         }
       `}</style>
     </div>

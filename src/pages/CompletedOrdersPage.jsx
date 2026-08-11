@@ -11,6 +11,7 @@ import {
   searchClients,
   quickCreateClient,
   getSettingsOrderStatuses,
+  getSettingsServiceTypes,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import OrderFormModal from "../components/Order/OrderFormModal";
@@ -25,6 +26,7 @@ import { showWhatsAppNotificationModal } from "../utils/whatsappHelper";
 const CompletedOrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [orderStatuses, setOrderStatuses] = useState([]);
+  const [serviceTypes, setServiceTypes] = useState([]);
   const [saudiOffices, setSaudiOffices] = useState([]);
   const [externalOffices, setExternalOffices] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -54,16 +56,20 @@ const CompletedOrdersPage = () => {
 
   const fetchInitialData = async () => {
     try {
-      const [saudiRes, externalRes, employeesRes, statusRes] = await Promise.all([
-        getSaudiOffices(),
-        getExternalOffices(),
-        getEmployees(),
+      const [saudiRes, externalRes, employeesRes, statusRes, serviceTypesRes] = await Promise.all([
+        getSaudiOffices({ all: 1, per_page: 500 }),
+        getExternalOffices({ all: 1, per_page: 500 }),
+        getEmployees({ per_page: 200 }),
         getSettingsOrderStatuses(),
+        getSettingsServiceTypes(),
       ]);
-      setSaudiOffices(saudiRes.data?.data || []);
-      setExternalOffices(externalRes.data?.data || []);
-      setEmployees(employeesRes.data?.data || []);
+      const saudiList = Array.isArray(saudiRes.data?.data) ? saudiRes.data.data : (Array.isArray(saudiRes.data) ? saudiRes.data : []);
+      setSaudiOffices(saudiList);
+      const externalList = Array.isArray(externalRes.data?.data) ? externalRes.data.data : (Array.isArray(externalRes.data) ? externalRes.data : []);
+      setExternalOffices(externalList);
+      setEmployees(employeesRes.data?.data || employeesRes.data || []);
       setOrderStatuses(statusRes.data?.data || []);
+      setServiceTypes(serviceTypesRes.data?.data || []);
     } catch (error) {
       console.error("Error fetching initial data:", error);
     }
@@ -146,7 +152,9 @@ const CompletedOrdersPage = () => {
     const columns = [
       { header: "رقم الطلب", key: "id" },
       { header: "صاحب التأشيرة", key: "visa_holder_name" },
+      { header: "هاتف صاحب التأشيرة", key: "visa_holder_phone" },
       { header: "رقم التأشيرة", key: "visa_number" },
+      { header: "نوع الخدمة", key: "service_type" },
       { header: "رقم الهوية", key: "id_number" },
       { header: "رقم عقد مساند", key: "musaned_contract_number" },
       { header: "إجمالي السعر", key: "total_price" },
@@ -161,7 +169,9 @@ const CompletedOrdersPage = () => {
     const columns = [
       { header: "رقم الطلب", key: "id" },
       { header: "صاحب التأشيرة", key: "visa_holder_name" },
+      { header: "هاتف صاحب التأشيرة", key: "visa_holder_phone" },
       { header: "رقم التأشيرة", key: "visa_number" },
+      { header: "نوع الخدمة", key: "service_type" },
       { header: "رقم الهوية", key: "id_number" },
       { header: "رقم عقد مساند", key: "musaned_contract_number" },
       { header: "إجمالي السعر", key: "total_price" },
@@ -261,6 +271,7 @@ const CompletedOrdersPage = () => {
                     })
                   }
                   statusOptions={orderStatuses}
+                  serviceTypeOptions={serviceTypes}
                 />
                 {totalPages > 1 && (
                   <div className="p-3 border-top bg-light bg-opacity-50">
@@ -292,6 +303,7 @@ const CompletedOrdersPage = () => {
         searchClients={searchClients}
         quickCreateClient={quickCreateClient}
         statusOptions={orderStatuses}
+        serviceTypeOptions={serviceTypes}
         loading={loading}
         isEdit={!!editingOrder}
         error={submitError}

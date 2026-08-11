@@ -8,6 +8,9 @@ import api, {
   deleteBankName,
   deleteMarketingStatus,
   deleteOrderStatus,
+  deleteServiceType,
+  deleteAuthenticationStatus,
+  deleteAuthorizationStatus,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import TableSkeleton from "../components/common/TableSkeleton";
@@ -21,6 +24,9 @@ const SettingsPage = () => {
   const [bankNames, setBankNames] = useState([]);
   const [marketingStatuses, setMarketingStatuses] = useState([]);
   const [orderStatuses, setOrderStatuses] = useState([]);
+  const [serviceTypes, setServiceTypes] = useState([]);
+  const [authenticationStatuses, setAuthenticationStatuses] = useState([]);
+  const [authorizationStatuses, setAuthorizationStatuses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -39,6 +45,9 @@ const SettingsPage = () => {
         bankRes,
         marketingRes,
         orderRes,
+        serviceTypesRes,
+        authRes,
+        authzRes,
       ] = await Promise.all([
         api.get("/settings/priority-levels"),
         api.get("/settings/passport-statuses"),
@@ -47,6 +56,9 @@ const SettingsPage = () => {
         api.get("/settings/bank-names"),
         api.get("/settings/marketing-statuses"),
         api.get("/settings/order-statuses"),
+        api.get("/settings/service-types"),
+        api.get("/settings/authentication-statuses"),
+        api.get("/settings/authorization-statuses"),
       ]);
       setPriorityLevels(
         priorityRes.data.data.map((item) => ({
@@ -92,6 +104,27 @@ const SettingsPage = () => {
       );
       setOrderStatuses(
         orderRes.data.data.map((item) => ({
+          ...item,
+          isNew: false,
+          uniqueId: Date.now() + Math.random(),
+        })),
+      );
+      setServiceTypes(
+        (serviceTypesRes.data.data || []).map((item) => ({
+          ...item,
+          isNew: false,
+          uniqueId: Date.now() + Math.random(),
+        })),
+      );
+      setAuthenticationStatuses(
+        (authRes.data?.data || []).map((item) => ({
+          ...item,
+          isNew: false,
+          uniqueId: Date.now() + Math.random(),
+        })),
+      );
+      setAuthorizationStatuses(
+        (authzRes.data?.data || []).map((item) => ({
           ...item,
           isNew: false,
           uniqueId: Date.now() + Math.random(),
@@ -416,7 +449,7 @@ const SettingsPage = () => {
           </Col>
         </Row>
 
-        <Row className="mt-4">
+        <Row className="mt-4 g-4">
           <Col xs={12} md={6}>
             <SettingsCard
               title="حالات الطلبات"
@@ -446,6 +479,104 @@ const SettingsPage = () => {
               }
               saving={saving}
               emptyMessage="لا توجد حالات طلبات"
+            />
+          </Col>
+
+          <Col xs={12} md={6}>
+            <SettingsCard
+              title="أنواع الخدمات"
+              items={serviceTypes}
+              onAdd={() => addItem(setServiceTypes)}
+              onUpdate={(idx, field, val) =>
+                updateItem(setServiceTypes, idx, field, val)
+              }
+              onDelete={(id, isNew, idx) =>
+                deleteItem(
+                  id,
+                  isNew,
+                  idx,
+                  serviceTypes,
+                  setServiceTypes,
+                  deleteServiceType,
+                  "أنواع الخدمات",
+                )
+              }
+              onSave={() =>
+                saveItems(
+                  serviceTypes,
+                  "/settings/service-types",
+                  "types",
+                  "تم حفظ أنواع الخدمات بنجاح",
+                )
+              }
+              saving={saving}
+              emptyMessage="لا توجد أنواع خدمات"
+            />
+          </Col>
+        </Row>
+
+        <Row className="mt-4 g-4">
+          <Col xs={12} md={6}>
+            <SettingsCard
+              title="حالات التوثيق"
+              items={authenticationStatuses}
+              onAdd={() => addItem(setAuthenticationStatuses)}
+              onUpdate={(idx, field, val) =>
+                updateItem(setAuthenticationStatuses, idx, field, val)
+              }
+              onDelete={(id, isNew, idx) =>
+                deleteItem(
+                  id,
+                  isNew,
+                  idx,
+                  authenticationStatuses,
+                  setAuthenticationStatuses,
+                  deleteAuthenticationStatus,
+                  "حالات التوثيق",
+                )
+              }
+              onSave={() =>
+                saveItems(
+                  authenticationStatuses,
+                  "/settings/authentication-statuses",
+                  "statuses",
+                  "تم حفظ حالات التوثيق بنجاح",
+                )
+              }
+              saving={saving}
+              emptyMessage="لا توجد حالات توثيق"
+            />
+          </Col>
+
+          <Col xs={12} md={6}>
+            <SettingsCard
+              title="حالات التفويض"
+              items={authorizationStatuses}
+              onAdd={() => addItem(setAuthorizationStatuses)}
+              onUpdate={(idx, field, val) =>
+                updateItem(setAuthorizationStatuses, idx, field, val)
+              }
+              onDelete={(id, isNew, idx) =>
+                deleteItem(
+                  id,
+                  isNew,
+                  idx,
+                  authorizationStatuses,
+                  setAuthorizationStatuses,
+                  deleteAuthorizationStatus,
+                  "حالات التفويض",
+                )
+              }
+              onSave={() =>
+                saveItems(
+                  authorizationStatuses,
+                  "/settings/authorization-statuses",
+                  "statuses",
+                  "تم حفظ حالات التفويض بنجاح",
+                )
+              }
+              saving={saving}
+              emptyMessage="لا توجد حالات تفويض"
             />
           </Col>
         </Row>

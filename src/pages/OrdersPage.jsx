@@ -12,6 +12,7 @@ import {
   getExternalOffices,
   getEmployees,
   getSettingsOrderStatuses,
+  getSettingsServiceTypes,
   searchClients,
   quickCreateClient,
 } from "../services/apiService";
@@ -32,6 +33,7 @@ const OrdersPage = () => {
   const [externalOffices, setExternalOffices] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [orderStatuses, setOrderStatuses] = useState([]);
+  const [serviceTypes, setServiceTypes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -58,7 +60,7 @@ const OrdersPage = () => {
       setLoading(true);
     }
     try {
-      const [ordersRes, clientsRes, saudiRes, externalRes, employeesRes, orderStatusesRes] = await Promise.all([
+      const [ordersRes, clientsRes, saudiRes, externalRes, employeesRes, orderStatusesRes, serviceTypesRes] = await Promise.all([
         getOrders({
           page: currentPage,
           per_page: itemsPerPage,
@@ -68,18 +70,22 @@ const OrdersPage = () => {
           sort_dir: filters.sort_dir,
         }),
         getClients({ per_page: 200, sort_by: "name", sort_dir: "asc" }),
-        getSaudiOffices(),
-        getExternalOffices(),
+        getSaudiOffices({ all: 1, per_page: 500 }),
+        getExternalOffices({ all: 1, per_page: 500 }),
         getEmployees({ per_page: 200, sort_by: "name", sort_dir: "asc" }),
         getSettingsOrderStatuses(),
+        getSettingsServiceTypes(),
       ]);
       setOrders(ordersRes.data?.data || []);
       setTotalPages(ordersRes.data?.meta?.last_page || 1);
       setClients(clientsRes.data?.data || []);
-      setSaudiOffices(saudiRes.data?.data || []);
-      setExternalOffices(externalRes.data?.data || []);
+      const saudiList = Array.isArray(saudiRes.data?.data) ? saudiRes.data.data : (Array.isArray(saudiRes.data) ? saudiRes.data : []);
+      setSaudiOffices(saudiList);
+      const externalList = Array.isArray(externalRes.data?.data) ? externalRes.data.data : (Array.isArray(externalRes.data) ? externalRes.data : []);
+      setExternalOffices(externalList);
       setEmployees(employeesRes.data?.data || employeesRes.data || []);
       setOrderStatuses(orderStatusesRes.data?.data || []);
+      setServiceTypes(serviceTypesRes.data?.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -127,6 +133,20 @@ const OrdersPage = () => {
   };
 
 
+  const handleServiceTypeChange = async (order, newServiceType) => {
+    setLoading(true);
+    try {
+      await updateOrder(order.id, { service_type: newServiceType });
+      showSuccess("تم التحديث!", "تم تغيير نوع الخدمة بنجاح");
+      fetchAllData();
+    } catch (error) {
+      console.error("Error updating service type:", error);
+      showError("خطأ!", "حدث خطأ أثناء تحديث نوع الخدمة");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleStatusChange = async (order, newStatus) => {
     setLoading(true);
     try {
@@ -165,7 +185,6 @@ const OrdersPage = () => {
             visa_number: formData.get("visa_number") || editingOrder.visa_number,
             passport_number: formData.get("passport_number") || editingOrder.passport_number,
             saudi_office_id: formData.get("saudi_office_id"),
-            supplier_id: formData.get("supplier_id"),
             external_office_id: formData.get("external_office_id"),
           };
           handleWhatsAppNotification(updatedOrder, newStatus);
@@ -181,7 +200,6 @@ const OrdersPage = () => {
             visa_number: formData.get("visa_number"),
             passport_number: formData.get("passport_number"),
             saudi_office_id: formData.get("saudi_office_id"),
-            supplier_id: formData.get("supplier_id"),
             external_office_id: formData.get("external_office_id"),
           };
           handleWhatsAppNotification(createdOrder, newStatus);
@@ -219,7 +237,9 @@ const OrdersPage = () => {
     const columns = [
       { header: "رقم الطلب", key: "id" },
       { header: "صاحب التأشيرة", key: "visa_holder_name" },
+      { header: "هاتف صاحب التأشيرة", key: "visa_holder_phone" },
       { header: "رقم التأشيرة", key: "visa_number" },
+      { header: "نوع الخدمة", key: "service_type" },
       { header: "رقم الهوية", key: "id_number" },
       { header: "رقم عقد مساند", key: "musaned_contract_number" },
       { header: "إجمالي السعر", key: "total_price" },
@@ -236,7 +256,9 @@ const OrdersPage = () => {
     const columns = [
       { header: "رقم الطلب", key: "id" },
       { header: "صاحب التأشيرة", key: "visa_holder_name" },
+      { header: "هاتف صاحب التأشيرة", key: "visa_holder_phone" },
       { header: "رقم التأشيرة", key: "visa_number" },
+      { header: "نوع الخدمة", key: "service_type" },
       { header: "رقم الهوية", key: "id_number" },
       { header: "رقم عقد مساند", key: "musaned_contract_number" },
       { header: "إجمالي السعر", key: "total_price" },
@@ -353,8 +375,10 @@ const OrdersPage = () => {
                   onEdit={handleEditOrder}
                   onDelete={handleDeleteOrder}
                   onStatusChange={handleStatusChange}
+                  onServiceTypeChange={handleServiceTypeChange}
                   onWhatsApp={(order) => handleWhatsAppNotification(order)}
                   statusOptions={orderStatuses}
+                  serviceTypeOptions={serviceTypes}
                 />
                 {totalPages > 1 && (
                   <PaginationComponent
@@ -383,6 +407,7 @@ const OrdersPage = () => {
         externalOffices={externalOffices}
         employees={employees}
         statusOptions={orderStatuses}
+        serviceTypeOptions={serviceTypes}
         searchClients={searchClients}
         quickCreateClient={quickCreateClient}
         loading={loading}

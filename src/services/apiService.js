@@ -100,6 +100,21 @@ export const getSettingsBankNames = () => api.get("/settings/bank-names");
 export const getSettingsMarketingStatuses = () =>
   api.get("/settings/marketing-statuses");
 export const getSettingsOrderStatuses = () => api.get("/settings/order-statuses");
+export const getSettingsServiceTypes = () =>
+  api.get("/settings/service-types").catch((err) => {
+    console.warn("Service types route not available on remote server yet:", err);
+    return { data: { data: [] } };
+  });
+export const getSettingsAuthenticationStatuses = () =>
+  api.get("/settings/authentication-statuses").catch((err) => {
+    console.warn("Authentication statuses route not available yet:", err);
+    return { data: { data: [] } };
+  });
+export const getSettingsAuthorizationStatuses = () =>
+  api.get("/settings/authorization-statuses").catch((err) => {
+    console.warn("Authorization statuses route not available yet:", err);
+    return { data: { data: [] } };
+  });
 
 export const updateSettingsPriorityLevels = (data) =>
   api.post("/settings/priority-levels", data);
@@ -115,6 +130,12 @@ export const updateSettingsMarketingStatuses = (data) =>
   api.post("/settings/marketing-statuses", data);
 export const updateSettingsOrderStatuses = (data) =>
   api.post("/settings/order-statuses", data);
+export const updateSettingsServiceTypes = (data) =>
+  api.post("/settings/service-types", data);
+export const updateSettingsAuthenticationStatuses = (data) =>
+  api.post("/settings/authentication-statuses", data);
+export const updateSettingsAuthorizationStatuses = (data) =>
+  api.post("/settings/authorization-statuses", data);
 
 export const deletePriorityLevel = (id) =>
   api.delete(`/settings/priority-levels/${id}`);
@@ -128,6 +149,11 @@ export const deleteBankName = (id) => api.delete(`/settings/bank-names/${id}`);
 export const deleteMarketingStatus = (id) =>
   api.delete(`/settings/marketing-statuses/${id}`);
 export const deleteOrderStatus = (id) => api.delete(`/settings/order-statuses/${id}`);
+export const deleteServiceType = (id) => api.delete(`/settings/service-types/${id}`);
+export const deleteAuthenticationStatus = (id) =>
+  api.delete(`/settings/authentication-statuses/${id}`);
+export const deleteAuthorizationStatus = (id) =>
+  api.delete(`/settings/authorization-statuses/${id}`);
 
 // =============== Marketing Leads ===============
 export const getMarketingLeads = (params) =>

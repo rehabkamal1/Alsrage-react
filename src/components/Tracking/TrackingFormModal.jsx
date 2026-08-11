@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import Select from "react-select";
-import ExternalOfficeFormModal from "./ExternalOfficeFormModal";
-import { createExternalOffice } from "../../services/apiService";
 import { showSuccess, showError } from "../../utils/swalHelper";
 
 const formatDateForInput = (val) => {
@@ -20,11 +18,12 @@ const TrackingFormModal = ({
   priorityLevels,
   passportStatuses,
   transferStatuses,
-  externalOffices,
+  authenticationStatuses = [],
+  authorizationStatuses = [],
+  externalOffices = [],
   loading,
   isEdit,
   error,
-  onRefreshExternalOffices,
 }) => {
   const [formData, setFormData] = useState({
     order_id: "",
@@ -33,20 +32,21 @@ const TrackingFormModal = ({
     certification_date: "",
     authentication_number: "",
     authorization_number: "",
+    delegate_phone: "",
     sponsor_number: "",
     last_action_date: "",
     notes: "",
     priority_level: "",
     passport_status: "",
     transfer_status: "",
+    authentication_status: "",
+    authorization_status: "",
     external_office_id: "",
   });
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [validated, setValidated] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
-  const [showExternalModal, setShowExternalModal] = useState(false);
-  const [addingOffice, setAddingOffice] = useState(false);
 
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
@@ -55,21 +55,20 @@ const TrackingFormModal = ({
       const newFormData = {
         order_id: initialData.order_id || "",
         is_authenticated: initialData.is_authenticated || false,
-        authentication_date: formatDateForInput(
-          initialData.authentication_date,
-        ),
+        authentication_date: formatDateForInput(initialData.authentication_date),
         certification_date: formatDateForInput(initialData.certification_date),
         authentication_number: initialData.authentication_number || "",
         authorization_number: initialData.authorization_number || "",
-        sponsor_number:
-          initialData.sponsor_number || order?.sponsor_number || "",
+        delegate_phone: initialData.delegate_phone || order?.client?.phone || initialData.sponsor_number || "",
+        sponsor_number: initialData.sponsor_number || order?.client?.phone || "",
         last_action_date: formatDateForInput(initialData.last_action_date),
         notes: initialData.notes || "",
         priority_level: initialData.priority_level || "",
         passport_status: initialData.passport_status || "",
         transfer_status: initialData.transfer_status || "",
-        external_office_id:
-          initialData.external_office_id || order?.external_office_id || "",
+        authentication_status: initialData.authentication_status || "",
+        authorization_status: initialData.authorization_status || "",
+        external_office_id: initialData.external_office_id || order?.external_office_id || "",
       };
 
       setFormData(newFormData);
@@ -82,12 +81,15 @@ const TrackingFormModal = ({
         certification_date: "",
         authentication_number: "",
         authorization_number: "",
+        delegate_phone: "",
         sponsor_number: "",
         last_action_date: "",
         notes: "",
         priority_level: "",
         passport_status: "",
         transfer_status: "",
+        authentication_status: "",
+        authorization_status: "",
         external_office_id: "",
       });
       setSelectedOrder(null);
@@ -113,37 +115,14 @@ const TrackingFormModal = ({
     }
   };
 
-const handleSubmit = (e) => {
-  e.preventDefault();
-
-  console.log("========== handleSubmit ==========");
-  console.log("formData before submit:", formData);
-  console.log("external_office_id value:", formData.external_office_id);
-
-  if (e.currentTarget.checkValidity() === false) {
-    e.stopPropagation();
-    setValidated(true);
-    return;
-  }
-  onSubmit(formData);
-};
-  const handleAddExternalOffice = async (officeData) => {
-    setAddingOffice(true);
-    try {
-      await createExternalOffice(officeData);
-      showSuccess("تم", "تم إضافة المكتب الخارجي بنجاح");
-      setShowExternalModal(false);
-      if (onRefreshExternalOffices) {
-        await onRefreshExternalOffices();
-      }
-    } catch (error) {
-      showError(
-        "خطأ",
-        error.response?.data?.message || "حدث خطأ أثناء الإضافة",
-      );
-    } finally {
-      setAddingOffice(false);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (e.currentTarget.checkValidity() === false) {
+      e.stopPropagation();
+      setValidated(true);
+      return;
     }
+    onSubmit(formData);
   };
 
   const getFieldError = (fieldName) => fieldErrors[fieldName]?.[0];
@@ -168,54 +147,37 @@ const handleSubmit = (e) => {
     color: s.color,
   }));
 
-  const externalOfficeOptions = [
-    ...(externalOffices || []).map((office) => ({
-      value: office.id,
-      label: `${office.country || ""} - ${office.name}`,
-    })),
-    { value: "add_new", label: "+ إضافة مكتب خارجي جديد" },
-  ];
+  const externalOfficeOptions = (externalOffices || []).map((office) => ({
+    value: office.id,
+    label: `${office.country || ""} - ${office.name}`,
+  }));
 
   const getSelectedOption = (options, value) => {
     if (!value || !options || options.length === 0) return null;
-    const found = options.find((opt) => opt.value === value);
+    const found = options.find((opt) => String(opt.value) === String(value));
     if (found) {
       return { value: found.value, label: found.label };
     }
     return null;
   };
 
-const handleSelectChange = (field, selected) => {
-  console.log(`Select changed for ${field}:`, selected);
-  if (field === "external_office_id" && selected?.value === "add_new") {
-    setShowExternalModal(true);
-    return;
-  }
-  if (selected && selected.value) {
-    console.log(`Setting ${field} to:`, selected.value);
-    setFormData((prev) => ({
-      ...prev,
-      [field]: selected.value,
-    }));
-  } else {
-    console.log(`Clearing ${field}`);
-    setFormData((prev) => ({
-      ...prev,
-      [field]: "",
-    }));
-  }
-};
+  const handleSelectChange = (field, selected) => {
+    if (selected && selected.value) {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: selected.value,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: "",
+      }));
+    }
+  };
 
   return (
     <>
-      <Modal
-        show={show}
-        onHide={onHide}
-        centered
-        size="xl"
-        dir="rtl"
-        backdrop="static"
-      >
+      <Modal show={show} onHide={onHide} centered size="xl" dir="rtl">
         <Modal.Header closeButton className="border-0 pt-4 px-4">
           <Modal.Title className="fw-bold fs-5">
             {isEdit ? "✏️ تعديل متابعة الطلب" : "➕ إضافة متابعة طلب"}
@@ -244,10 +206,15 @@ const handleSelectChange = (field, selected) => {
                     )}
                     onChange={(opt) => {
                       const orderId = opt ? opt.value : "";
-                      setFormData((prev) => ({ ...prev, order_id: orderId }));
-                      setSelectedOrder(
-                        orders?.find((o) => o.id === parseInt(orderId)) || null,
-                      );
+                      const foundOrder = orders?.find((o) => o.id === parseInt(orderId)) || null;
+                      setFormData((prev) => ({
+                        ...prev,
+                        order_id: orderId,
+                        external_office_id: foundOrder?.external_office_id || "",
+                        delegate_phone: foundOrder?.client?.phone || "",
+                        sponsor_number: foundOrder?.client?.phone || "",
+                      }));
+                      setSelectedOrder(foundOrder);
                     }}
                     isDisabled={isEdit}
                     placeholder="-- اختر طلباً --"
@@ -264,19 +231,26 @@ const handleSelectChange = (field, selected) => {
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold small text-secondary">
-                    رقم الكفيل
+                    رقم المندوب
                   </Form.Label>
                   <Form.Control
                     type="text"
-                    name="sponsor_number"
-                    value={formData.sponsor_number}
-                    onChange={handleChange}
-                    isInvalid={!!getFieldError("sponsor_number")}
+                    name="delegate_phone"
+                    value={formData.delegate_phone}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        delegate_phone: val,
+                        sponsor_number: val,
+                      }));
+                    }}
+                    isInvalid={!!getFieldError("delegate_phone") || !!getFieldError("sponsor_number")}
                     className="rounded-3"
-                    placeholder="أدخل رقم الكفيل"
+                    placeholder="أدخل رقم المندوب"
                   />
                   <Form.Control.Feedback type="invalid">
-                    {getFieldError("sponsor_number")}
+                    {getFieldError("delegate_phone") || getFieldError("sponsor_number")}
                   </Form.Control.Feedback>
                 </Form.Group>
               </Col>
@@ -414,7 +388,7 @@ const handleSelectChange = (field, selected) => {
                     type="switch"
                     id="is_authenticated"
                     name="is_authenticated"
-                    label="تم التوثيق"
+                    label="تم الطلب"
                     checked={formData.is_authenticated}
                     onChange={handleChange}
                   />
@@ -523,6 +497,75 @@ const handleSelectChange = (field, selected) => {
               </Col>
             </Row>
 
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold small text-secondary">
+                    حالة التوثيق
+                  </Form.Label>
+                  <Select
+                    options={(authenticationStatuses || []).map((s) => ({
+                      value: s.key || s.label,
+                      label: s.label,
+                    }))}
+                    value={
+                      formData.authentication_status
+                        ? {
+                            value: formData.authentication_status,
+                            label:
+                              authenticationStatuses?.find(
+                                (s) => (s.key || s.label) === formData.authentication_status
+                              )?.label || formData.authentication_status,
+                          }
+                        : null
+                    }
+                    onChange={(opt) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        authentication_status: opt ? opt.value : "",
+                      }))
+                    }
+                    placeholder="-- اختر حالة التوثيق --"
+                    isClearable
+                    isRtl
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold small text-secondary">
+                    حالة التفويض
+                  </Form.Label>
+                  <Select
+                    options={(authorizationStatuses || []).map((s) => ({
+                      value: s.key || s.label,
+                      label: s.label,
+                    }))}
+                    value={
+                      formData.authorization_status
+                        ? {
+                            value: formData.authorization_status,
+                            label:
+                              authorizationStatuses?.find(
+                                (s) => (s.key || s.label) === formData.authorization_status
+                              )?.label || formData.authorization_status,
+                          }
+                        : null
+                    }
+                    onChange={(opt) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        authorization_status: opt ? opt.value : "",
+                      }))
+                    }
+                    placeholder="-- اختر حالة التفويض --"
+                    isClearable
+                    isRtl
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
             <Form.Group className="mb-3">
               <Form.Label className="fw-semibold small text-secondary">
                 الملاحظات
@@ -562,13 +605,6 @@ const handleSelectChange = (field, selected) => {
           </Modal.Footer>
         </Form>
       </Modal>
-
-      <ExternalOfficeFormModal
-        show={showExternalModal}
-        onHide={() => setShowExternalModal(false)}
-        onSubmit={handleAddExternalOffice}
-        loading={addingOffice}
-      />
     </>
   );
 };
