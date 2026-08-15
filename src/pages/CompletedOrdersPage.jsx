@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button } from "react-bootstrap";
 import RefreshButton from "../components/common/RefreshButton";
+import DateFilterBar from "../components/common/DateFilterBar";
 import {
   getOrders,
   updateOrder,
@@ -37,6 +38,8 @@ const CompletedOrdersPage = () => {
   const [submitError, setSubmitError] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [filters, setFilters] = useState({
     status: "completed",
     sort_by: "id",
@@ -52,20 +55,29 @@ const CompletedOrdersPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [currentPage, filters, searchQuery]);
+  }, [currentPage, filters, searchQuery, fromDate, toDate]);
 
   const fetchInitialData = async () => {
     try {
-      const [saudiRes, externalRes, employeesRes, statusRes, serviceTypesRes] = await Promise.all([
-        getSaudiOffices({ all: 1, per_page: 500 }),
-        getExternalOffices({ all: 1, per_page: 500 }),
-        getEmployees({ per_page: 200 }),
-        getSettingsOrderStatuses(),
-        getSettingsServiceTypes(),
-      ]);
-      const saudiList = Array.isArray(saudiRes.data?.data) ? saudiRes.data.data : (Array.isArray(saudiRes.data) ? saudiRes.data : []);
+      const [saudiRes, externalRes, employeesRes, statusRes, serviceTypesRes] =
+        await Promise.all([
+          getSaudiOffices({ all: 1, per_page: 500 }),
+          getExternalOffices({ all: 1, per_page: 500 }),
+          getEmployees({ per_page: 200 }),
+          getSettingsOrderStatuses(),
+          getSettingsServiceTypes(),
+        ]);
+      const saudiList = Array.isArray(saudiRes.data?.data)
+        ? saudiRes.data.data
+        : Array.isArray(saudiRes.data)
+          ? saudiRes.data
+          : [];
       setSaudiOffices(saudiList);
-      const externalList = Array.isArray(externalRes.data?.data) ? externalRes.data.data : (Array.isArray(externalRes.data) ? externalRes.data : []);
+      const externalList = Array.isArray(externalRes.data?.data)
+        ? externalRes.data.data
+        : Array.isArray(externalRes.data)
+          ? externalRes.data
+          : [];
       setExternalOffices(externalList);
       setEmployees(employeesRes.data?.data || employeesRes.data || []);
       setOrderStatuses(statusRes.data?.data || []);
@@ -78,12 +90,16 @@ const CompletedOrdersPage = () => {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const response = await getOrders({
+      const params = {
         page: currentPage,
         search: searchQuery,
         ...filters,
         per_page: 15,
-      });
+      };
+      if (fromDate) params.from_date = fromDate;
+      if (toDate) params.to_date = toDate;
+
+      const response = await getOrders(params);
       setOrders(response.data.data);
       setTotalPages(response.data.meta?.last_page || 1);
       setTotalOrders(response.data.meta?.total || 0);
@@ -94,6 +110,12 @@ const CompletedOrdersPage = () => {
       setLoading(false);
       setInitialLoading(false);
     }
+  };
+
+  const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
+    setFromDate(fromDate);
+    setToDate(toDate);
+    setCurrentPage(1);
   };
 
   const handleFilterChange = (key, value) => {
@@ -159,8 +181,16 @@ const CompletedOrdersPage = () => {
       { header: "رقم عقد مساند", key: "musaned_contract_number" },
       { header: "إجمالي السعر", key: "total_price" },
       { header: "الرصيد المتبقي", key: "price_difference" },
-      { header: "الحالة", format: (o) => orderStatuses.find(s => (s.key || s.id) === o.status)?.label || o.status },
-      { header: "التاريخ", format: (o) => new Date(o.created_at).toLocaleDateString("ar-SA") },
+      {
+        header: "الحالة",
+        format: (o) =>
+          orderStatuses.find((s) => (s.key || s.id) === o.status)?.label ||
+          o.status,
+      },
+      {
+        header: "التاريخ",
+        format: (o) => new Date(o.created_at).toLocaleDateString("ar-SA"),
+      },
     ];
     exportToExcel(orders, columns, "الطلبات_المكتملة.xlsx");
   };
@@ -176,8 +206,16 @@ const CompletedOrdersPage = () => {
       { header: "رقم عقد مساند", key: "musaned_contract_number" },
       { header: "إجمالي السعر", key: "total_price" },
       { header: "الرصيد المتبقي", key: "price_difference" },
-      { header: "الحالة", format: (o) => orderStatuses.find(s => (s.key || s.id) === o.status)?.label || o.status },
-      { header: "التاريخ", format: (o) => new Date(o.created_at).toLocaleDateString("ar-SA") },
+      {
+        header: "الحالة",
+        format: (o) =>
+          orderStatuses.find((s) => (s.key || s.id) === o.status)?.label ||
+          o.status,
+      },
+      {
+        header: "التاريخ",
+        format: (o) => new Date(o.created_at).toLocaleDateString("ar-SA"),
+      },
     ];
     exportToPDF(orders, columns, "الطلبات_المكتملة.pdf");
   };
@@ -198,12 +236,14 @@ const CompletedOrdersPage = () => {
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
             <h1 className="h3 mb-1 fw-bold">✅ الطلبات المكتملة</h1>
-            <p className="text-muted small mb-0">إجمالي الطلبات المكتملة: {totalOrders}</p>
+            <p className="text-muted small mb-0">
+              إجمالي الطلبات المكتملة: {totalOrders}
+            </p>
           </div>
           <div className="d-flex gap-2">
-            <RefreshButton 
-              onClick={fetchOrders} 
-              loading={loading} 
+            <RefreshButton
+              onClick={fetchOrders}
+              loading={loading}
               className="border shadow-sm text-primary fw-semibold"
             />
             <Button
@@ -227,14 +267,26 @@ const CompletedOrdersPage = () => {
           </div>
         </div>
 
+        <DateFilterBar
+          onFilterChange={handleDateFilterChange}
+          initialFromDate={fromDate}
+          initialToDate={toDate}
+          initialPreset="all"
+          size="md"
+        />
+
         <OrderSearchBar
           searchQuery={searchQuery}
           onSearch={handleSearch}
-          onClear={() => setSearchQuery("")}
+          onClear={() => {
+            setSearchQuery("");
+            setFromDate("");
+            setToDate("");
+          }}
           loading={loading}
           filters={filters}
           onFilterChange={handleFilterChange}
-          statusOptions={orderStatuses.filter(s => s.key === 'completed')}
+          statusOptions={orderStatuses.filter((s) => s.key === "completed")}
           isCompletedPage={true}
         />
 
@@ -245,7 +297,16 @@ const CompletedOrdersPage = () => {
             ) : orders.length === 0 ? (
               <div className="text-center py-5 text-muted">
                 <div className="mb-3">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="48"
+                    height="48"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                     <polyline points="14 2 14 8 20 8"></polyline>
                     <line x1="16" y1="13" x2="8" y2="13"></line>

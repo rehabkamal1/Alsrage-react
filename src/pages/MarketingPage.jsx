@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button, Dropdown } from "react-bootstrap";
+import RefreshButton from "../components/common/RefreshButton";
+import DateFilterBar from "../components/common/DateFilterBar";
 import api, {
   getMarketingLeads,
   createMarketingLead,
@@ -40,15 +42,13 @@ const MarketingPage = () => {
   const [priorityLevels, setPriorityLevels] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [filters, setFilters] = useState({
     type: "",
-    status: "",
-    priority_level: "",
   });
   const [sortField, setSortField] = useState("id");
   const [sortDirection, setSortDirection] = useState("desc");
-  const [filterFromDate, setFilterFromDate] = useState("");
-  const [filterToDate, setFilterToDate] = useState("");
   const [submitError, setSubmitError] = useState(null);
   const [addingOffice, setAddingOffice] = useState(false);
   const itemsPerPage = 10;
@@ -70,8 +70,8 @@ const MarketingPage = () => {
     filters,
     sortField,
     sortDirection,
-    filterFromDate,
-    filterToDate,
+    fromDate,
+    toDate,
     currentPage,
   ]);
 
@@ -104,10 +104,8 @@ const MarketingPage = () => {
       const params = {
         search: searchQuery,
         type: filters.type,
-        status: filters.status,
-        priority_level: filters.priority_level,
-        from_date: filterFromDate,
-        to_date: filterToDate,
+        from_date: fromDate,
+        to_date: toDate,
         sort_field: sortField,
         sort_direction: sortDirection,
         per_page: 1000,
@@ -115,18 +113,6 @@ const MarketingPage = () => {
       };
       const response = await getMarketingLeads(params);
       const leadsData = response.data.data || [];
-
-      console.log("========== fetchLeads API Response ==========");
-      console.log("Raw leads data from API:", leadsData);
-
-      leadsData.forEach((lead, index) => {
-        console.log(`Lead ${index} (ID: ${lead.id}):`, {
-          source_name: lead.source_name,
-          source_id: lead.source_id,
-          source_type: lead.source_type,
-        });
-      });
-
       setAllLeads(leadsData);
 
       const start = (currentPage - 1) * itemsPerPage;
@@ -140,6 +126,12 @@ const MarketingPage = () => {
     }
   };
 
+  const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
+    setFromDate(fromDate);
+    setToDate(toDate);
+    setCurrentPage(1);
+  };
+
   const handleSearch = (query) => {
     setSearchQuery(query);
     setCurrentPage(1);
@@ -147,9 +139,9 @@ const MarketingPage = () => {
 
   const handleClearSearch = () => {
     setSearchQuery("");
-    setFilters({ type: "", status: "", priority_level: "" });
-    setFilterFromDate("");
-    setFilterToDate("");
+    setFilters({ type: "" });
+    setFromDate("");
+    setToDate("");
     setCurrentPage(1);
   };
 
@@ -164,11 +156,6 @@ const MarketingPage = () => {
     setCurrentPage(1);
   };
 
-  const handleDateFilter = () => {
-    setCurrentPage(1);
-    fetchLeads();
-  };
-
   const handleAddLead = () => {
     setEditingLead(null);
     setSubmitError(null);
@@ -176,30 +163,9 @@ const MarketingPage = () => {
   };
 
   const handleEditLead = (lead) => {
-    console.log("========== handleEditLead ==========");
-    console.log("Editing lead:", lead);
     setEditingLead(lead);
     setSubmitError(null);
     setShowModal(true);
-  };
-
-  const handleUpdateField = async (leadId, field, value) => {
-    setLoading(true);
-    try {
-      await updateMarketingLead(leadId, { [field]: value });
-      showSuccess(
-        "تم",
-        `تم تحديث ${field === "status" ? "الحالة" : "درجة الأهمية"} بنجاح`,
-      );
-      await fetchLeads();
-    } catch (error) {
-      showError(
-        "خطأ",
-        error.response?.data?.message || "حدث خطأ أثناء التحديث",
-      );
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleSubmitLead = async (formData) => {
@@ -279,54 +245,19 @@ const MarketingPage = () => {
       { header: "اسم العميل", key: "name" },
       { header: "رقم الهاتف", key: "phone" },
       { header: "المصدر", key: "source_name" },
-      {
-        header: "الحالة",
-        key: "status",
-        format: (item) => {
-          const found = statuses?.find((s) => s.key === item.status);
-          return found?.label || item.status || "-";
-        },
-      },
-      {
-        header: "درجة الأهمية",
-        key: "priority_level",
-        format: (item) => {
-          const found = priorityLevels?.find(
-            (p) => p.key === item.priority_level,
-          );
-          return found?.label || item.priority_level || "-";
-        },
-      },
       { header: "تاريخ التواصل", key: "contact_date" },
       { header: "تاريخ المتابعة", key: "next_followup_date" },
       { header: "الملاحظات", key: "notes" },
     ];
     exportToExcel(exportData, columns, "التسويق.xlsx");
   };
+
   const handleExportPDF = () => {
     const exportData = allLeads.length > 0 ? allLeads : leads;
     const columns = [
       { header: "اسم العميل", key: "name" },
       { header: "رقم الهاتف", key: "phone" },
       { header: "المصدر", key: "source_name" },
-      {
-        header: "الحالة",
-        key: "status",
-        format: (item) => {
-          const found = statuses?.find((s) => s.key === item.status);
-          return found?.label || item.status || "-";
-        },
-      },
-      {
-        header: "درجة الأهمية",
-        key: "priority_level",
-        format: (item) => {
-          const found = priorityLevels?.find(
-            (p) => p.key === item.priority_level,
-          );
-          return found?.label || item.priority_level || "-";
-        },
-      },
       { header: "تاريخ التواصل", key: "contact_date" },
       { header: "تاريخ المتابعة", key: "next_followup_date" },
     ];
@@ -355,7 +286,7 @@ const MarketingPage = () => {
           <Card className="shadow-sm border-0 rounded-4">
             <Card.Body className="p-0">
               <div className="table-responsive">
-                <TableSkeleton rows={5} columns={10} />
+                <TableSkeleton rows={5} columns={8} />
               </div>
             </Card.Body>
           </Card>
@@ -376,6 +307,11 @@ const MarketingPage = () => {
         <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
           <h1 className="h3 mb-0 fw-bold">التسويق</h1>
           <div className="d-flex gap-2 flex-wrap">
+            <RefreshButton
+              onClick={fetchLeads}
+              loading={loading}
+              className="border shadow-sm text-primary fw-semibold"
+            />
             <Button
               variant="light"
               onClick={handleExportExcel}
@@ -436,24 +372,25 @@ const MarketingPage = () => {
           </div>
         </div>
 
+        <DateFilterBar
+          onFilterChange={handleDateFilterChange}
+          initialFromDate={fromDate}
+          initialToDate={toDate}
+          initialPreset="all"
+          size="md"
+        />
+
         <div className="mb-4">
           <MarketingSearchBar
             searchQuery={searchQuery}
             onSearch={handleSearch}
             onClear={handleClearSearch}
             loading={loading}
-            statuses={statuses}
-            priorityLevels={priorityLevels}
             filters={filters}
             onFilterChange={handleFilterChange}
             sortField={sortField}
             sortDirection={sortDirection}
             onSortChange={handleSortChange}
-            filterFromDate={filterFromDate}
-            filterToDate={filterToDate}
-            setFilterFromDate={setFilterFromDate}
-            setFilterToDate={setFilterToDate}
-            onDateFilter={handleDateFilter}
             types={types}
           />
         </div>
@@ -463,7 +400,7 @@ const MarketingPage = () => {
             {loading ? (
               <div className="text-center py-5">
                 <div className="table-responsive">
-                  <TableSkeleton rows={5} columns={10} />
+                  <TableSkeleton rows={5} columns={8} />
                 </div>
               </div>
             ) : (
@@ -473,9 +410,6 @@ const MarketingPage = () => {
                     leads={currentData}
                     onEdit={handleEditLead}
                     onDelete={handleDeleteLead}
-                    onUpdateField={handleUpdateField}
-                    statuses={statuses}
-                    priorityLevels={priorityLevels}
                   />
                 </div>
                 {totalPages > 1 && (

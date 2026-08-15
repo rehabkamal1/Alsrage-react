@@ -250,14 +250,16 @@ const FinanceTable = ({
 
   return (
     <div className="table-responsive">
-      <Table hover className="mb-0 align-middle finance-table">
+      <Table hover className="mb-0 align-middle finance-table text-center">
         <thead className="table-light">
           <tr>
             <th style={{ minWidth: "5px", width: "5px", padding: "0" }}></th>
             <th>#</th>
-            <th>النوع</th>
-            <th>المبلغ</th>
+            <th>الموظف المسؤول</th>
+            <th>نوع المعاملة</th>
+            <th>رقم المندوب</th>
             <th>رقم الطلب</th>
+            <th>المبلغ</th>
             <th>صاحب التأشيرة</th>
             <th>رقم الحوالة</th>
             <th>طريقة الدفع</th>
@@ -293,6 +295,7 @@ const FinanceTable = ({
                     }}
                   ></td>
                   <td className="fw-semibold">#{transaction.id}</td>
+                  <td>{transaction.employee_name || "-"}</td>
                   <td>
                     <span
                       className={
@@ -306,10 +309,13 @@ const FinanceTable = ({
                         : "📤 مصروفات"}
                     </span>
                   </td>
+                  <td>{transaction.client_name || "-"}</td>
+                  <td>
+                    #{transaction.order_number || transaction.order_id || "-"}
+                  </td>
                   <td className="fw-semibold">
                     {Number(transaction.amount).toFixed(2)} ر.س
                   </td>
-                  <td>#{transaction.order_number || transaction.order_id}</td>
                   <td>{transaction.visa_holder_name || "-"}</td>
                   <td>{transaction.transfer_number || "-"}</td>
                   <td>{renderPaymentMethodDropdown(transaction)}</td>
@@ -322,7 +328,7 @@ const FinanceTable = ({
                       "ar-SA",
                     )}
                   </td>
-                  <td className="text-center">
+                  <td>
                     <div className="d-flex align-items-center justify-content-center gap-2">
                       <Button
                         variant="link"
@@ -347,7 +353,7 @@ const FinanceTable = ({
             })}
           {(!transactions || transactions.length === 0) && (
             <tr>
-              <td colSpan="14" className="text-center py-5 text-muted">
+              <td colSpan="16" className="text-center py-5 text-muted">
                 لا توجد حوالات
               </td>
             </tr>
@@ -379,7 +385,7 @@ const FinanceTable = ({
         }
 
         .finance-table tbody tr:hover .priority-strip {
-          background-color: var(--priority-color, #6c757d) !important;
+          backgroundColor: var(--priority-color, #6c757d) !important;
         }
       `}</style>
     </div>

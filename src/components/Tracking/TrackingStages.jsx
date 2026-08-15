@@ -22,7 +22,7 @@ const stagesConfig = [
   },
   {
     id: 3,
-    name: "تم الطلب",
+    name: "تم اكتمال الخدمة",
     field: "is_authenticated",
     nextAction: "إرسال التأشيرة",
   },

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button, Tabs, Tab } from "react-bootstrap";
 import RefreshButton from "../components/common/RefreshButton";
+import DateFilterBar from "../components/common/DateFilterBar";
 import {
   getSaudiOffices,
   createSaudiOffice,
@@ -27,11 +28,13 @@ const SaudiOfficesPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [submitError, setSubmitError] = useState(null);
   const [activeTab, setActiveTab] = useState("offices");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const itemsPerPage = 8;
 
   useEffect(() => {
     fetchOffices();
-  }, []);
+  }, [fromDate, toDate]);
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -57,7 +60,10 @@ const SaudiOfficesPage = () => {
   const fetchOffices = async () => {
     setInitialLoading(true);
     try {
-      const response = await getSaudiOffices();
+      const params = {};
+      if (fromDate) params.from_date = fromDate;
+      if (toDate) params.to_date = toDate;
+      const response = await getSaudiOffices(params);
       setOffices(response.data.data || []);
       setFilteredOffices(response.data.data || []);
     } catch (error) {
@@ -65,6 +71,12 @@ const SaudiOfficesPage = () => {
     } finally {
       setInitialLoading(false);
     }
+  };
+
+  const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
+    setFromDate(fromDate);
+    setToDate(toDate);
+    setCurrentPage(1);
   };
 
   const handleSearch = (query) => {
@@ -161,7 +173,7 @@ const SaudiOfficesPage = () => {
   };
 
   const currentTabOffices = filteredOffices.filter((o) =>
-    activeTab === "suppliers" ? o.is_supplier : true
+    activeTab === "suppliers" ? o.is_supplier : true,
   );
   const totalPages = Math.ceil(currentTabOffices.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -208,9 +220,9 @@ const SaudiOfficesPage = () => {
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
           <h1 className="h3 mb-0 fw-bold">المكاتب السعودية</h1>
           <div className="d-flex gap-2">
-            <RefreshButton 
-              onClick={fetchOffices} 
-              loading={loading} 
+            <RefreshButton
+              onClick={fetchOffices}
+              loading={loading}
               className="border shadow-sm text-primary fw-semibold"
             />
             <Button
@@ -242,6 +254,14 @@ const SaudiOfficesPage = () => {
           </div>
         </div>
 
+        <DateFilterBar
+          onFilterChange={handleDateFilterChange}
+          initialFromDate={fromDate}
+          initialToDate={toDate}
+          initialPreset="all"
+          size="md"
+        />
+
         <SaudiOfficeSearchBar
           searchQuery={searchQuery}
           onSearch={handleSearch}
@@ -249,7 +269,10 @@ const SaudiOfficesPage = () => {
           loading={loading}
         />
 
-        <div className="d-flex bg-white rounded-3 p-1 mb-4 shadow-sm border" style={{ width: "fit-content" }}>
+        <div
+          className="d-flex bg-white rounded-3 p-1 mb-4 shadow-sm border"
+          style={{ width: "fit-content" }}
+        >
           <Button
             variant={activeTab === "offices" ? "dark" : "white"}
             className={`rounded-3 border-0 px-4 py-2 fw-semibold ${activeTab !== "offices" ? "text-secondary" : ""}`}

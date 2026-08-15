@@ -1,83 +1,84 @@
-import React from "react";
-import { Table, Button } from "react-bootstrap";
+// src/components/Client/ClientTable.jsx
 
-const ClientTable = ({ clients, onEdit, onDelete }) => {
+import React from "react";
+import { Table, Button, Badge } from "react-bootstrap";
+
+const ClientTable = ({ clients, onEdit, onDelete, onViewOrders }) => {
   return (
     <div className="table-responsive">
-      <Table hover className="mb-0 align-middle">
+      <Table hover className="mb-0 align-middle text-center">
         <thead className="table-light">
           <tr>
-            <th className="rounded-end">التصنيف</th>
+            <th>#</th>
+            <th>نوع العميل</th>
             <th>رقم هاتف المندوب</th>
             <th>المندوب</th>
-            <th>اسم صاحب التأشيرة</th>
-            <th>هاتف إضافي</th>
+            <th>رقم هاتف إضافي</th>
             <th>المدينة</th>
             <th>العنوان</th>
-            <th className="rounded-start text-center">الإجراءات</th>
+            <th>طلبات العميل</th>
+            <th>تاريخ التسجيل</th>
+            <th>الإجراءات</th>
           </tr>
         </thead>
         <tbody>
-          {clients.map((client, index) => (
-            <tr key={client.id}>
-              <td>
-                <span
-                  className={client.client_type === "office" ? "badge-pill-office" : "badge-pill-individual"}
-                >
-                  {client.client_type === "office"
-                    ? "🏢 مكتب خدمات"
-                    : "👤 عميل فردي"}
-                </span>
-              </td>
-              <td>
-                <span className="phone-badge">
-                  <i className="fa-solid fa-phone fs-7 opacity-75"></i>
-                  {client.phone}
-                </span>
-              </td>
-              <td className="fw-bold text-dark">{client.name || "-"}</td>
-              <td>{client.employee?.name || "-"}</td>
-              <td>
-                {client.additional_phone ? (
-                  <span className="phone-badge">
-                    {client.additional_phone}
-                  </span>
-                ) : (
-                  "-"
-                )}
-              </td>
-              <td>
-                <span className="badge bg-light text-dark border px-3 py-1.5 rounded-pill fw-medium">
-                  {client.city || "-"}
-                </span>
-              </td>
-              <td className="text-muted small">{client.address || "-"}</td>
-              <td className="text-center">
-                <div className="d-flex align-items-center justify-content-center gap-2">
-                  <Button
-                    variant="link"
-                    className="table-action-btn edit-btn"
-                    onClick={() => onEdit(client)}
-                    title="تعديل"
+          {clients &&
+            clients.map((client) => (
+              <tr key={client.id}>
+                <td className="fw-semibold">#{client.id}</td>
+                <td>
+                  <Badge
+                    bg={client.client_type === "office" ? "info" : "secondary"}
                   >
-                    <i className="fa-solid fa-pen-to-square"></i>
-                  </Button>
+                    {client.client_type === "office" ? "مكتب" : "فرد"}
+                  </Badge>
+                </td>
+                <td>{client.phone}</td>
+                <td>{client.name || "-"}</td>
+                <td>{client.additional_phone || "-"}</td>
+                <td>{client.city || "-"}</td>
+                <td>{client.address || "-"}</td>
+                <td>
                   <Button
-                    variant="link"
-                    className="table-action-btn delete-btn"
-                    onClick={() => onDelete(client.id)}
-                    title="حذف"
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={() => onViewOrders(client)}
+                    title="عرض طلبات العميل"
+                    className="rounded-pill px-3 py-1"
                   >
-                    <i className="fa-solid fa-trash-can"></i>
+                    <i className="fa-solid fa-file-invoice me-1"></i>
+                    عرض الطلبات
                   </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-          {clients.length === 0 && (
+                </td>
+                <td>
+                  {new Date(client.created_at).toLocaleDateString("ar-SA")}
+                </td>
+                <td>
+                  <div className="d-flex align-items-center justify-content-center gap-2">
+                    <Button
+                      variant="link"
+                      className="table-action-btn edit-btn"
+                      onClick={() => onEdit(client)}
+                      title="تعديل"
+                    >
+                      <i className="fa-solid fa-pen-to-square"></i>
+                    </Button>
+                    <Button
+                      variant="link"
+                      className="table-action-btn delete-btn"
+                      onClick={() => onDelete(client.id)}
+                      title="حذف"
+                    >
+                      <i className="fa-solid fa-trash-can"></i>
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          {(!clients || clients.length === 0) && (
             <tr>
-              <td colSpan="8" className="text-center py-5 text-muted">
-                لا يوجد عملاء مضافين بعد
+              <td colSpan="10" className="text-center py-5 text-muted">
+                لا يوجد عملاء
               </td>
             </tr>
           )}

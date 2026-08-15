@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button } from "react-bootstrap";
 import RefreshButton from "../components/common/RefreshButton";
+import DateFilterBar from "../components/common/DateFilterBar";
 import {
   getExternalOffices,
   createExternalOffice,
@@ -26,11 +27,13 @@ const ExternalOfficesPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [submitError, setSubmitError] = useState(null);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const itemsPerPage = 8;
 
   useEffect(() => {
     fetchOffices();
-  }, []);
+  }, [fromDate, toDate]);
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -53,7 +56,10 @@ const ExternalOfficesPage = () => {
   const fetchOffices = async () => {
     setInitialLoading(true);
     try {
-      const response = await getExternalOffices();
+      const params = {};
+      if (fromDate) params.from_date = fromDate;
+      if (toDate) params.to_date = toDate;
+      const response = await getExternalOffices(params);
       setOffices(response.data.data || []);
       setFilteredOffices(response.data.data || []);
     } catch (error) {
@@ -61,6 +67,12 @@ const ExternalOfficesPage = () => {
     } finally {
       setInitialLoading(false);
     }
+  };
+
+  const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
+    setFromDate(fromDate);
+    setToDate(toDate);
+    setCurrentPage(1);
   };
 
   const handleSearch = (query) => {
@@ -211,9 +223,9 @@ const ExternalOfficesPage = () => {
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
           <h1 className="h3 mb-0 fw-bold">المكاتب الخارجية</h1>
           <div className="d-flex flex-wrap gap-2">
-            <RefreshButton 
-              onClick={fetchOffices} 
-              loading={loading} 
+            <RefreshButton
+              onClick={fetchOffices}
+              loading={loading}
               className="border shadow-sm text-primary fw-semibold"
             />
             <Button
@@ -234,8 +246,8 @@ const ExternalOfficesPage = () => {
               <i className="fa-solid fa-file-pdf fs-5"></i>
               <span>بي دي اف</span>
             </Button>
-            <Button 
-              variant="dark" 
+            <Button
+              variant="dark"
               onClick={handleAddOffice}
               className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
             >
@@ -244,6 +256,14 @@ const ExternalOfficesPage = () => {
             </Button>
           </div>
         </div>
+
+        <DateFilterBar
+          onFilterChange={handleDateFilterChange}
+          initialFromDate={fromDate}
+          initialToDate={toDate}
+          initialPreset="all"
+          size="md"
+        />
 
         <ExternalOfficeSearchBar
           searchQuery={searchQuery}

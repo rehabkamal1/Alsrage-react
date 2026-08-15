@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,12 +10,28 @@ import {
   Title,
   Tooltip,
   Legend,
-  Filler
-} from 'chart.js';
-import { Line, Bar, Doughnut } from 'react-chartjs-2';
-import { Table, Badge, Button, Form, Row, Col, Spinner, ProgressBar } from 'react-bootstrap';
-import RefreshButton from '../components/common/RefreshButton';
-import { getClients, getOrders, getEmployees, getSaudiOffices, getExternalOffices } from '../services/apiService';
+  Filler,
+} from "chart.js";
+import { Line, Bar, Doughnut } from "react-chartjs-2";
+import {
+  Table,
+  Badge,
+  Button,
+  Form,
+  Row,
+  Col,
+  Spinner,
+  ProgressBar,
+} from "react-bootstrap";
+import RefreshButton from "../components/common/RefreshButton";
+import DateFilterBar from "../components/common/DateFilterBar";
+import {
+  getClients,
+  getOrders,
+  getEmployees,
+  getSaudiOffices,
+  getExternalOffices,
+} from "../services/apiService";
 
 // Register ChartJS components
 ChartJS.register(
@@ -28,7 +44,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
 );
 
 const DashboardPage = () => {
@@ -36,34 +52,33 @@ const DashboardPage = () => {
     clients: 0,
     orders: 0,
     employees: 0,
-    offices: 0
+    offices: 0,
   });
   const [recentOrders, setRecentOrders] = useState([]);
   const [recentClients, setRecentClients] = useState([]);
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders' | 'clients'
+  const [activeTab, setActiveTab] = useState("orders");
 
   const [orderStatusCounts, setOrderStatusCounts] = useState({
     pending: 0,
     processing: 0,
     completed: 0,
     cancelled: 0,
-    musaned_paid: 0
+    musaned_paid: 0,
   });
   const [loading, setLoading] = useState(true);
 
   // Date Filtering State
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [activePreset, setActivePreset] = useState('all');
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   // Chart datasets
   const [monthlyOrders, setMonthlyOrders] = useState({
-    labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
-    data: [0, 0, 0, 0, 0, 0]
+    labels: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"],
+    data: [0, 0, 0, 0, 0, 0],
   });
   const [monthlyClients, setMonthlyClients] = useState({
-    labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
-    data: [0, 0, 0, 0, 0, 0]
+    labels: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"],
+    data: [0, 0, 0, 0, 0, 0],
   });
 
   const fetchDashboardData = useCallback(async () => {
@@ -73,13 +88,14 @@ const DashboardPage = () => {
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
 
-      const [clientsRes, ordersRes, employeesRes, saudiRes, externalRes] = await Promise.all([
-        getClients(params),
-        getOrders(params),
-        getEmployees(params),
-        getSaudiOffices(params),
-        getExternalOffices(params)
-      ]);
+      const [clientsRes, ordersRes, employeesRes, saudiRes, externalRes] =
+        await Promise.all([
+          getClients(params),
+          getOrders(params),
+          getEmployees(params),
+          getSaudiOffices(params),
+          getExternalOffices(params),
+        ]);
 
       const clientList = clientsRes.data?.data || clientsRes.data || [];
       const orderList = ordersRes.data?.data || ordersRes.data || [];
@@ -88,31 +104,61 @@ const DashboardPage = () => {
       const externalList = externalRes.data?.data || externalRes.data || [];
 
       setStats({
-        clients: clientsRes.data?.meta?.total ?? clientsRes.data?.total ?? clientList.length,
-        orders: ordersRes.data?.meta?.total ?? ordersRes.data?.total ?? orderList.length,
+        clients:
+          clientsRes.data?.meta?.total ??
+          clientsRes.data?.total ??
+          clientList.length,
+        orders:
+          ordersRes.data?.meta?.total ??
+          ordersRes.data?.total ??
+          orderList.length,
         employees: employeesRes.data?.total ?? employeeList.length,
-        offices: (saudiRes.data?.meta?.total ?? saudiRes.data?.total ?? saudiList.length) +
-                 (externalRes.data?.meta?.total ?? externalRes.data?.total ?? externalList.length)
+        offices:
+          (saudiRes.data?.meta?.total ??
+            saudiRes.data?.total ??
+            saudiList.length) +
+          (externalRes.data?.meta?.total ??
+            externalRes.data?.total ??
+            externalList.length),
       });
 
       setRecentOrders(orderList.slice(0, 6));
       setRecentClients(clientList.slice(0, 6));
 
       // Calculate Status Distribution
-      const statusCounts = { pending: 0, processing: 0, completed: 0, cancelled: 0, musaned_paid: 0 };
-      orderList.forEach(order => {
+      const statusCounts = {
+        pending: 0,
+        processing: 0,
+        completed: 0,
+        cancelled: 0,
+        musaned_paid: 0,
+      };
+      orderList.forEach((order) => {
         if (order.status && statusCounts[order.status] !== undefined) {
           statusCounts[order.status]++;
-        } else if (order.status === 'canceled') {
+        } else if (order.status === "canceled") {
           statusCounts.cancelled++;
         }
       });
       setOrderStatusCounts(statusCounts);
 
       // Calculate monthly order counts for line chart
-      const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+      const monthNames = [
+        "يناير",
+        "فبراير",
+        "مارس",
+        "أبريل",
+        "مايو",
+        "يونيو",
+        "يوليو",
+        "أغسطس",
+        "سبتمبر",
+        "أكتوبر",
+        "نوفمبر",
+        "ديسمبر",
+      ];
       const orderCounts = Array(12).fill(0);
-      orderList.forEach(order => {
+      orderList.forEach((order) => {
         if (order.created_at) {
           const monthIndex = new Date(order.created_at).getMonth();
           orderCounts[monthIndex]++;
@@ -124,25 +170,24 @@ const DashboardPage = () => {
         last6MonthsIndices.push((currentMonth - i + 12) % 12);
       }
       setMonthlyOrders({
-        labels: last6MonthsIndices.map(i => monthNames[i]),
-        data: last6MonthsIndices.map(i => orderCounts[i])
+        labels: last6MonthsIndices.map((i) => monthNames[i]),
+        data: last6MonthsIndices.map((i) => orderCounts[i]),
       });
 
       // Calculate monthly clients for bar chart
       const clientCounts = Array(12).fill(0);
-      clientList.forEach(client => {
+      clientList.forEach((client) => {
         if (client.created_at) {
           const monthIndex = new Date(client.created_at).getMonth();
           clientCounts[monthIndex]++;
         }
       });
       setMonthlyClients({
-        labels: last6MonthsIndices.map(i => monthNames[i]),
-        data: last6MonthsIndices.map(i => clientCounts[i])
+        labels: last6MonthsIndices.map((i) => monthNames[i]),
+        data: last6MonthsIndices.map((i) => clientCounts[i]),
       });
-
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error("Error fetching dashboard data:", error);
     } finally {
       setLoading(false);
     }
@@ -152,52 +197,51 @@ const DashboardPage = () => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Handle Preset Button Clicks
-  const handlePresetSelect = (presetKey) => {
-    setActivePreset(presetKey);
-    const today = new Date();
-    const formatDate = (d) => d.toISOString().split('T')[0];
-
-    if (presetKey === 'all') {
-      setFromDate('');
-      setToDate('');
-    } else if (presetKey === 'today') {
-      const todayStr = formatDate(today);
-      setFromDate(todayStr);
-      setToDate(todayStr);
-    } else if (presetKey === 'week') {
-      const dayOfWeek = today.getDay(); // 0 = Sun
-      const firstDayOfWeek = new Date(today);
-      firstDayOfWeek.setDate(today.getDate() - dayOfWeek);
-      setFromDate(formatDate(firstDayOfWeek));
-      setToDate(formatDate(today));
-    } else if (presetKey === 'month') {
-      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      setFromDate(formatDate(firstDayOfMonth));
-      setToDate(formatDate(today));
-    } else if (presetKey === 'year') {
-      const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
-      setFromDate(formatDate(firstDayOfYear));
-      setToDate(formatDate(today));
-    }
-  };
-
-  const handleResetFilters = () => {
-    setActivePreset('all');
-    setFromDate('');
-    setToDate('');
+  const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
+    setFromDate(fromDate);
+    setToDate(toDate);
   };
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      'pending': { label: 'قيد الانتظار', bg: 'warning', text: 'dark', pulse: 'warning' },
-      'processing': { label: 'تحت المعالجة', bg: 'info', text: 'white', pulse: 'info' },
-      'completed': { label: 'مكتمل', bg: 'success', text: 'white', pulse: 'success' },
-      'cancelled': { label: 'ملغي', bg: 'danger', text: 'white', pulse: 'danger' },
-      'canceled': { label: 'ملغي', bg: 'danger', text: 'white', pulse: 'danger' },
-      'musaned_paid': { label: 'تم سداد مساند', bg: 'primary', text: 'white', pulse: 'primary' },
+      pending: {
+        label: "قيد الانتظار",
+        bg: "warning",
+        text: "dark",
+        pulse: "warning",
+      },
+      processing: {
+        label: "تحت المعالجة",
+        bg: "info",
+        text: "white",
+        pulse: "info",
+      },
+      completed: {
+        label: "مكتمل",
+        bg: "success",
+        text: "white",
+        pulse: "success",
+      },
+      cancelled: {
+        label: "ملغي",
+        bg: "danger",
+        text: "white",
+        pulse: "danger",
+      },
+      canceled: { label: "ملغي", bg: "danger", text: "white", pulse: "danger" },
+      musaned_paid: {
+        label: "تم سداد مساند",
+        bg: "primary",
+        text: "white",
+        pulse: "primary",
+      },
     };
-    const config = statusMap[status] || { label: status, bg: 'secondary', text: 'white', pulse: 'secondary' };
+    const config = statusMap[status] || {
+      label: status,
+      bg: "secondary",
+      text: "white",
+      pulse: "secondary",
+    };
     return (
       <div className="d-inline-flex align-items-center gap-1.5 px-3 py-1.5 rounded-pill border bg-light shadow-sm">
         <span className={`pulse-dot ${config.pulse}`}></span>
@@ -211,14 +255,14 @@ const DashboardPage = () => {
     labels: monthlyOrders.labels,
     datasets: [
       {
-        label: 'الطلبات',
+        label: "الطلبات",
         data: monthlyOrders.data,
         fill: true,
-        backgroundColor: 'rgba(99, 102, 241, 0.15)',
-        borderColor: '#6366f1',
+        backgroundColor: "rgba(99, 102, 241, 0.15)",
+        borderColor: "#6366f1",
         borderWidth: 3,
-        pointBackgroundColor: '#4f46e5',
-        pointBorderColor: '#fff',
+        pointBackgroundColor: "#4f46e5",
+        pointBorderColor: "#fff",
         pointHoverRadius: 7,
         tension: 0.4,
       },
@@ -230,10 +274,10 @@ const DashboardPage = () => {
     labels: monthlyClients.labels,
     datasets: [
       {
-        label: 'العملاء الجدد',
+        label: "العملاء الجدد",
         data: monthlyClients.data,
-        backgroundColor: 'rgba(16, 185, 129, 0.85)',
-        hoverBackgroundColor: '#10b981',
+        backgroundColor: "rgba(16, 185, 129, 0.85)",
+        hoverBackgroundColor: "#10b981",
         borderRadius: 10,
         barThickness: 22,
       },
@@ -242,7 +286,7 @@ const DashboardPage = () => {
 
   // Doughnut Chart Data for Status Distribution
   const doughnutData = {
-    labels: ['قيد الانتظار', 'تحت المعالجة', 'مكتمل', 'سداد مساند', 'ملغي'],
+    labels: ["قيد الانتظار", "تحت المعالجة", "مكتمل", "سداد مساند", "ملغي"],
     datasets: [
       {
         data: [
@@ -250,13 +294,19 @@ const DashboardPage = () => {
           orderStatusCounts.processing,
           orderStatusCounts.completed,
           orderStatusCounts.musaned_paid,
-          orderStatusCounts.cancelled
+          orderStatusCounts.cancelled,
         ],
-        backgroundColor: ['#f59e0b', '#06b6d4', '#10b981', '#6366f1', '#ef4444'],
+        backgroundColor: [
+          "#f59e0b",
+          "#06b6d4",
+          "#10b981",
+          "#6366f1",
+          "#ef4444",
+        ],
         borderWidth: 0,
-        hoverOffset: 6
-      }
-    ]
+        hoverOffset: 6,
+      },
+    ],
   };
 
   const chartOptions = {
@@ -265,22 +315,28 @@ const DashboardPage = () => {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#0f172a',
+        backgroundColor: "#0f172a",
         padding: 12,
         cornerRadius: 10,
-        titleFont: { size: 14, family: 'Cairo' },
-        bodyFont: { size: 13, family: 'Cairo' },
-      }
+        titleFont: { size: 14, family: "Cairo" },
+        bodyFont: { size: 13, family: "Cairo" },
+      },
     },
     scales: {
       y: {
         beginAtZero: true,
-        grid: { color: 'rgba(226, 232, 240, 0.6)' },
-        ticks: { font: { size: 12, family: 'Cairo', weight: '600' }, color: '#64748b' }
+        grid: { color: "rgba(226, 232, 240, 0.6)" },
+        ticks: {
+          font: { size: 12, family: "Cairo", weight: "600" },
+          color: "#64748b",
+        },
       },
       x: {
         grid: { display: false },
-        ticks: { font: { size: 12, family: 'Cairo', weight: '600' }, color: '#64748b' }
+        ticks: {
+          font: { size: 12, family: "Cairo", weight: "600" },
+          color: "#64748b",
+        },
       },
     },
   };
@@ -288,17 +344,17 @@ const DashboardPage = () => {
   const doughnutOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    cutout: '72%',
+    cutout: "72%",
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#0f172a',
+        backgroundColor: "#0f172a",
         padding: 12,
         cornerRadius: 10,
-        titleFont: { size: 14, family: 'Cairo' },
-        bodyFont: { size: 13, family: 'Cairo' },
-      }
-    }
+        titleFont: { size: 14, family: "Cairo" },
+        bodyFont: { size: 13, family: "Cairo" },
+      },
+    },
   };
 
   return (
@@ -307,23 +363,38 @@ const DashboardPage = () => {
       <div className="dash-hero-card p-4 p-md-5 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-4">
         <div>
           <div className="d-flex align-items-center gap-2 mb-2">
-            <span 
+            <span
               className="badge rounded-pill px-3 py-1.5 small fw-bold d-inline-flex align-items-center gap-1 shadow-sm"
-              style={{ 
-                backgroundColor: 'rgba(255, 255, 255, 0.2)', 
-                color: '#ffffff', 
-                border: '1px solid rgba(255, 255, 255, 0.35)',
-                backdropFilter: 'blur(6px)',
-                fontSize: '0.85rem'
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
+                color: "#ffffff",
+                border: "1px solid rgba(255, 255, 255, 0.35)",
+                backdropFilter: "blur(6px)",
+                fontSize: "0.85rem",
               }}
             >
-              <i className="fa-solid fa-sparkles text-warning me-1"></i> مرحباً بك مجدداً 👋
+              <i className="fa-solid fa-sparkles text-warning me-1"></i> مرحباً
+              بك مجدداً 👋
             </span>
-            <span className="text-white-50 small">| {new Date().toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+            <span className="text-white-50 small">
+              |{" "}
+              {new Date().toLocaleDateString("ar-EG", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </span>
           </div>
-          <h1 className="display-6 fw-bold mb-2 text-white">مركز قيادة النظام والمعلومات</h1>
-          <p className="mb-0 text-white-50" style={{ maxWidth: '640px', fontSize: '0.95rem' }}>
-            رؤية بانورامية شاملة لكافة أنشطة المؤسسة والعمليات مع أدوات فلترة زمنية فورية ومتقدمة.
+          <h1 className="display-6 fw-bold mb-2 text-white">
+            مركز قيادة النظام والمعلومات
+          </h1>
+          <p
+            className="mb-0 text-white-50"
+            style={{ maxWidth: "640px", fontSize: "0.95rem" }}
+          >
+            رؤية بانورامية شاملة لكافة أنشطة المؤسسة والعمليات مع أدوات فلترة
+            زمنية فورية ومتقدمة.
           </p>
         </div>
 
@@ -341,92 +412,14 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Glassmorphism Date Filter Bar */}
-      <div className="dash-glass-card p-3 p-md-4 mb-4">
-        <Row className="g-3 align-items-center">
-          {/* Quick Presets */}
-          <Col xs={12} xl={7} className="d-flex align-items-center flex-wrap gap-2">
-            <span className="fw-bold text-dark small me-2 d-flex align-items-center gap-1">
-              <i className="fa-solid fa-sliders text-primary"></i> التصفية الزمنية:
-            </span>
-            {[
-              { key: 'all', label: 'الكل' },
-              { key: 'today', label: 'اليوم' },
-              { key: 'week', label: 'هذا الأسبوع' },
-              { key: 'month', label: 'هذا الشهر' },
-              { key: 'year', label: 'هذه السنة' },
-            ].map(preset => (
-              <button
-                key={preset.key}
-                className={`preset-pill-btn ${activePreset === preset.key ? 'active' : ''}`}
-                onClick={() => handlePresetSelect(preset.key)}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </Col>
-
-          {/* Custom Date Inputs */}
-          <Col xs={12} xl={5}>
-            <div className="d-flex align-items-center gap-2 justify-content-xl-end flex-wrap">
-              <div className="d-flex align-items-center gap-2 bg-light p-1.5 rounded-3 border">
-                <Form.Group className="mb-0 d-flex align-items-center gap-1">
-                  <span className="text-muted small px-1 fw-bold">من:</span>
-                  <Form.Control
-                    type="date"
-                    size="sm"
-                    value={fromDate}
-                    onChange={(e) => {
-                      setFromDate(e.target.value);
-                      setActivePreset('custom');
-                    }}
-                    className="border-0 bg-transparent shadow-none px-1 small font-monospace"
-                  />
-                </Form.Group>
-                <span className="text-muted opacity-50">|</span>
-                <Form.Group className="mb-0 d-flex align-items-center gap-1">
-                  <span className="text-muted small px-1 fw-bold">إلى:</span>
-                  <Form.Control
-                    type="date"
-                    size="sm"
-                    value={toDate}
-                    onChange={(e) => {
-                      setToDate(e.target.value);
-                      setActivePreset('custom');
-                    }}
-                    className="border-0 bg-transparent shadow-none px-1 small font-monospace"
-                  />
-                </Form.Group>
-              </div>
-
-              {(fromDate || toDate || activePreset !== 'all') && (
-                <Button
-                  variant="outline-danger"
-                  size="sm"
-                  className="rounded-circle p-0 d-flex align-items-center justify-content-center border-0 bg-danger bg-opacity-10 text-danger"
-                  style={{ width: '34px', height: '34px' }}
-                  onClick={handleResetFilters}
-                  title="إعادة ضبط الفلتر"
-                >
-                  <i className="fa-solid fa-xmark"></i>
-                </Button>
-              )}
-            </div>
-          </Col>
-        </Row>
-
-        {(fromDate || toDate) && (
-          <div className="mt-3 pt-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div className="d-flex align-items-center gap-2">
-              <Badge bg="primary" className="rounded-pill px-3 py-1.5 fw-medium shadow-sm">
-                <i className="fa-regular fa-calendar-check me-1"></i>
-                الفترة المحددة: {fromDate || 'من البداية'} ⬅️ {toDate || 'حتى الآن'}
-              </Badge>
-            </div>
-            <span className="text-muted small fw-semibold">يتم عرض البيانات والرسوم البيانية بناءً على الفلتر الحالي</span>
-          </div>
-        )}
-      </div>
+      {/* Date Filter Bar - Using the new component */}
+      <DateFilterBar
+        onFilterChange={handleDateFilterChange}
+        initialFromDate={fromDate}
+        initialToDate={toDate}
+        initialPreset="all"
+        size="md"
+      />
 
       {/* Elevated Stats Grid */}
       <Row className="g-4 mb-4">
@@ -434,8 +427,12 @@ const DashboardPage = () => {
           <div className="dash-stat-box glow-ring-box">
             <div className="d-flex justify-content-between align-items-start mb-3">
               <div>
-                <span className="text-muted small fw-bold d-block mb-1">إجمالي العملاء</span>
-                <h2 className="display-6 fw-extrabold text-dark mb-0">{stats.clients}</h2>
+                <span className="text-muted small fw-bold d-block mb-1">
+                  إجمالي العملاء
+                </span>
+                <h2 className="display-6 fw-extrabold text-dark mb-0">
+                  {stats.clients}
+                </h2>
               </div>
               <div className="dash-stat-icon-wrapper primary">
                 <i className="fa-solid fa-users"></i>
@@ -454,8 +451,12 @@ const DashboardPage = () => {
           <div className="dash-stat-box glow-ring-box">
             <div className="d-flex justify-content-between align-items-start mb-3">
               <div>
-                <span className="text-muted small fw-bold d-block mb-1">الطلبات النشطة</span>
-                <h2 className="display-6 fw-extrabold text-dark mb-0">{stats.orders}</h2>
+                <span className="text-muted small fw-bold d-block mb-1">
+                  الطلبات النشطة
+                </span>
+                <h2 className="display-6 fw-extrabold text-dark mb-0">
+                  {stats.orders}
+                </h2>
               </div>
               <div className="dash-stat-icon-wrapper success">
                 <i className="fa-solid fa-file-invoice"></i>
@@ -474,8 +475,12 @@ const DashboardPage = () => {
           <div className="dash-stat-box glow-ring-box">
             <div className="d-flex justify-content-between align-items-start mb-3">
               <div>
-                <span className="text-muted small fw-bold d-block mb-1">المكاتب المسجلة</span>
-                <h2 className="display-6 fw-extrabold text-dark mb-0">{stats.offices}</h2>
+                <span className="text-muted small fw-bold d-block mb-1">
+                  المكاتب المسجلة
+                </span>
+                <h2 className="display-6 fw-extrabold text-dark mb-0">
+                  {stats.offices}
+                </h2>
               </div>
               <div className="dash-stat-icon-wrapper danger">
                 <i className="fa-solid fa-building"></i>
@@ -499,11 +504,15 @@ const DashboardPage = () => {
             <div className="d-flex justify-content-between align-items-center mb-3">
               <div>
                 <h6 className="fw-bold text-dark mb-1">حركة الطلبات الشهرية</h6>
-                <span className="text-muted small">تتبع الإنشاء على مدى الأشهر</span>
+                <span className="text-muted small">
+                  تتبع الإنشاء على مدى الأشهر
+                </span>
               </div>
-              <span className="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1 small">خطّي</span>
+              <span className="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1 small">
+                خطّي
+              </span>
             </div>
-            <div style={{ height: '230px' }}>
+            <div style={{ height: "230px" }}>
               <Line data={lineData} options={chartOptions} />
             </div>
           </div>
@@ -517,9 +526,11 @@ const DashboardPage = () => {
                 <h6 className="fw-bold text-dark mb-1">نمو قاعدة العملاء</h6>
                 <span className="text-muted small">معدل الانضمام الشهري</span>
               </div>
-              <span className="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 small">أعمدة</span>
+              <span className="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 small">
+                أعمدة
+              </span>
             </div>
-            <div style={{ height: '230px' }}>
+            <div style={{ height: "230px" }}>
               <Bar data={barData} options={chartOptions} />
             </div>
           </div>
@@ -531,27 +542,48 @@ const DashboardPage = () => {
             <div className="d-flex justify-content-between align-items-center mb-3">
               <div>
                 <h6 className="fw-bold text-dark mb-1">نسب توزيع الحالات</h6>
-                <span className="text-muted small">توزيع الطلبات حسب الحالة</span>
+                <span className="text-muted small">
+                  توزيع الطلبات حسب الحالة
+                </span>
               </div>
-              <span className="badge bg-info-subtle text-info rounded-pill px-2.5 py-1 small">دائري</span>
+              <span className="badge bg-info-subtle text-info rounded-pill px-2.5 py-1 small">
+                دائري
+              </span>
             </div>
-            <div style={{ height: '180px' }} className="position-relative">
+            <div style={{ height: "180px" }} className="position-relative">
               <Doughnut data={doughnutData} options={doughnutOptions} />
               <div className="position-absolute top-50 start-50 translate-middle text-center pointer-events-none">
-                <span className="d-block display-7 fw-bold text-dark">{stats.orders}</span>
-                <span className="text-muted small" style={{ fontSize: '0.75rem' }}>طلب</span>
+                <span className="d-block display-7 fw-bold text-dark">
+                  {stats.orders}
+                </span>
+                <span
+                  className="text-muted small"
+                  style={{ fontSize: "0.75rem" }}
+                >
+                  طلب
+                </span>
               </div>
             </div>
             <div className="d-flex flex-wrap justify-content-center gap-2 mt-3 pt-2 border-top">
               {[
-                { label: 'انتظار', color: '#f59e0b' },
-                { label: 'معالجة', color: '#06b6d4' },
-                { label: 'مكتمل', color: '#10b981' },
-                { label: 'مساند', color: '#6366f1' },
-                { label: 'ملغي', color: '#ef4444' },
+                { label: "انتظار", color: "#f59e0b" },
+                { label: "معالجة", color: "#06b6d4" },
+                { label: "مكتمل", color: "#10b981" },
+                { label: "مساند", color: "#6366f1" },
+                { label: "ملغي", color: "#ef4444" },
               ].map((st, i) => (
-                <span key={i} className="badge bg-light text-dark border rounded-pill px-2.5 py-1 small d-flex align-items-center gap-1">
-                  <span className="rounded-circle" style={{ width: '8px', height: '8px', backgroundColor: st.color }}></span>
+                <span
+                  key={i}
+                  className="badge bg-light text-dark border rounded-pill px-2.5 py-1 small d-flex align-items-center gap-1"
+                >
+                  <span
+                    className="rounded-circle"
+                    style={{
+                      width: "8px",
+                      height: "8px",
+                      backgroundColor: st.color,
+                    }}
+                  ></span>
                   {st.label}
                 </span>
               ))}
@@ -565,26 +597,30 @@ const DashboardPage = () => {
         <div className="p-4 bg-white border-bottom d-flex justify-content-between align-items-center flex-wrap gap-3">
           <div className="d-flex align-items-center gap-2 bg-light p-1 rounded-3 border">
             <button
-              className={`activity-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
-              onClick={() => setActiveTab('orders')}
+              className={`activity-tab-btn ${activeTab === "orders" ? "active" : ""}`}
+              onClick={() => setActiveTab("orders")}
             >
-              <i className="fa-solid fa-file-lines me-1.5"></i> أحدث الطلبات ({recentOrders.length})
+              <i className="fa-solid fa-file-lines me-1.5"></i> أحدث الطلبات (
+              {recentOrders.length})
             </button>
             <button
-              className={`activity-tab-btn ${activeTab === 'clients' ? 'active' : ''}`}
-              onClick={() => setActiveTab('clients')}
+              className={`activity-tab-btn ${activeTab === "clients" ? "active" : ""}`}
+              onClick={() => setActiveTab("clients")}
             >
-              <i className="fa-solid fa-users me-1.5"></i> أحدث العملاء ({recentClients.length})
+              <i className="fa-solid fa-users me-1.5"></i> أحدث العملاء (
+              {recentClients.length})
             </button>
           </div>
 
           <span className="text-muted small fw-semibold">
-            {activeTab === 'orders' ? 'أحدث 6 طلبات مسجلة' : 'أحدث 6 عملاء مسجلين'}
+            {activeTab === "orders"
+              ? "أحدث 6 طلبات مسجلة"
+              : "أحدث 6 عملاء مسجلين"}
           </span>
         </div>
 
         {/* Tab 1: Orders Table */}
-        {activeTab === 'orders' && (
+        {activeTab === "orders" && (
           <div className="table-responsive">
             <Table hover className="dash-table align-middle mb-0">
               <thead>
@@ -597,23 +633,36 @@ const DashboardPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {recentOrders.map(order => (
+                {recentOrders.map((order) => (
                   <tr key={order.id}>
                     <td>
                       <div className="d-flex align-items-center gap-3">
-                        <div className="rounded-circle bg-primary bg-opacity-10 text-primary fw-bold d-flex align-items-center justify-content-center shadow-sm" style={{ width: '42px', height: '42px', fontSize: '1rem' }}>
-                          {order.client?.name ? order.client.name.charAt(0) : 'ع'}
+                        <div
+                          className="rounded-circle bg-primary bg-opacity-10 text-primary fw-bold d-flex align-items-center justify-content-center shadow-sm"
+                          style={{
+                            width: "42px",
+                            height: "42px",
+                            fontSize: "1rem",
+                          }}
+                        >
+                          {order.client?.name
+                            ? order.client.name.charAt(0)
+                            : "ع"}
                         </div>
                         <div>
-                          <div className="fw-bold text-dark">{order.client?.name || 'غير محدد'}</div>
-                          <div className="text-muted small dir-ltr text-end">{order.client?.phone || '-'}</div>
+                          <div className="fw-bold text-dark">
+                            {order.client?.name || "غير محدد"}
+                          </div>
+                          <div className="text-muted small dir-ltr text-end">
+                            {order.client?.phone || "-"}
+                          </div>
                         </div>
                       </div>
                     </td>
                     <td>
                       <span className="fw-medium text-secondary">
                         <i className="fa-regular fa-building me-1 text-muted"></i>
-                        {order.saudi_office?.name || '-'}
+                        {order.saudi_office?.name || "-"}
                       </span>
                     </td>
                     <td className="text-center">
@@ -621,15 +670,18 @@ const DashboardPage = () => {
                     </td>
                     <td className="text-center">
                       <span className="badge bg-light text-secondary border px-3 py-1.5 rounded-pill font-monospace small">
-                        {new Date(order.created_at).toLocaleDateString('ar-EG', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        {new Date(order.created_at).toLocaleDateString(
+                          "ar-EG",
+                          { day: "2-digit", month: "short", year: "numeric" },
+                        )}
                       </span>
                     </td>
                     <td className="text-end">
-                      <Button 
-                        variant="light" 
-                        size="sm" 
+                      <Button
+                        variant="light"
+                        size="sm"
                         className="rounded-circle shadow-sm border text-primary hover-bg-primary hover-text-white transition-all"
-                        style={{ width: '36px', height: '36px' }}
+                        style={{ width: "36px", height: "36px" }}
                         title="عرض التفاصيل"
                       >
                         <i className="fa-solid fa-eye"></i>
@@ -642,8 +694,12 @@ const DashboardPage = () => {
                     <td colSpan="5" className="text-center py-5 text-muted">
                       <div className="py-4">
                         <i className="fa-regular fa-folder-open display-4 text-muted opacity-50 mb-3 d-block"></i>
-                        <p className="fw-bold mb-1">لا توجد طلبات حديثة في هذه الفترة الزمنية</p>
-                        <span className="small text-muted">جرّب اختيار نطاق زمني أكبر من شريط الفلترة أعلاه.</span>
+                        <p className="fw-bold mb-1">
+                          لا توجد طلبات حديثة في هذه الفترة الزمنية
+                        </p>
+                        <span className="small text-muted">
+                          جرّب اختيار نطاق زمني أكبر من شريط الفلترة أعلاه.
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -654,7 +710,7 @@ const DashboardPage = () => {
         )}
 
         {/* Tab 2: Clients Table */}
-        {activeTab === 'clients' && (
+        {activeTab === "clients" && (
           <div className="table-responsive">
             <Table hover className="dash-table align-middle mb-0">
               <thead>
@@ -668,37 +724,62 @@ const DashboardPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {recentClients.map(client => (
+                {recentClients.map((client) => (
                   <tr key={client.id}>
                     <td>
-                      <Badge bg={client.client_type === 'office' ? 'info' : 'secondary'} className="rounded-pill px-3 py-1.5">
-                        {client.client_type === 'office' ? 'مكتب' : 'فرد'}
+                      <Badge
+                        bg={
+                          client.client_type === "office" ? "info" : "secondary"
+                        }
+                        className="rounded-pill px-3 py-1.5"
+                      >
+                        {client.client_type === "office" ? "مكتب" : "فرد"}
                       </Badge>
                     </td>
                     <td>
-                      <span className="text-muted font-monospace dir-ltr">{client.phone}</span>
+                      <span className="text-muted font-monospace dir-ltr">
+                        {client.phone}
+                      </span>
                     </td>
                     <td>
                       <div className="d-flex align-items-center gap-2">
-                        <div className="rounded-circle bg-success bg-opacity-10 text-success fw-bold d-flex align-items-center justify-content-center shadow-sm" style={{ width: '32px', height: '32px', fontSize: '0.85rem' }}>
-                          {client.name ? client.name.charAt(0) : 'م'}
+                        <div
+                          className="rounded-circle bg-success bg-opacity-10 text-success fw-bold d-flex align-items-center justify-content-center shadow-sm"
+                          style={{
+                            width: "32px",
+                            height: "32px",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {client.name ? client.name.charAt(0) : "م"}
                         </div>
-                        <span className="fw-semibold text-dark">{client.name || '-'}</span>
+                        <span className="fw-semibold text-dark">
+                          {client.name || "-"}
+                        </span>
                       </div>
                     </td>
                     <td className="fw-bold text-dark">
-                      {client.employee?.name || '-'}
+                      {client.employee?.name || "-"}
                     </td>
                     <td className="text-center">
                       <span className="badge bg-light text-secondary border px-3 py-1.5 rounded-pill font-monospace small">
-                        {new Date(client.created_at).toLocaleDateString('ar-EG', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        {new Date(client.created_at).toLocaleDateString(
+                          "ar-EG",
+                          { day: "2-digit", month: "short", year: "numeric" },
+                        )}
                       </span>
                     </td>
                     <td className="text-end">
-                      <a 
+                      <a
                         href={`tel:${client.phone}`}
                         className="btn btn-light btn-sm rounded-circle shadow-sm border text-success hover-bg-success hover-text-white transition-all me-1"
-                        style={{ width: '36px', height: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{
+                          width: "36px",
+                          height: "36px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
                         title="اتصال بالمندوب"
                       >
                         <i className="fa-solid fa-phone"></i>
@@ -708,10 +789,12 @@ const DashboardPage = () => {
                 ))}
                 {recentClients.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="text-center py-5 text-muted">
+                    <td colSpan="6" className="text-center py-5 text-muted">
                       <div className="py-4">
                         <i className="fa-regular fa-user display-4 text-muted opacity-50 mb-3 d-block"></i>
-                        <p className="fw-bold mb-1">لا يوجد عملاء مسجلين في هذه الفترة</p>
+                        <p className="fw-bold mb-1">
+                          لا يوجد عملاء مسجلين في هذه الفترة
+                        </p>
                       </div>
                     </td>
                   </tr>

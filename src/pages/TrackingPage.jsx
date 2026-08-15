@@ -2,14 +2,16 @@ import React, { useState, useEffect } from "react";
 import { Container, Card, Button, Form } from "react-bootstrap";
 import Select from "react-select";
 import RefreshButton from "../components/common/RefreshButton";
+import DateFilterBar from "../components/common/DateFilterBar";
 import api, {
   getOrderTracking,
   createOrderTracking,
   updateOrderTracking,
   deleteOrderTracking,
-  getOrders,
+  getOrdersWithoutTracking,
   getExternalOffices,
-  createExternalOffice,
+  getSaudiOffices,
+  getClients,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import TrackingFormModal from "../components/Tracking/TrackingFormModal";
@@ -25,6 +27,9 @@ const TrackingPage = () => {
   const [filteredTracking, setFilteredTracking] = useState([]);
   const [orders, setOrders] = useState([]);
   const [externalOffices, setExternalOffices] = useState([]);
+  const [saudiOffices, setSaudiOffices] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [serviceTypes, setServiceTypes] = useState([]);
   const [priorityLevels, setPriorityLevels] = useState([]);
   const [passportStatuses, setPassportStatuses] = useState([]);
   const [transferStatuses, setTransferStatuses] = useState([]);
@@ -37,10 +42,19 @@ const TrackingPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [submitError, setSubmitError] = useState(null);
+
+  // Date Filter State
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
   const [filters, setFilters] = useState({
     priority_level: "",
     passport_status: "",
     transfer_status: "",
+    service_type: "",
+    saudi_office_id: "",
+    external_office_id: "",
+    client_id: "",
   });
   const [sortField, setSortField] = useState("id");
   const [sortDirection, setSortDirection] = useState("desc");
@@ -56,17 +70,40 @@ const TrackingPage = () => {
     if (orders.length > 0) {
       fetchTracking();
     }
-  }, [filters, sortField, sortDirection, searchQuery, currentPage, orders]);
+  }, [
+    filters,
+    sortField,
+    sortDirection,
+    searchQuery,
+    currentPage,
+    orders,
+    fromDate,
+    toDate,
+  ]);
 
   const fetchAllData = async () => {
     setInitialLoading(true);
     try {
-      const [ordersRes, externalOfficesRes] = await Promise.all([
-        getOrders(),
-        getExternalOffices(),
+      const [
+        ordersRes,
+        externalOfficesRes,
+        saudiOfficesRes,
+        clientsRes,
+        serviceTypesRes,
+      ] = await Promise.all([
+        getOrdersWithoutTracking({ per_page: 1000 }),
+        getExternalOffices({ all: 1, per_page: 500 }),
+        getSaudiOffices({ all: 1, per_page: 500 }),
+        getClients({ per_page: 500 }),
+        api.get("/settings/service-types"),
       ]);
       setOrders(ordersRes.data.data || []);
-      setExternalOffices(externalOfficesRes.data.data || []);
+      setExternalOffices(
+        externalOfficesRes.data.data || externalOfficesRes.data || [],
+      );
+      setSaudiOffices(saudiOfficesRes.data.data || saudiOfficesRes.data || []);
+      setClients(clientsRes.data.data || []);
+      setServiceTypes(serviceTypesRes.data.data || serviceTypesRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -152,6 +189,12 @@ const TrackingPage = () => {
         priority_level: filters.priority_level,
         passport_status: filters.passport_status,
         transfer_status: filters.transfer_status,
+        service_type: filters.service_type,
+        saudi_office_id: filters.saudi_office_id,
+        external_office_id: filters.external_office_id,
+        client_id: filters.client_id,
+        from_date: fromDate,
+        to_date: toDate,
         sort_field: sortField,
         sort_direction: sortDirection,
         per_page: 1000,
@@ -159,27 +202,8 @@ const TrackingPage = () => {
       };
       const response = await getOrderTracking(params);
       const trackingData = response.data.data || [];
-      console.log("Raw tracking data from API:", trackingData);
-
-      if (trackingData.length > 0) {
-        console.log("First tracking item:", trackingData[0]);
-        console.log(
-          "external_office_id in tracking:",
-          trackingData[0].external_office_id,
-        );
-      }
 
       const enrichedData = enrichTrackingWithOrderData(trackingData);
-      console.log("Enriched tracking data:", enrichedData);
-
-      if (enrichedData.length > 0) {
-        console.log("First enriched item:", enrichedData[0]);
-        console.log(
-          "external_office_id after enrich:",
-          enrichedData[0].external_office_id,
-        );
-      }
-
       setAllTrackingData(enrichedData);
 
       const start = (currentPage - 1) * itemsPerPage;
@@ -194,6 +218,12 @@ const TrackingPage = () => {
     }
   };
 
+  const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
+    setFromDate(fromDate);
+    setToDate(toDate);
+    setCurrentPage(1);
+  };
+
   const handleSearch = (query) => {
     setSearchQuery(query);
     setCurrentPage(1);
@@ -205,7 +235,13 @@ const TrackingPage = () => {
       priority_level: "",
       passport_status: "",
       transfer_status: "",
+      service_type: "",
+      saudi_office_id: "",
+      external_office_id: "",
+      client_id: "",
     });
+    setFromDate("");
+    setToDate("");
     setCurrentPage(1);
   };
 
@@ -493,6 +529,16 @@ const TrackingPage = () => {
           </div>
         </div>
 
+        {/* Date Filter Bar */}
+        <DateFilterBar
+          onFilterChange={handleDateFilterChange}
+          initialFromDate={fromDate}
+          initialToDate={toDate}
+          initialPreset="all"
+          size="md"
+        />
+
+        {/* Tracking Search Bar */}
         <div className="mb-4">
           <TrackingSearchBar
             searchQuery={searchQuery}
@@ -502,6 +548,10 @@ const TrackingPage = () => {
             priorityLevels={priorityLevels}
             passportStatuses={passportStatuses}
             transferStatuses={transferStatuses}
+            serviceTypes={serviceTypes}
+            saudiOffices={saudiOffices}
+            externalOffices={externalOffices}
+            clients={clients}
             filters={filters}
             onFilterChange={handleFilterChange}
             sortField={sortField}

@@ -9,6 +9,8 @@ const FinanceFormModal = ({
   onSubmit,
   initialData,
   orders,
+  clients,
+  employees,
   paymentMethods,
   bankNames,
   priorityLevels,
@@ -21,7 +23,9 @@ const FinanceFormModal = ({
     type: "receipt",
     amount: "",
     order_id: "",
+    order_ids: [],
     client_id: "",
+    employee_id: "",
     payment_method: "",
     bank_name: "",
     transfer_date: "",
@@ -34,7 +38,6 @@ const FinanceFormModal = ({
   const [validated, setValidated] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // دالة لتنسيق التاريخ من API إلى صيغة YYYY-MM-DD
   const formatDateForInput = (dateString) => {
     if (!dateString) return "";
     if (dateString.includes("T")) {
@@ -43,89 +46,74 @@ const FinanceFormModal = ({
     return dateString;
   };
 
-  // دالة للبحث عن القيمة الصحيحة (مقارنة بالـ label أو الـ value)
-  const findValueByLabelOrValue = (list, searchValue, defaultValue = "") => {
-    if (!searchValue || !list || list.length === 0) return defaultValue;
-
-    // البحث بالـ value
-    const foundByValue = list.find((item) => item.value === searchValue);
-    if (foundByValue) return foundByValue.value;
-
-    // البحث بالـ label
-    const foundByLabel = list.find((item) => item.label === searchValue);
-    if (foundByLabel) return foundByLabel.value;
-
-    return defaultValue;
+  const normalizeOptions = (list) => {
+    if (!list || !Array.isArray(list)) return [];
+    return list.map((item) => ({
+      value: item.value || item.key || item.id,
+      label: item.label || item.name || item.text || "غير محدد",
+      color: item.color || "#6c757d",
+    }));
   };
 
-  useEffect(() => {
-    console.log("========== FinanceFormModal useEffect ==========");
-    console.log("show:", show);
-    console.log("isEdit:", isEdit);
-    console.log("initialData:", initialData);
-    console.log("paymentMethods:", paymentMethods);
-    console.log("bankNames:", bankNames);
-    console.log("priorityLevels:", priorityLevels);
-    console.log("transferStatuses:", transferStatuses);
+  const getSelectedOption = (options, value) => {
+    if (!value || !options || options.length === 0) return null;
+    const found = options.find((opt) => String(opt.value) === String(value));
+    return found ? { value: found.value, label: found.label } : null;
+  };
 
+  const findValueInList = (list, searchValue, defaultValue = "") => {
+    if (!searchValue || !list || list.length === 0) return defaultValue;
+    const normalizedList = normalizeOptions(list);
+    const found = normalizedList.find(
+      (item) =>
+        String(item.value) === String(searchValue) ||
+        item.label === searchValue,
+    );
+    return found ? found.value : defaultValue;
+  };
+
+  const normalizedPaymentMethods = normalizeOptions(paymentMethods);
+  const normalizedBankNames = normalizeOptions(bankNames);
+  const normalizedTransferStatuses = normalizeOptions(transferStatuses);
+  const normalizedPriorityLevels = normalizeOptions(priorityLevels);
+
+  useEffect(() => {
     if (initialData) {
-      // تنسيق التاريخ
       const formattedTransferDate = formatDateForInput(
         initialData.transfer_date,
       );
 
-      // البحث عن القيم الصحيحة
-      const paymentMethodValue = findValueByLabelOrValue(
+      const paymentMethodValue = findValueInList(
         paymentMethods,
         initialData.payment_method,
         "",
       );
 
-      const bankNameValue = findValueByLabelOrValue(
+      const bankNameValue = findValueInList(
         bankNames,
         initialData.bank_name,
         "",
       );
 
-      const statusValue = findValueByLabelOrValue(
+      const statusValue = findValueInList(
         transferStatuses,
         initialData.status,
         "pending",
       );
 
-      const priorityValue = findValueByLabelOrValue(
+      const priorityValue = findValueInList(
         priorityLevels,
         initialData.priority_level,
         "medium",
-      );
-
-      console.log("Converted values:");
-      console.log(
-        "- payment_method:",
-        initialData.payment_method,
-        "->",
-        paymentMethodValue,
-      );
-      console.log("- bank_name:", initialData.bank_name, "->", bankNameValue);
-      console.log("- status:", initialData.status, "->", statusValue);
-      console.log(
-        "- priority_level:",
-        initialData.priority_level,
-        "->",
-        priorityValue,
-      );
-      console.log(
-        "- transfer_date:",
-        initialData.transfer_date,
-        "->",
-        formattedTransferDate,
       );
 
       setFormData({
         type: initialData.type || "receipt",
         amount: initialData.amount || "",
         order_id: initialData.order_id || "",
+        order_ids: initialData.order_ids || [],
         client_id: initialData.client_id || "",
+        employee_id: initialData.employee_id || "",
         payment_method: paymentMethodValue,
         bank_name: bankNameValue,
         transfer_date: formattedTransferDate,
@@ -135,12 +123,13 @@ const FinanceFormModal = ({
         notes: initialData.notes || "",
       });
     } else {
-      console.log("No initialData, using default values");
       setFormData({
         type: "receipt",
         amount: "",
         order_id: "",
+        order_ids: [],
         client_id: "",
+        employee_id: "",
         payment_method: "",
         bank_name: "",
         transfer_date: "",
@@ -163,14 +152,9 @@ const FinanceFormModal = ({
 
   useEffect(() => {
     if (error && error.errors) {
-      console.log("Error received:", error);
       setFieldErrors(error.errors);
     }
   }, [error]);
-
-  useEffect(() => {
-    console.log("Current formData state:", formData);
-  }, [formData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -180,14 +164,9 @@ const FinanceFormModal = ({
     }
   };
 
-  const selectedOrder = orders?.find(
-    (o) => o.id === parseInt(formData.order_id),
-  );
-
   const handleSubmit = (e) => {
     e.preventDefault();
     const form = e.currentTarget;
-    console.log("Submitting formData:", formData);
     if (form.checkValidity() === false) {
       e.stopPropagation();
       setValidated(true);
@@ -203,21 +182,23 @@ const FinanceFormModal = ({
     return null;
   };
 
-  // دالة للحصول على الـ label المناسب للـ Select
-  const getSelectedOption = (options, value) => {
-    if (!value || !options || options.length === 0) return null;
-    const found = options.find((opt) => opt.value === value);
-    return found ? { value: found.value, label: found.label } : null;
-  };
+  const clientOptions = (clients || []).map((c) => ({
+    value: c.id,
+    label: `${c.name || ""} - ${c.phone || ""}`,
+  }));
+
+  const employeeOptions = (employees || []).map((e) => ({
+    value: e.id,
+    label: e.name || `موظف #${e.id}`,
+  }));
+
+  const orderOptions = (orders || []).map((o) => ({
+    value: o.id,
+    label: `#${o.id} - ${o.visa_holder_name || o.client?.visa_holder_name || "بدون اسم"} - ${o.visa_number || ""}`,
+  }));
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      centered
-      size="xl"
-      dir="rtl"
-    >
+    <Modal show={show} onHide={onHide} centered size="xl" dir="rtl">
       <Modal.Header closeButton className="border-0 pt-4 px-4">
         <Modal.Title className="fw-bold fs-5">
           {isEdit ? "✏️ تعديل الحوالة" : "➕ إضافة حوالة جديدة"}
@@ -227,6 +208,34 @@ const FinanceFormModal = ({
       <Form onSubmit={handleSubmit} noValidate validated={validated}>
         <Modal.Body className="px-4">
           <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  الموظف المسؤول
+                </Form.Label>
+                <Select
+                  options={employeeOptions}
+                  value={getSelectedOption(
+                    employeeOptions,
+                    formData.employee_id,
+                  )}
+                  onChange={(opt) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      employee_id: opt ? opt.value : "",
+                    }))
+                  }
+                  placeholder="-- اختر الموظف --"
+                  isClearable
+                  isRtl
+                />
+                {getFieldError("employee_id") && (
+                  <div className="text-danger small mt-1">
+                    {getFieldError("employee_id")}
+                  </div>
+                )}
+              </Form.Group>
+            </Col>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
@@ -250,8 +259,73 @@ const FinanceFormModal = ({
                   }
                   isRtl
                 />
+                {getFieldError("type") && (
+                  <div className="text-danger small mt-1">
+                    {getFieldError("type")}
+                  </div>
+                )}
               </Form.Group>
             </Col>
+          </Row>
+
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  رقم المندوب <span className="text-danger">*</span>
+                </Form.Label>
+                <Select
+                  options={clientOptions}
+                  value={getSelectedOption(clientOptions, formData.client_id)}
+                  onChange={(opt) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      client_id: opt ? opt.value : "",
+                    }))
+                  }
+                  placeholder="-- اختر المندوب --"
+                  isClearable
+                  isRtl
+                />
+                {(validated && !formData.client_id) ||
+                getFieldError("client_id") ? (
+                  <div className="text-danger small mt-1">
+                    {getFieldError("client_id") || "يرجى اختيار المندوب"}
+                  </div>
+                ) : null}
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  رقم الطلب
+                </Form.Label>
+                <Select
+                  isMulti
+                  options={orderOptions}
+                  value={orderOptions.filter((o) =>
+                    formData.order_ids?.includes(o.value),
+                  )}
+                  onChange={(selected) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      order_ids: selected ? selected.map((s) => s.value) : [],
+                    }))
+                  }
+                  placeholder="-- اختر طلباً (يمكن اختيار أكثر من واحد) --"
+                  isClearable
+                  isRtl
+                />
+                {getFieldError("order_ids") && (
+                  <div className="text-danger small mt-1">
+                    {getFieldError("order_ids")}
+                  </div>
+                )}
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
@@ -272,86 +346,15 @@ const FinanceFormModal = ({
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
-          </Row>
-
-          <Row>
-            <Col md={12}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold small text-secondary">
-                  رقم الطلب <span className="text-danger">*</span>
-                </Form.Label>
-                <Select
-                  options={
-                    orders?.map((o) => ({
-                      value: o.id,
-                      label: `#${o.id} - ${o.visa_holder_name || o.client?.visa_holder_name || "بدون اسم"} - ${o.visa_number || ""}`,
-                    })) || []
-                  }
-                  value={
-                    formData.order_id &&
-                    orders?.find((o) => o.id === parseInt(formData.order_id))
-                      ? {
-                          value: formData.order_id,
-                          label: `#${formData.order_id} - ${orders.find((o) => o.id === parseInt(formData.order_id)).visa_holder_name || orders.find((o) => o.id === parseInt(formData.order_id)).client?.visa_holder_name || "بدون اسم"} - ${orders.find((o) => o.id === parseInt(formData.order_id)).visa_number || ""}`,
-                        }
-                      : null
-                  }
-                  onChange={(opt) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      order_id: opt ? opt.value : "",
-                    }))
-                  }
-                  placeholder="-- اختر طلباً --"
-                  isClearable
-                  isRtl
-                />
-                <Form.Control.Feedback
-                  type="invalid"
-                  style={{
-                    display: validated && !formData.order_id ? "block" : "none",
-                  }}
-                >
-                  يرجى اختيار الطلب
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
-
-          {selectedOrder && formData.type === "receipt" && (
-            <div className="bg-light p-3 rounded-3 mb-3">
-              <div className="d-flex justify-content-between">
-                <span className="text-muted">صاحب التأشيرة:</span>
-                <span className="fw-semibold">
-                  {selectedOrder.visa_holder_name ||
-                    selectedOrder.client?.visa_holder_name ||
-                    "-"}
-                </span>
-              </div>
-              <div className="d-flex justify-content-between mt-2">
-                <span className="text-muted">رقم التأشيرة:</span>
-                <span>{selectedOrder.visa_number || "-"}</span>
-              </div>
-              <div className="d-flex justify-content-between mt-2">
-                <span className="text-muted">رقم الهوية:</span>
-                <span>{selectedOrder.id_number || "-"}</span>
-              </div>
-            </div>
-          )}
-
-          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
                   طريقة الدفع
                 </Form.Label>
                 <Select
-                  options={paymentMethods.map((m) => ({
-                    value: m.value,
-                    label: m.label,
-                  }))}
+                  options={normalizedPaymentMethods}
                   value={getSelectedOption(
-                    paymentMethods,
+                    normalizedPaymentMethods,
                     formData.payment_method,
                   )}
                   onChange={(opt) =>
@@ -371,17 +374,20 @@ const FinanceFormModal = ({
                 )}
               </Form.Group>
             </Col>
+          </Row>
+
+          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
                   بنك المستفيد
                 </Form.Label>
                 <Select
-                  options={bankNames.map((b) => ({
-                    value: b.value,
-                    label: b.label,
-                  }))}
-                  value={getSelectedOption(bankNames, formData.bank_name)}
+                  options={normalizedBankNames}
+                  value={getSelectedOption(
+                    normalizedBankNames,
+                    formData.bank_name,
+                  )}
                   onChange={(opt) =>
                     setFormData((prev) => ({
                       ...prev,
@@ -399,9 +405,6 @@ const FinanceFormModal = ({
                 )}
               </Form.Group>
             </Col>
-          </Row>
-
-          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
@@ -421,6 +424,9 @@ const FinanceFormModal = ({
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
+          </Row>
+
+          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
@@ -439,20 +445,17 @@ const FinanceFormModal = ({
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
-          </Row>
-
-          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
                   حالة الحوالة
                 </Form.Label>
                 <Select
-                  options={transferStatuses.map((s) => ({
-                    value: s.value,
-                    label: s.label,
-                  }))}
-                  value={getSelectedOption(transferStatuses, formData.status)}
+                  options={normalizedTransferStatuses}
+                  value={getSelectedOption(
+                    normalizedTransferStatuses,
+                    formData.status,
+                  )}
                   onChange={(opt) =>
                     setFormData((prev) => ({
                       ...prev,
@@ -470,18 +473,18 @@ const FinanceFormModal = ({
                 )}
               </Form.Group>
             </Col>
+          </Row>
+
+          <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
                   درجة الأهمية
                 </Form.Label>
                 <Select
-                  options={priorityLevels.map((l) => ({
-                    value: l.value,
-                    label: l.label,
-                  }))}
+                  options={normalizedPriorityLevels}
                   value={getSelectedOption(
-                    priorityLevels,
+                    normalizedPriorityLevels,
                     formData.priority_level,
                   )}
                   onChange={(opt) =>

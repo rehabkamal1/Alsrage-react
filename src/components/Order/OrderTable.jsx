@@ -139,7 +139,7 @@ const OrderTable = ({
 
   return (
     <div className="table-responsive">
-      <Table hover className="mb-0 align-middle">
+      <Table hover className="mb-0 align-middle text-center">
         <thead className="table-light">
           <tr>
             <th>#</th>
@@ -202,7 +202,7 @@ const OrderTable = ({
                 <td>
                   {new Date(order.created_at).toLocaleDateString("ar-SA")}
                 </td>
-                <td className="text-center">
+                <td>
                   <div className="d-flex align-items-center justify-content-center gap-2">
                     {onWhatsApp && (
                       <Button

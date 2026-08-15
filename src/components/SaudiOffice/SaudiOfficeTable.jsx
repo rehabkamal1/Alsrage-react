@@ -7,13 +7,15 @@ const SaudiOfficeTable = ({ offices, onEdit, onDelete }) => {
     const cleanNumber = mobile.replace(/\D/g, "");
     return `https://wa.me/${cleanNumber}`;
   };
+
   return (
     <div className="table-responsive">
-      <Table hover className="mb-0 align-middle">
+      <Table hover className="mb-0 align-middle text-center">
         <thead className="table-light">
           <tr>
             <th>#</th>
-            <th>اسم المكتب / جهة الوصول</th>
+            <th>اسم المكتب</th>
+            <th>جهة الوصول</th>
             <th>المدينة</th>
             <th>الموظف المسؤول</th>
             <th>إجمالي التفويض</th>
@@ -30,12 +32,8 @@ const SaudiOfficeTable = ({ offices, onEdit, onDelete }) => {
             offices.map((office, index) => (
               <tr key={office.id}>
                 <td>{index + 1}</td>
-                <td>
-                  <div className="fw-semibold">{office.name}</div>
-                  {office.destination && (
-                    <div className="text-muted small">{office.destination}</div>
-                  )}
-                </td>
+                <td className="fw-semibold">{office.name}</td>
+                <td>{office.destination || "-"}</td>
                 <td>{office.city || "-"}</td>
                 <td>{office.responsible_employee || "-"}</td>
                 <td>
@@ -48,22 +46,26 @@ const SaudiOfficeTable = ({ offices, onEdit, onDelete }) => {
                     {office.musaned_price || "0"}
                   </Badge>
                 </td>
-                <td dir="ltr">
-                  <div>{office.mobile || "-"}</div>
-                  {office.mobile && (
-                    <a
-                      href={getWhatsAppLink(office.mobile)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-success text-decoration-none small d-flex align-items-center mt-1"
-                    >
-                      <i className="fa-brands fa-whatsapp me-1"></i> واتساب
-                    </a>
-                  )}
+                <td>
+                  <div className="d-flex flex-column align-items-center">
+                    <span dir="ltr">{office.mobile || "-"}</span>
+                    {office.mobile && (
+                      <a
+                        href={getWhatsAppLink(office.mobile)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-sm btn-outline-success rounded-circle d-inline-flex align-items-center justify-content-center mt-1"
+                        style={{ width: "32px", height: "32px" }}
+                        title="تواصل عبر واتساب"
+                      >
+                        <i className="fa-brands fa-whatsapp fs-5"></i>
+                      </a>
+                    )}
+                  </div>
                 </td>
                 <td>{office.notes || "-"}</td>
                 <td>{office.address || "-"}</td>
-                <td className="text-center">
+                <td>
                   {office.whatsapp_link ? (
                     <a
                       href={office.whatsapp_link}
@@ -79,7 +81,7 @@ const SaudiOfficeTable = ({ offices, onEdit, onDelete }) => {
                     "-"
                   )}
                 </td>
-                <td className="text-center">
+                <td>
                   <div className="d-flex align-items-center justify-content-center gap-2">
                     <Button
                       variant="link"
@@ -103,7 +105,7 @@ const SaudiOfficeTable = ({ offices, onEdit, onDelete }) => {
             ))}
           {(!offices || offices.length === 0) && (
             <tr>
-              <td colSpan="11" className="text-center py-5 text-muted">
+              <td colSpan="12" className="text-center py-5 text-muted">
                 لا يوجد مكاتب سعودية مضافين بعد
               </td>
             </tr>

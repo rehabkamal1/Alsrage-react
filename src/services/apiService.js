@@ -2,7 +2,7 @@ import axios from "axios";
 
 const getToken = () => localStorage.getItem("auth_token");
 const API_URL =
-  import.meta.env.VITE_API_URL || "https://alserage.alfanar-rec.com";
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -59,6 +59,13 @@ export const getOrder = (id) => api.get(`/orders/${id}`);
 export const createOrder = (data) => api.post("/orders", data);
 export const updateOrder = (id, data) => api.post(`/orders/${id}?_method=PUT`, data);
 export const deleteOrder = (id) => api.delete(`/orders/${id}`);
+export const getOrdersWithoutTracking = (params = {}) => {
+  return api.get("/orders/without-tracking", {
+    params: {
+      ...params,
+    },
+  });
+};
 
 // =============== Employees ===============
 export const getEmployees = (params = {}) => api.get("/employees", { params });
@@ -97,8 +104,6 @@ export const getSettingsTransferStatuses = () =>
 export const getSettingsPaymentMethods = () =>
   api.get("/settings/payment-methods");
 export const getSettingsBankNames = () => api.get("/settings/bank-names");
-export const getSettingsMarketingStatuses = () =>
-  api.get("/settings/marketing-statuses");
 export const getSettingsOrderStatuses = () => api.get("/settings/order-statuses");
 export const getSettingsServiceTypes = () =>
   api.get("/settings/service-types").catch((err) => {
@@ -126,8 +131,6 @@ export const updateSettingsPaymentMethods = (data) =>
   api.post("/settings/payment-methods", data);
 export const updateSettingsBankNames = (data) =>
   api.post("/settings/bank-names", data);
-export const updateSettingsMarketingStatuses = (data) =>
-  api.post("/settings/marketing-statuses", data);
 export const updateSettingsOrderStatuses = (data) =>
   api.post("/settings/order-statuses", data);
 export const updateSettingsServiceTypes = (data) =>
@@ -146,8 +149,6 @@ export const deleteTransferStatus = (id) =>
 export const deletePaymentMethod = (id) =>
   api.delete(`/settings/payment-methods/${id}`);
 export const deleteBankName = (id) => api.delete(`/settings/bank-names/${id}`);
-export const deleteMarketingStatus = (id) =>
-  api.delete(`/settings/marketing-statuses/${id}`);
 export const deleteOrderStatus = (id) => api.delete(`/settings/order-statuses/${id}`);
 export const deleteServiceType = (id) => api.delete(`/settings/service-types/${id}`);
 export const deleteAuthenticationStatus = (id) =>

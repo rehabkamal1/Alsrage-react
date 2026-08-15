@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button } from "react-bootstrap";
 import RefreshButton from "../components/common/RefreshButton";
+import DateFilterBar from "../components/common/DateFilterBar";
 import {
   getEmployees,
   createEmployee,
@@ -25,6 +26,8 @@ const EmployeesPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [filters, setFilters] = useState({
     sort_by: "created_at",
     sort_dir: "desc",
@@ -34,7 +37,7 @@ const EmployeesPage = () => {
 
   useEffect(() => {
     fetchEmployees();
-  }, [currentPage, searchQuery, filters]);
+  }, [currentPage, searchQuery, filters, fromDate, toDate]);
 
   const fetchEmployees = async () => {
     if (initialLoading) {
@@ -43,13 +46,17 @@ const EmployeesPage = () => {
       setLoading(true);
     }
     try {
-      const response = await getEmployees({
+      const params = {
         page: currentPage,
         per_page: itemsPerPage,
         search: searchQuery || undefined,
         sort_by: filters.sort_by,
         sort_dir: filters.sort_dir,
-      });
+      };
+      if (fromDate) params.from_date = fromDate;
+      if (toDate) params.to_date = toDate;
+
+      const response = await getEmployees(params);
       setEmployees(response.data?.data || []);
       setTotalPages(response.data?.last_page || 1);
     } catch (error) {
@@ -60,6 +67,12 @@ const EmployeesPage = () => {
     }
   };
 
+  const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
+    setFromDate(fromDate);
+    setToDate(toDate);
+    setCurrentPage(1);
+  };
+
   const handleSearch = (query) => {
     setSearchQuery(query);
     setCurrentPage(1);
@@ -67,6 +80,12 @@ const EmployeesPage = () => {
 
   const handleClearSearch = () => {
     setSearchQuery("");
+    setFilters({
+      sort_by: "created_at",
+      sort_dir: "desc",
+    });
+    setFromDate("");
+    setToDate("");
     setCurrentPage(1);
   };
 
@@ -193,9 +212,9 @@ const EmployeesPage = () => {
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1 className="h3 mb-0 fw-bold">الموظفين</h1>
           <div className="d-flex gap-2">
-            <RefreshButton 
-              onClick={fetchEmployees} 
-              loading={loading} 
+            <RefreshButton
+              onClick={fetchEmployees}
+              loading={loading}
               className="border shadow-sm text-primary fw-semibold"
             />
             <Button
@@ -226,6 +245,14 @@ const EmployeesPage = () => {
             </Button>
           </div>
         </div>
+
+        <DateFilterBar
+          onFilterChange={handleDateFilterChange}
+          initialFromDate={fromDate}
+          initialToDate={toDate}
+          initialPreset="all"
+          size="md"
+        />
 
         <EmployeeSearchBar
           searchQuery={searchQuery}

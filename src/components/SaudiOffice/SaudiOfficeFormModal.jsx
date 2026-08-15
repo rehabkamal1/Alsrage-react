@@ -71,9 +71,9 @@ const SaudiOfficeFormModal = ({
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({ 
-      ...prev, 
-      [name]: type === 'checkbox' ? checked : value 
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
     }));
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
@@ -99,13 +99,7 @@ const SaudiOfficeFormModal = ({
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      centered
-      size="md"
-      dir="rtl"
-    >
+    <Modal show={show} onHide={onHide} centered size="md" dir="rtl">
       <Modal.Header closeButton className="border-0 pt-4 px-4">
         <Modal.Title className="fw-bold fs-5">
           {isEdit ? "✏️ تعديل المكتب السعودي" : "➕ إضافة مكتب سعودي جديد"}
@@ -339,7 +333,7 @@ const SaudiOfficeFormModal = ({
           <Row>
             <Col md={12}>
               <Form.Group className="mb-3">
-                <Form.Check 
+                <Form.Check
                   type="checkbox"
                   id="is_supplier"
                   name="is_supplier"
@@ -356,33 +350,33 @@ const SaudiOfficeFormModal = ({
             <Col md={12}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
-                  وتساب
+                  جروب الواتساب
                 </Form.Label>
-                <div className="d-flex align-items-center gap-2">
-                  <Form.Control
-                    type="url"
-                    name="whatsapp_link"
-                    value={formData.whatsapp_link}
-                    onChange={handleChange}
-                    placeholder="رابط جروب الواتساب"
-                    isInvalid={!!getFieldError("whatsapp_link")}
-                    className="rounded-3"
-                  />
-                  {formData.whatsapp_link && (
+                <Form.Control
+                  type="url"
+                  name="whatsapp_link"
+                  value={formData.whatsapp_link}
+                  onChange={handleChange}
+                  placeholder="رابط جروب الواتساب"
+                  isInvalid={!!getFieldError("whatsapp_link")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("whatsapp_link")}
+                </Form.Control.Feedback>
+                {formData.whatsapp_link && (
+                  <div className="mt-2">
                     <a
                       href={formData.whatsapp_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn btn-success rounded-3 d-flex align-items-center justify-content-center"
-                      title="الدخول لجروب الواتساب"
+                      className="btn btn-sm btn-outline-success rounded-3 w-100 d-flex align-items-center justify-content-center gap-2"
                     >
                       <i className="fa-brands fa-whatsapp fs-5"></i>
+                      <span>جروب الواتساب</span>
                     </a>
-                  )}
-                </div>
-                <Form.Control.Feedback type="invalid" className={getFieldError("whatsapp_link") ? "d-block" : ""}>
-                  {getFieldError("whatsapp_link")}
-                </Form.Control.Feedback>
+                  </div>
+                )}
               </Form.Group>
             </Col>
           </Row>

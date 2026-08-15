@@ -55,12 +55,19 @@ const TrackingFormModal = ({
       const newFormData = {
         order_id: initialData.order_id || "",
         is_authenticated: initialData.is_authenticated || false,
-        authentication_date: formatDateForInput(initialData.authentication_date),
+        authentication_date: formatDateForInput(
+          initialData.authentication_date,
+        ),
         certification_date: formatDateForInput(initialData.certification_date),
         authentication_number: initialData.authentication_number || "",
         authorization_number: initialData.authorization_number || "",
-        delegate_phone: initialData.delegate_phone || order?.client?.phone || initialData.sponsor_number || "",
-        sponsor_number: initialData.sponsor_number || order?.client?.phone || "",
+        delegate_phone:
+          initialData.delegate_phone ||
+          order?.client?.phone ||
+          initialData.sponsor_number ||
+          "",
+        sponsor_number:
+          initialData.sponsor_number || order?.client?.phone || "",
         last_action_date: formatDateForInput(initialData.last_action_date),
         notes: initialData.notes || "",
         priority_level: initialData.priority_level || "",
@@ -68,7 +75,8 @@ const TrackingFormModal = ({
         transfer_status: initialData.transfer_status || "",
         authentication_status: initialData.authentication_status || "",
         authorization_status: initialData.authorization_status || "",
-        external_office_id: initialData.external_office_id || order?.external_office_id || "",
+        external_office_id:
+          initialData.external_office_id || order?.external_office_id || "",
       };
 
       setFormData(newFormData);
@@ -193,12 +201,12 @@ const TrackingFormModal = ({
                     رقم الطلب <span className="text-danger">*</span>
                   </Form.Label>
                   <Select
-                    options={(orders || []).map((o) => ({
+                    options={orders.map((o) => ({
                       value: o.id,
                       label: `#${o.id} - ${o.visa_holder_name || o.client?.visa_holder_name || ""} - ${o.visa_number || ""}`,
                     }))}
                     value={getSelectedOption(
-                      (orders || []).map((o) => ({
+                      orders.map((o) => ({
                         value: o.id,
                         label: `#${o.id} - ${o.visa_holder_name || o.client?.visa_holder_name || ""} - ${o.visa_number || ""}`,
                       })),
@@ -206,11 +214,13 @@ const TrackingFormModal = ({
                     )}
                     onChange={(opt) => {
                       const orderId = opt ? opt.value : "";
-                      const foundOrder = orders?.find((o) => o.id === parseInt(orderId)) || null;
+                      const foundOrder =
+                        orders?.find((o) => o.id === parseInt(orderId)) || null;
                       setFormData((prev) => ({
                         ...prev,
                         order_id: orderId,
-                        external_office_id: foundOrder?.external_office_id || "",
+                        external_office_id:
+                          foundOrder?.external_office_id || "",
                         delegate_phone: foundOrder?.client?.phone || "",
                         sponsor_number: foundOrder?.client?.phone || "",
                       }));
@@ -224,6 +234,12 @@ const TrackingFormModal = ({
                   {validated && !formData.order_id && (
                     <div className="text-danger small mt-1">
                       يرجى اختيار الطلب
+                    </div>
+                  )}
+                  {!isEdit && orders.length === 0 && (
+                    <div className="text-warning small mt-1">
+                      <i className="fa-solid fa-info-circle me-1"></i>
+                      لا توجد طلبات متاحة للمتابعة (جميع الطلبات لديها متابعة)
                     </div>
                   )}
                 </Form.Group>
@@ -245,12 +261,16 @@ const TrackingFormModal = ({
                         sponsor_number: val,
                       }));
                     }}
-                    isInvalid={!!getFieldError("delegate_phone") || !!getFieldError("sponsor_number")}
+                    isInvalid={
+                      !!getFieldError("delegate_phone") ||
+                      !!getFieldError("sponsor_number")
+                    }
                     className="rounded-3"
                     placeholder="أدخل رقم المندوب"
                   />
                   <Form.Control.Feedback type="invalid">
-                    {getFieldError("delegate_phone") || getFieldError("sponsor_number")}
+                    {getFieldError("delegate_phone") ||
+                      getFieldError("sponsor_number")}
                   </Form.Control.Feedback>
                 </Form.Group>
               </Col>
@@ -385,10 +405,10 @@ const TrackingFormModal = ({
               <Col md={6}>
                 <Form.Group className="d-flex align-items-center h-100 pt-4">
                   <Form.Check
-                    type="switch"
+                    type="checkbox"
                     id="is_authenticated"
                     name="is_authenticated"
-                    label="تم الطلب"
+                    label="تم اكتمال الخدمة"
                     checked={formData.is_authenticated}
                     onChange={handleChange}
                   />
@@ -514,7 +534,9 @@ const TrackingFormModal = ({
                             value: formData.authentication_status,
                             label:
                               authenticationStatuses?.find(
-                                (s) => (s.key || s.label) === formData.authentication_status
+                                (s) =>
+                                  (s.key || s.label) ===
+                                  formData.authentication_status,
                               )?.label || formData.authentication_status,
                           }
                         : null
@@ -547,7 +569,9 @@ const TrackingFormModal = ({
                             value: formData.authorization_status,
                             label:
                               authorizationStatuses?.find(
-                                (s) => (s.key || s.label) === formData.authorization_status
+                                (s) =>
+                                  (s.key || s.label) ===
+                                  formData.authorization_status,
                               )?.label || formData.authorization_status,
                           }
                         : null

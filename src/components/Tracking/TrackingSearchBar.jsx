@@ -6,10 +6,14 @@ const TrackingSearchBar = ({
   onSearch,
   onClear,
   loading,
-  priorityLevels,
-  passportStatuses,
-  transferStatuses,
-  filters,
+  priorityLevels = [],
+  passportStatuses = [],
+  transferStatuses = [],
+  serviceTypes = [],
+  saudiOffices = [],
+  externalOffices = [],
+  clients = [],
+  filters = {},
   onFilterChange,
   sortField,
   sortDirection,
@@ -63,7 +67,7 @@ const TrackingSearchBar = ({
         </Button>
       </InputGroup>
 
-      <Row className="g-2 align-items-end">
+      <Row className="g-2 align-items-end mb-2">
         <Col md={3}>
           <Form.Group>
             <Form.Label className="small text-secondary">
@@ -99,6 +103,53 @@ const TrackingSearchBar = ({
               options={[{ value: "", label: "الكل" }, ...priorityLevels.map(l => ({ value: l.value, label: l.label }))]}
               value={priorityLevels.find(l => l.value === filters.priority_level) ? { value: filters.priority_level, label: priorityLevels.find(l => l.value === filters.priority_level).label } : { value: "", label: "الكل" }}
               onChange={(opt) => onFilterChange("priority_level", opt ? opt.value : "")}
+              isRtl
+            />
+          </Form.Group>
+        </Col>
+        <Col md={3}>
+          <Form.Group>
+            <Form.Label className="small text-secondary">نوع الخدمة</Form.Label>
+            <Select
+              options={[{ value: "", label: "الكل" }, ...serviceTypes.map(t => ({ value: t.key || t.label, label: t.label }))]}
+              value={serviceTypes.find(t => (t.key || t.label) === filters.service_type) ? { value: filters.service_type, label: serviceTypes.find(t => (t.key || t.label) === filters.service_type).label } : { value: "", label: "الكل" }}
+              onChange={(opt) => onFilterChange("service_type", opt ? opt.value : "")}
+              isRtl
+            />
+          </Form.Group>
+        </Col>
+      </Row>
+
+      <Row className="g-2 align-items-end mb-2">
+        <Col md={3}>
+          <Form.Group>
+            <Form.Label className="small text-secondary">المكتب السعودي</Form.Label>
+            <Select
+              options={[{ value: "", label: "الكل" }, ...saudiOffices.map(o => ({ value: o.id, label: o.name }))]}
+              value={saudiOffices.find(o => o.id === parseInt(filters.saudi_office_id)) ? { value: filters.saudi_office_id, label: saudiOffices.find(o => o.id === parseInt(filters.saudi_office_id)).name } : { value: "", label: "الكل" }}
+              onChange={(opt) => onFilterChange("saudi_office_id", opt ? opt.value : "")}
+              isRtl
+            />
+          </Form.Group>
+        </Col>
+        <Col md={3}>
+          <Form.Group>
+            <Form.Label className="small text-secondary">المكتب الخارجي</Form.Label>
+            <Select
+              options={[{ value: "", label: "الكل" }, ...externalOffices.map(o => ({ value: o.id, label: o.name }))]}
+              value={externalOffices.find(o => o.id === parseInt(filters.external_office_id)) ? { value: filters.external_office_id, label: externalOffices.find(o => o.id === parseInt(filters.external_office_id)).name } : { value: "", label: "الكل" }}
+              onChange={(opt) => onFilterChange("external_office_id", opt ? opt.value : "")}
+              isRtl
+            />
+          </Form.Group>
+        </Col>
+        <Col md={3}>
+          <Form.Group>
+            <Form.Label className="small text-secondary">المندوب</Form.Label>
+            <Select
+              options={[{ value: "", label: "الكل" }, ...clients.map(c => ({ value: c.id, label: c.name }))]}
+              value={clients.find(c => c.id === parseInt(filters.client_id)) ? { value: filters.client_id, label: clients.find(c => c.id === parseInt(filters.client_id)).name } : { value: "", label: "الكل" }}
+              onChange={(opt) => onFilterChange("client_id", opt ? opt.value : "")}
               isRtl
             />
           </Form.Group>

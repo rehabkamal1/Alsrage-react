@@ -60,19 +60,22 @@ const OrderSearchBar = ({
       <div className="d-flex flex-wrap gap-2 mt-3">
         {!isCompletedPage && (
           <div className="flex-grow-1" style={{ minWidth: "160px" }}>
-
             <Select
               options={[
                 { value: "", label: "كل الحالات" },
-                ...statusOptions.map((s) => ({ value: s.key || s.id, label: s.label })),
+                ...statusOptions.map((s) => ({
+                  value: s.key || s.id,
+                  label: s.label,
+                })),
               ]}
               value={
                 filters.status
                   ? {
                       value: filters.status,
                       label:
-                        statusOptions.find((s) => (s.key || s.id) === filters.status)?.label ||
-                        filters.status,
+                        statusOptions.find(
+                          (s) => (s.key || s.id) === filters.status,
+                        )?.label || filters.status,
                     }
                   : { value: "", label: "كل الحالات" }
               }
@@ -108,9 +111,14 @@ const OrderSearchBar = ({
                 { value: "total_price", label: "إجمالي السعر" },
                 { value: "musaned_paid", label: "المبلغ المدفوع" },
                 { value: "status", label: "الحالة" },
-              ].find(opt => opt.value === filters.sort_by) || { value: "id", label: "رقم الطلب" }
+              ].find((opt) => opt.value === filters.sort_by) || {
+                value: "id",
+                label: "رقم الطلب",
+              }
             }
-            onChange={(opt) => onFilterChange("sort_by", opt ? opt.value : "id")}
+            onChange={(opt) =>
+              onFilterChange("sort_by", opt ? opt.value : "id")
+            }
             styles={customStyles}
             isRtl
           />
@@ -126,7 +134,9 @@ const OrderSearchBar = ({
               value: filters.sort_dir,
               label: filters.sort_dir === "desc" ? "تنازلي" : "تصاعدي",
             }}
-            onChange={(opt) => onFilterChange("sort_dir", opt ? opt.value : "desc")}
+            onChange={(opt) =>
+              onFilterChange("sort_dir", opt ? opt.value : "desc")
+            }
             styles={customStyles}
             isRtl
           />

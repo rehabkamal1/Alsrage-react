@@ -1,33 +1,7 @@
 import React from "react";
-import { Table, Button, Form } from "react-bootstrap";
+import { Table, Button } from "react-bootstrap";
 
-const MarketingTable = ({
-  leads,
-  onEdit,
-  onDelete,
-  onUpdateField,
-  statuses,
-  priorityLevels,
-}) => {
-  console.log("========== MarketingTable RENDER ==========");
-  console.log("leads data:", leads);
-  console.log("statuses:", statuses);
-  console.log("priorityLevels:", priorityLevels);
-
-  leads?.forEach((lead, index) => {
-    console.log(`Lead ${index} (ID: ${lead.id}):`, {
-      name: lead.name,
-      phone: lead.phone,
-      source_name: lead.source_name,
-      source_id: lead.source_id,
-      source_type: lead.source_type,
-      status: lead.status,
-      priority_level: lead.priority_level,
-      contact_date: lead.contact_date,
-      next_followup_date: lead.next_followup_date,
-    });
-  });
-
+const MarketingTable = ({ leads, onEdit, onDelete }) => {
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
@@ -39,136 +13,15 @@ const MarketingTable = ({
     });
   };
 
-  const getStatusColor = (status) => {
-    const found = statuses?.find((s) => s.key === status);
-    return found?.color || "#6c757d";
-  };
-
-  const getStatusLabel = (status) => {
-    const found = statuses?.find((s) => s.key === status);
-    return found?.label || status || "-";
-  };
-
-  const getPriorityColor = (level) => {
-    const found = priorityLevels?.find((p) => p.key === level);
-    return found?.color || "#6c757d";
-  };
-
-  const getPriorityLabel = (level) => {
-    const found = priorityLevels?.find((p) => p.key === level);
-    return found?.label || level || "-";
-  };
-
-  const handleInlineUpdate = async (leadId, field, value) => {
-    console.log(
-      `handleInlineUpdate: leadId=${leadId}, field=${field}, value=${value}`,
-    );
-    if (onUpdateField) {
-      await onUpdateField(leadId, field, value);
-    }
-  };
-
-  const renderStatusDropdown = (lead) => {
-    const currentColor = getStatusColor(lead.status);
-
-    if (!statuses || statuses.length === 0) {
-      return <span className="text-muted">{getStatusLabel(lead.status)}</span>;
-    }
-
-    return (
-      <div className="d-flex justify-content-center">
-        <Form.Select
-          size="sm"
-          value={lead.status || ""}
-          onChange={(e) =>
-            handleInlineUpdate(lead.id, "status", e.target.value)
-          }
-          className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select"
-          style={{
-            backgroundColor: currentColor,
-            color: "#fff",
-            cursor: "pointer",
-            fontSize: "0.85rem",
-            width: "fit-content",
-            minWidth: "130px",
-            transition: "all 0.2s ease-in-out",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          }}
-          title="اضغط لتغيير الحالة"
-        >
-          <option value="">-- اختر --</option>
-          {statuses.map((status) => (
-            <option
-              key={status.key}
-              value={status.key}
-              style={{ backgroundColor: status.color, color: "#fff" }}
-            >
-              {status.label}
-            </option>
-          ))}
-        </Form.Select>
-      </div>
-    );
-  };
-
-  const renderPriorityDropdown = (lead) => {
-    const currentColor = getPriorityColor(lead.priority_level);
-
-    if (!priorityLevels || priorityLevels.length === 0) {
-      return (
-        <span className="text-muted">
-          {getPriorityLabel(lead.priority_level)}
-        </span>
-      );
-    }
-
-    return (
-      <div className="d-flex justify-content-center">
-        <Form.Select
-          size="sm"
-          value={lead.priority_level || ""}
-          onChange={(e) =>
-            handleInlineUpdate(lead.id, "priority_level", e.target.value)
-          }
-          className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 priority-select"
-          style={{
-            backgroundColor: currentColor,
-            color: "#fff",
-            cursor: "pointer",
-            fontSize: "0.85rem",
-            width: "fit-content",
-            minWidth: "130px",
-            transition: "all 0.2s ease-in-out",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          }}
-          title="اضغط لتغيير درجة الأهمية"
-        >
-          <option value="">-- اختر --</option>
-          {priorityLevels.map((priority) => (
-            <option
-              key={priority.key}
-              value={priority.key}
-              style={{ backgroundColor: priority.color, color: "#fff" }}
-            >
-              {priority.label}
-            </option>
-          ))}
-        </Form.Select>
-      </div>
-    );
-  };
-
   return (
     <div className="table-responsive">
-      <Table hover className="mb-0 align-middle">
+      <Table hover className="mb-0 align-middle text-center">
         <thead className="table-light">
           <tr>
             <th>#</th>
             <th>اسم العميل</th>
             <th>رقم الهاتف</th>
             <th>المصدر</th>
-            <th>الحالة</th>
-            <th>درجة الأهمية</th>
             <th>تاريخ التواصل</th>
             <th>تاريخ المتابعة</th>
             <th>الملاحظات</th>
@@ -182,11 +35,7 @@ const MarketingTable = ({
                 <td className="fw-semibold">#{lead.id}</td>
                 <td>{lead.name || "-"}</td>
                 <td dir="ltr">{lead.phone || "-"}</td>
-                <td>
-                  {lead.source_name || lead.source_id || "-"}
-                </td>
-                <td>{renderStatusDropdown(lead)}</td>
-                <td>{renderPriorityDropdown(lead)}</td>
+                <td>{lead.source_name || lead.source_id || "-"}</td>
                 <td>{formatDate(lead.contact_date)}</td>
                 <td>{formatDate(lead.next_followup_date)}</td>
                 <td
@@ -199,7 +48,7 @@ const MarketingTable = ({
                   {lead.notes || "-"}
                 </td>
                 <td>
-                  <div className="d-flex gap-2">
+                  <div className="d-flex gap-2 justify-content-center">
                     <Button
                       variant="link"
                       className="text-primary p-0 rounded-circle"
@@ -254,24 +103,13 @@ const MarketingTable = ({
             ))}
           {(!leads || leads.length === 0) && (
             <tr>
-              <td colSpan="10" className="text-center py-5 text-muted">
+              <td colSpan="8" className="text-center py-5 text-muted">
                 لا توجد بيانات تسويقية
               </td>
             </tr>
           )}
         </tbody>
       </Table>
-      <style>{`
-        .status-select:hover, .priority-select:hover {
-          transform: translateY(-1px);
-          filter: brightness(1.1);
-          box-shadow: 0 4px 6px rgba(0,0,0,0.15) !important;
-        }
-        .status-select:focus, .priority-select:focus {
-          box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
-          outline: 0;
-        }
-      `}</style>
     </div>
   );
 };

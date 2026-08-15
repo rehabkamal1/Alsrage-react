@@ -32,7 +32,11 @@ const ClientFormModal = ({
 
   const fetchEmployees = async () => {
     try {
-      const response = await getEmployees({ per_page: 200, sort_by: "name", sort_dir: "asc" });
+      const response = await getEmployees({
+        per_page: 200,
+        sort_by: "name",
+        sort_dir: "asc",
+      });
       const list = response.data?.data || response.data || [];
       setEmployees(list);
     } catch (error) {
@@ -82,7 +86,9 @@ const ClientFormModal = ({
       return;
     }
 
-    const selectedEmployee = employees.find((emp) => emp.name === employeeSearch);
+    const selectedEmployee = employees.find(
+      (emp) => emp.name === employeeSearch,
+    );
     const payload = {
       ...formData,
       employee_id: selectedEmployee?.id || formData.employee_id,
@@ -91,13 +97,7 @@ const ClientFormModal = ({
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      centered
-      size="lg"
-      dir="rtl"
-    >
+    <Modal show={show} onHide={onHide} centered size="lg" dir="rtl">
       <Modal.Header closeButton className="border-0 pt-4 px-4">
         <Modal.Title className="fw-bold fs-5">
           {isEdit ? "✏️ تعديل بيانات العميل" : "➕ إضافة عميل جديد"}
@@ -164,19 +164,15 @@ const ClientFormModal = ({
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
-                  اسم صاحب التأشيرة
+                  رقم هاتف إضافي
                 </Form.Label>
-                <Select
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                  options={employees.map(emp => ({ value: emp.id, label: emp.name }))}
-                  value={employees.find(emp => emp.id === formData.employee_id) ? { value: formData.employee_id, label: employees.find(emp => emp.id === formData.employee_id).name } : null}
-                  onChange={(option) => {
-                    setFormData(prev => ({ ...prev, employee_id: option ? option.value : "" }));
-                  }}
-                  placeholder="اختر صاحب التأشيرة..."
-                  isClearable
-                  isRtl
+                <Form.Control
+                  type="tel"
+                  name="additional_phone"
+                  value={formData.additional_phone}
+                  onChange={handleChange}
+                  placeholder="رقم هاتف إضافي"
+                  className="rounded-3"
                 />
               </Form.Group>
             </Col>
@@ -201,15 +197,34 @@ const ClientFormModal = ({
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
-                  رقم هاتف إضافي
+                  الموظف المسؤول
                 </Form.Label>
-                <Form.Control
-                  type="tel"
-                  name="additional_phone"
-                  value={formData.additional_phone}
-                  onChange={handleChange}
-                  placeholder="رقم هاتف إضافي"
-                  className="rounded-3"
+                <Select
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  options={employees.map((emp) => ({
+                    value: emp.id,
+                    label: emp.name,
+                  }))}
+                  value={
+                    employees.find((emp) => emp.id === formData.employee_id)
+                      ? {
+                          value: formData.employee_id,
+                          label: employees.find(
+                            (emp) => emp.id === formData.employee_id,
+                          ).name,
+                        }
+                      : null
+                  }
+                  onChange={(option) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      employee_id: option ? option.value : "",
+                    }));
+                  }}
+                  placeholder="اختر الموظف..."
+                  isClearable
+                  isRtl
                 />
               </Form.Group>
             </Col>

@@ -15,6 +15,8 @@ const ExternalOfficeFormModal = ({
     name: "",
     country: "",
     contacts: [{ name: "", phone: "", commission: "" }],
+    phone: "",
+    notes: "",
     whatsapp_link: "",
   });
 
@@ -30,6 +32,7 @@ const ExternalOfficeFormModal = ({
           initialData.contacts && initialData.contacts.length > 0
             ? [...initialData.contacts]
             : [{ name: "", phone: "", commission: "" }],
+        phone: initialData.phone || "",
         notes: initialData.notes || "",
         whatsapp_link: initialData.whatsapp_link || "",
       });
@@ -38,6 +41,7 @@ const ExternalOfficeFormModal = ({
         name: "",
         country: "",
         contacts: [{ name: "", phone: "", commission: "" }],
+        phone: "",
         notes: "",
         whatsapp_link: "",
       });
@@ -104,13 +108,7 @@ const ExternalOfficeFormModal = ({
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      centered
-      size="lg"
-      dir="rtl"
-    >
+    <Modal show={show} onHide={onHide} centered size="lg" dir="rtl">
       <Modal.Header closeButton className="border-0 pt-4 px-4">
         <Modal.Title className="fw-bold fs-5">
           {isEdit ? "✏️ تعديل المكتب الخارجي" : "➕ إضافة مكتب خارجي جديد"}
@@ -120,7 +118,7 @@ const ExternalOfficeFormModal = ({
       <Form onSubmit={handleSubmit} noValidate validated={validated}>
         <Modal.Body className="px-4">
           <Row>
-            <Col md={12}>
+            <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
                   الدولة <span className="text-danger">*</span>
@@ -139,10 +137,7 @@ const ExternalOfficeFormModal = ({
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>
-          </Row>
-
-          <Row>
-            <Col md={12}>
+            <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
                   اسم المكتب <span className="text-danger">*</span>
@@ -250,6 +245,74 @@ const ExternalOfficeFormModal = ({
           </div>
 
           <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  رقم الهاتف (الأساسي) <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                  placeholder="أدخل رقم الهاتف الأساسي للمكتب"
+                  isInvalid={!!getFieldError("phone")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("phone") || "يرجى إدخال رقم الهاتف الأساسي"}
+                </Form.Control.Feedback>
+                {formData.phone && (
+                  <div className="mt-2">
+                    <a
+                      href={`https://wa.me/${formData.phone.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-sm btn-outline-success rounded-3 w-100 d-flex align-items-center justify-content-center gap-2"
+                    >
+                      <i className="fa-brands fa-whatsapp fs-5"></i>
+                      <span>تواصل عبر واتساب</span>
+                    </a>
+                  </div>
+                )}
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  جروب الواتساب
+                </Form.Label>
+                <Form.Control
+                  type="url"
+                  name="whatsapp_link"
+                  value={formData.whatsapp_link}
+                  onChange={handleChange}
+                  placeholder="رابط جروب الواتساب"
+                  isInvalid={!!getFieldError("whatsapp_link")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("whatsapp_link")}
+                </Form.Control.Feedback>
+                {formData.whatsapp_link && (
+                  <div className="mt-2">
+                    <a
+                      href={formData.whatsapp_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-sm btn-outline-success rounded-3 w-100 d-flex align-items-center justify-content-center gap-2"
+                    >
+                      <i className="fa-brands fa-whatsapp fs-5"></i>
+                      <span>جروب الواتساب</span>
+                    </a>
+                  </div>
+                )}
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
             <Col md={12}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
@@ -266,41 +329,6 @@ const ExternalOfficeFormModal = ({
                 />
                 <Form.Control.Feedback type="invalid">
                   {getFieldError("notes")}
-                </Form.Control.Feedback>
-              </Form.Group>
-            </Col>
-          </Row>
-
-          <Row>
-            <Col md={12}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold small text-secondary">
-                  وتساب
-                </Form.Label>
-                <div className="d-flex align-items-center gap-2">
-                  <Form.Control
-                    type="url"
-                    name="whatsapp_link"
-                    value={formData.whatsapp_link}
-                    onChange={handleChange}
-                    placeholder="رابط جروب الواتساب"
-                    isInvalid={!!getFieldError("whatsapp_link")}
-                    className="rounded-3"
-                  />
-                  {formData.whatsapp_link && (
-                    <a
-                      href={formData.whatsapp_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-success rounded-3 d-flex align-items-center justify-content-center"
-                      title="الدخول لجروب الواتساب"
-                    >
-                      <i className="fa-brands fa-whatsapp fs-5"></i>
-                    </a>
-                  )}
-                </div>
-                <Form.Control.Feedback type="invalid" className={getFieldError("whatsapp_link") ? "d-block" : ""}>
-                  {getFieldError("whatsapp_link")}
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>

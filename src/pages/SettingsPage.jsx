@@ -6,7 +6,6 @@ import api, {
   deleteTransferStatus,
   deletePaymentMethod,
   deleteBankName,
-  deleteMarketingStatus,
   deleteOrderStatus,
   deleteServiceType,
   deleteAuthenticationStatus,
@@ -22,7 +21,6 @@ const SettingsPage = () => {
   const [transferStatuses, setTransferStatuses] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [bankNames, setBankNames] = useState([]);
-  const [marketingStatuses, setMarketingStatuses] = useState([]);
   const [orderStatuses, setOrderStatuses] = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
   const [authenticationStatuses, setAuthenticationStatuses] = useState([]);
@@ -43,7 +41,6 @@ const SettingsPage = () => {
         transferRes,
         paymentRes,
         bankRes,
-        marketingRes,
         orderRes,
         serviceTypesRes,
         authRes,
@@ -54,7 +51,6 @@ const SettingsPage = () => {
         api.get("/settings/transfer-statuses"),
         api.get("/settings/payment-methods"),
         api.get("/settings/bank-names"),
-        api.get("/settings/marketing-statuses"),
         api.get("/settings/order-statuses"),
         api.get("/settings/service-types"),
         api.get("/settings/authentication-statuses"),
@@ -90,13 +86,6 @@ const SettingsPage = () => {
       );
       setBankNames(
         bankRes.data.data.map((item) => ({
-          ...item,
-          isNew: false,
-          uniqueId: Date.now() + Math.random(),
-        })),
-      );
-      setMarketingStatuses(
-        marketingRes.data.data.map((item) => ({
           ...item,
           isNew: false,
           uniqueId: Date.now() + Math.random(),
@@ -418,40 +407,6 @@ const SettingsPage = () => {
 
           <Col xs={12} md={6}>
             <SettingsCard
-              title="حالات التسويق"
-              items={marketingStatuses}
-              onAdd={() => addItem(setMarketingStatuses)}
-              onUpdate={(idx, field, val) =>
-                updateItem(setMarketingStatuses, idx, field, val)
-              }
-              onDelete={(id, isNew, idx) =>
-                deleteItem(
-                  id,
-                  isNew,
-                  idx,
-                  marketingStatuses,
-                  setMarketingStatuses,
-                  deleteMarketingStatus,
-                  "حالات التسويق",
-                )
-              }
-              onSave={() =>
-                saveItems(
-                  marketingStatuses,
-                  "/settings/marketing-statuses",
-                  "statuses",
-                  "تم حفظ حالات التسويق بنجاح",
-                )
-              }
-              saving={saving}
-              emptyMessage="لا توجد حالات تسويق"
-            />
-          </Col>
-        </Row>
-
-        <Row className="mt-4 g-4">
-          <Col xs={12} md={6}>
-            <SettingsCard
               title="حالات الطلبات"
               items={orderStatuses}
               onAdd={() => addItem(setOrderStatuses)}
@@ -481,7 +436,9 @@ const SettingsPage = () => {
               emptyMessage="لا توجد حالات طلبات"
             />
           </Col>
+        </Row>
 
+        <Row className="mt-4 g-4">
           <Col xs={12} md={6}>
             <SettingsCard
               title="أنواع الخدمات"
@@ -513,9 +470,7 @@ const SettingsPage = () => {
               emptyMessage="لا توجد أنواع خدمات"
             />
           </Col>
-        </Row>
 
-        <Row className="mt-4 g-4">
           <Col xs={12} md={6}>
             <SettingsCard
               title="حالات التوثيق"
@@ -547,7 +502,9 @@ const SettingsPage = () => {
               emptyMessage="لا توجد حالات توثيق"
             />
           </Col>
+        </Row>
 
+        <Row className="mt-4">
           <Col xs={12} md={6}>
             <SettingsCard
               title="حالات التفويض"

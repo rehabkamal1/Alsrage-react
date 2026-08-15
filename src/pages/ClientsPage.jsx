@@ -1,6 +1,9 @@
+// src/pages/ClientsPage.jsx
+
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Card, Button } from "react-bootstrap";
+import { Container, Card, Button, Badge } from "react-bootstrap";
 import RefreshButton from "../components/common/RefreshButton";
+import DateFilterBar from "../components/common/DateFilterBar";
 import {
   getClients,
   createClient,
@@ -11,6 +14,7 @@ import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import ClientFormModal from "../components/Client/ClientFormModal";
 import ClientTable from "../components/Client/ClientTable";
 import ClientSearchBar from "../components/Client/ClientSearchBar";
+import ClientOrdersModal from "../components/Client/ClientOrdersModal";
 import PaginationComponent from "../components/common/Pagination";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import TableSkeleton from "../components/common/TableSkeleton";
@@ -22,10 +26,14 @@ const ClientsPage = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showOrdersModal, setShowOrdersModal] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
   const [editingClient, setEditingClient] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [filters, setFilters] = useState({
     client_type: "",
     sort_by: "created_at",
@@ -35,7 +43,7 @@ const ClientsPage = () => {
 
   useEffect(() => {
     fetchClients();
-  }, [currentPage, searchQuery, filters]);
+  }, [currentPage, searchQuery, filters, fromDate, toDate]);
 
   const fetchClients = async () => {
     if (initialLoading) {
@@ -52,6 +60,9 @@ const ClientsPage = () => {
         sort_by: filters.sort_by,
         sort_dir: filters.sort_dir,
       };
+      if (fromDate) params.from_date = fromDate;
+      if (toDate) params.to_date = toDate;
+
       const response = await getClients(params);
       setClients(response.data.data || []);
       setTotalPages(response.data.meta?.last_page || 1);
@@ -63,6 +74,12 @@ const ClientsPage = () => {
     }
   };
 
+  const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
+    setFromDate(fromDate);
+    setToDate(toDate);
+    setCurrentPage(1);
+  };
+
   const handleSearch = (query) => {
     setSearchQuery(query);
     setCurrentPage(1);
@@ -70,6 +87,13 @@ const ClientsPage = () => {
 
   const handleClearSearch = () => {
     setSearchQuery("");
+    setFilters({
+      client_type: "",
+      sort_by: "created_at",
+      sort_dir: "desc",
+    });
+    setFromDate("");
+    setToDate("");
     setCurrentPage(1);
   };
 
@@ -86,6 +110,11 @@ const ClientsPage = () => {
   const handleEditClient = (client) => {
     setEditingClient(client);
     setShowModal(true);
+  };
+
+  const handleShowOrders = (client) => {
+    setSelectedClient(client);
+    setShowOrdersModal(true);
   };
 
   const handleSubmit = async (formData) => {
@@ -139,7 +168,6 @@ const ClientsPage = () => {
       { header: "نوع العميل", key: "client_type" },
       { header: "رقم هاتف المندوب", key: "phone" },
       { header: "المندوب", key: "name" },
-      { header: "اسم صاحب التأشيرة", format: (client) => client.employee?.name || "-" },
       { header: "رقم هاتف إضافي", key: "additional_phone" },
       { header: "المدينة", key: "city" },
       { header: "العنوان", key: "address" },
@@ -152,13 +180,38 @@ const ClientsPage = () => {
       { header: "نوع العميل", key: "client_type" },
       { header: "رقم هاتف المندوب", key: "phone" },
       { header: "المندوب", key: "name" },
-      { header: "اسم صاحب التأشيرة", format: (client) => client.employee?.name || "-" },
       { header: "رقم هاتف إضافي", key: "additional_phone" },
       { header: "المدينة", key: "city" },
       { header: "العنوان", key: "address" },
     ];
     exportToPDF(clients, columns, "العملاء.pdf");
   };
+
+  if (initialLoading) {
+    return (
+      <div
+        style={{
+          backgroundColor: "#f5f7fa",
+          minHeight: "100vh",
+          padding: "24px",
+        }}
+      >
+        <Container fluid>
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <h1 className="h3 mb-0 fw-bold">العملاء</h1>
+            <Button variant="dark" disabled>
+              + عميل جديد
+            </Button>
+          </div>
+          <Card className="shadow-sm border-0 rounded-4">
+            <Card.Body className="p-0">
+              <TableSkeleton rows={5} columns={8} />
+            </Card.Body>
+          </Card>
+        </Container>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -172,9 +225,9 @@ const ClientsPage = () => {
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
           <h1 className="h3 mb-0 fw-bold">العملاء</h1>
           <div className="d-flex flex-wrap gap-2">
-            <RefreshButton 
-              onClick={fetchClients} 
-              loading={loading} 
+            <RefreshButton
+              onClick={fetchClients}
+              loading={loading}
               className="border shadow-sm text-primary fw-semibold"
             />
             <Button
@@ -206,6 +259,14 @@ const ClientsPage = () => {
           </div>
         </div>
 
+        <DateFilterBar
+          onFilterChange={handleDateFilterChange}
+          initialFromDate={fromDate}
+          initialToDate={toDate}
+          initialPreset="all"
+          size="md"
+        />
+
         <ClientSearchBar
           searchQuery={searchQuery}
           onSearch={handleSearch}
@@ -217,7 +278,7 @@ const ClientsPage = () => {
 
         <Card className="shadow-sm border-0 rounded-4">
           <Card.Body className="p-0">
-            {initialLoading ? (
+            {loading ? (
               <TableSkeleton rows={5} columns={8} />
             ) : (
               <>
@@ -225,6 +286,7 @@ const ClientsPage = () => {
                   clients={clients}
                   onEdit={handleEditClient}
                   onDelete={handleDeleteClient}
+                  onViewOrders={handleShowOrders}
                 />
 
                 <PaginationComponent
@@ -248,6 +310,15 @@ const ClientsPage = () => {
         initialData={editingClient}
         loading={loading}
         isEdit={!!editingClient}
+      />
+
+      <ClientOrdersModal
+        show={showOrdersModal}
+        onHide={() => {
+          setShowOrdersModal(false);
+          setSelectedClient(null);
+        }}
+        client={selectedClient}
       />
     </div>
   );

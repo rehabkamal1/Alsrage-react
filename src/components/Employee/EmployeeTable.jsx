@@ -6,13 +6,12 @@ const EmployeeTable = ({ employees, onEdit, onDelete }) => {
     if (!permissions || permissions.length === 0) {
       return "-";
     }
-    // Show count of permissions
     return `${permissions.length} صلاحيات`;
   };
 
   return (
     <div className="table-responsive">
-      <Table hover className="mb-0 align-middle">
+      <Table hover className="mb-0 align-middle text-center">
         <thead className="table-light">
           <tr>
             <th>#</th>
@@ -39,10 +38,8 @@ const EmployeeTable = ({ employees, onEdit, onDelete }) => {
                   <span className="phone-badge">{employee.phone}</span>
                 </td>
                 <td>{employee.position || "-"}</td>
+                <td>{formatPermissions(employee.permissions)}</td>
                 <td>
-                  {formatPermissions(employee.permissions)}
-                </td>
-                <td className="text-center">
                   <div className="d-flex align-items-center justify-content-center gap-2">
                     <Button
                       variant="link"

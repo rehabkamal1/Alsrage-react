@@ -16,8 +16,8 @@ export const saveWhatsAppTemplate = (template) => {
 
 /**
  * Open a SweetAlert dialog allowing the user to select who to send a WhatsApp notification to:
- * 1. صاحب المكتب السعودي (Saudi Office Owner)
- * 2. المكتب الخارجي (External Office)
+ * 1. صاحب المكتب السعودي (Saudi Office Owner) - رقم هاتف أو جروب
+ * 2. المكتب الخارجي (External Office) - رقم هاتف أو جروب
  * 3. العميل / المندوب (Client / Representative)
  */
 export const showWhatsAppNotificationModal = ({
@@ -32,21 +32,25 @@ export const showWhatsAppNotificationModal = ({
 
   const currentStatusKey = newStatus || order.status;
   const statusLabel =
-    orderStatuses.find((s) => String(s.key || s.id) === String(currentStatusKey))
-      ?.label || currentStatusKey || "تحديث جديد";
+    orderStatuses.find(
+      (s) => String(s.key || s.id) === String(currentStatusKey),
+    )?.label ||
+    currentStatusKey ||
+    "تحديث جديد";
 
   // Find Saudi Office
   const saudiOffice =
     order.saudi_office ||
     saudiOffices.find(
-      (o) => String(o.id) === String(order.saudi_office_id || order.supplier_id)
+      (o) =>
+        String(o.id) === String(order.saudi_office_id || order.supplier_id),
     );
 
   // Find External Office
   const externalOffice =
     order.external_office ||
     externalOffices.find(
-      (o) => String(o.id) === String(order.external_office_id)
+      (o) => String(o.id) === String(order.external_office_id),
     );
 
   // Find Client
@@ -56,18 +60,22 @@ export const showWhatsAppNotificationModal = ({
 
   // Extract Phone Numbers
   const saudiPhone = saudiOffice?.mobile || saudiOffice?.phone || "";
-  
+  const saudiWhatsAppLink = saudiOffice?.whatsapp_link || "";
+
   let externalPhone = externalOffice?.phone || externalOffice?.mobile || "";
-  if (!externalPhone && externalOffice?.contacts && externalOffice.contacts.length > 0) {
+  if (
+    !externalPhone &&
+    externalOffice?.contacts &&
+    externalOffice.contacts.length > 0
+  ) {
     externalPhone = externalOffice.contacts[0]?.phone || "";
   }
+  const externalWhatsAppLink = externalOffice?.whatsapp_link || "";
 
   const clientPhone = client?.phone || order.client_phone || "";
 
   const visaHolder =
-    order.visa_holder_name ||
-    client?.employee?.name ||
-    "غير محدد";
+    order.visa_holder_name || client?.employee?.name || "غير محدد";
   const delegateName = client?.name || "غير محدد";
 
   const template = getWhatsAppTemplate();
@@ -76,7 +84,10 @@ export const showWhatsAppNotificationModal = ({
     .replace(/\{visa_holder\}/g, visaHolder)
     .replace(/\{delegate_name\}/g, delegateName)
     .replace(/\{visa_number\}/g, order.visa_number || "غير محدد")
-    .replace(/\{contract_number\}/g, order.musaned_contract_number || "غير محدد")
+    .replace(
+      /\{contract_number\}/g,
+      order.musaned_contract_number || "غير محدد",
+    )
     .replace(/\{status\}/g, statusLabel);
 
   const encodedMessage = encodeURIComponent(message);
@@ -87,13 +98,23 @@ export const showWhatsAppNotificationModal = ({
     window.open(`https://wa.me/${cleanPhone}?text=${encodedMessage}`, "_blank");
   };
 
-  const hasAnyPhone = saudiPhone || externalPhone || clientPhone;
+  const openWhatsAppGroup = (link) => {
+    if (!link) return;
+    window.open(link, "_blank");
+  };
+
+  const hasAnyPhone =
+    saudiPhone ||
+    externalPhone ||
+    clientPhone ||
+    saudiWhatsAppLink ||
+    externalWhatsAppLink;
 
   if (!hasAnyPhone) {
     Swal.fire({
       icon: "info",
       title: "لا توجد أرقام هواتف",
-      text: "لم يتم العثور على أرقام هواتف مسجلة لـ (المكتب السعودي، المكتب الخارجي، أو العميل) لهذا الطلب.",
+      text: "لم يتم العثور على أرقام هواتف أو روابط جروبات مسجلة لـ (المكتب السعودي، المكتب الخارجي، أو العميل) لهذا الطلب.",
       confirmButtonText: "موافق",
       confirmButtonColor: "#4f46e5",
       customClass: {
@@ -109,39 +130,108 @@ export const showWhatsAppNotificationModal = ({
       <div class="text-center mb-3">
         <p class="text-muted small mb-0">اختر جهة الاتصال التي ترغب في إرسال تفاصيل تحديث الطلب <strong>#${order.id}</strong> لها:</p>
       </div>
-      <div class="d-flex flex-column gap-2 text-start my-2">
-        <button id="wa-saudi-btn" type="button" class="btn btn-outline-primary py-2.5 px-3 rounded-3 d-flex align-items-center justify-content-between w-100 ${!saudiPhone ? 'disabled opacity-50' : ''}">
-          <div class="d-flex align-items-center gap-3">
+      <div class="d-flex flex-column gap-3 text-start my-2">
+        ${
+          saudiPhone || saudiWhatsAppLink
+            ? `
+        <div class="border rounded-3 p-2">
+          <div class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
             <span class="fs-4">🇸🇦</span>
-            <div class="text-end">
-              <div class="fw-bold text-dark fs-6">صاحب المكتب السعودي</div>
-              <div class="small text-muted dir-ltr">${saudiOffice?.name ? `${saudiOffice.name} • ` : ''}${saudiPhone || 'غير متوفر'}</div>
-            </div>
+            <span>صاحب المكتب السعودي</span>
           </div>
-          <i class="fa-brands fa-whatsapp text-success fs-3"></i>
-        </button>
+          <div class="d-flex flex-column gap-1">
+            ${
+              saudiPhone
+                ? `
+            <button id="wa-saudi-btn" type="button" class="btn btn-outline-primary py-2 px-3 rounded-2 d-flex align-items-center justify-content-between w-100">
+              <div class="d-flex align-items-center gap-2">
+                <span>📱</span>
+                <span class="small dir-ltr">${saudiPhone}</span>
+              </div>
+              <i class="fa-brands fa-whatsapp text-success fs-5"></i>
+            </button>
+            `
+                : ""
+            }
+            ${
+              saudiWhatsAppLink
+                ? `
+            <button id="wa-saudi-group-btn" type="button" class="btn btn-outline-success py-2 px-3 rounded-2 d-flex align-items-center justify-content-between w-100">
+              <div class="d-flex align-items-center gap-2">
+                <span>👥</span>
+                <span class="small">جروب الواتساب</span>
+              </div>
+              <i class="fa-brands fa-whatsapp text-success fs-5"></i>
+            </button>
+            `
+                : ""
+            }
+          </div>
+        </div>
+        `
+            : ""
+        }
 
-        <button id="wa-external-btn" type="button" class="btn btn-outline-primary py-2.5 px-3 rounded-3 d-flex align-items-center justify-content-between w-100 ${!externalPhone ? 'disabled opacity-50' : ''}">
-          <div class="d-flex align-items-center gap-3">
+        ${
+          externalPhone || externalWhatsAppLink
+            ? `
+        <div class="border rounded-3 p-2">
+          <div class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
             <span class="fs-4">🌍</span>
-            <div class="text-end">
-              <div class="fw-bold text-dark fs-6">المكتب الخارجي</div>
-              <div class="small text-muted dir-ltr">${externalOffice?.name ? `${externalOffice.name} • ` : ''}${externalPhone || 'غير متوفر'}</div>
-            </div>
+            <span>المكتب الخارجي</span>
           </div>
-          <i class="fa-brands fa-whatsapp text-success fs-3"></i>
-        </button>
+          <div class="d-flex flex-column gap-1">
+            ${
+              externalPhone
+                ? `
+            <button id="wa-external-btn" type="button" class="btn btn-outline-primary py-2 px-3 rounded-2 d-flex align-items-center justify-content-between w-100">
+              <div class="d-flex align-items-center gap-2">
+                <span>📱</span>
+                <span class="small dir-ltr">${externalPhone}</span>
+              </div>
+              <i class="fa-brands fa-whatsapp text-success fs-5"></i>
+            </button>
+            `
+                : ""
+            }
+            ${
+              externalWhatsAppLink
+                ? `
+            <button id="wa-external-group-btn" type="button" class="btn btn-outline-success py-2 px-3 rounded-2 d-flex align-items-center justify-content-between w-100">
+              <div class="d-flex align-items-center gap-2">
+                <span>👥</span>
+                <span class="small">جروب الواتساب</span>
+              </div>
+              <i class="fa-brands fa-whatsapp text-success fs-5"></i>
+            </button>
+            `
+                : ""
+            }
+          </div>
+        </div>
+        `
+            : ""
+        }
 
-        <button id="wa-client-btn" type="button" class="btn btn-outline-primary py-2.5 px-3 rounded-3 d-flex align-items-center justify-content-between w-100 ${!clientPhone ? 'disabled opacity-50' : ''}">
-          <div class="d-flex align-items-center gap-3">
+        ${
+          clientPhone
+            ? `
+        <div class="border rounded-3 p-2">
+          <div class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
             <span class="fs-4">👤</span>
-            <div class="text-end">
-              <div class="fw-bold text-dark fs-6">العميل / المندوب</div>
-              <div class="small text-muted dir-ltr">${delegateName !== 'غير محدد' ? `${delegateName} • ` : ''}${clientPhone || 'غير متوفر'}</div>
-            </div>
+            <span>العميل / المندوب</span>
           </div>
-          <i class="fa-brands fa-whatsapp text-success fs-3"></i>
-        </button>
+          <button id="wa-client-btn" type="button" class="btn btn-outline-primary py-2 px-3 rounded-2 d-flex align-items-center justify-content-between w-100">
+            <div class="d-flex align-items-center gap-2">
+              <span>📱</span>
+              <span class="small dir-ltr">${clientPhone}</span>
+            </div>
+            <i class="fa-brands fa-whatsapp text-success fs-5"></i>
+          </button>
+        </div>
+        `
+            : ""
+        }
       </div>
     `,
     showConfirmButton: false,
@@ -153,22 +243,44 @@ export const showWhatsAppNotificationModal = ({
     },
     didOpen: () => {
       if (saudiPhone) {
-        document.getElementById("wa-saudi-btn")?.addEventListener("click", () => {
-          openWhatsApp(saudiPhone);
-          Swal.close();
-        });
+        document
+          .getElementById("wa-saudi-btn")
+          ?.addEventListener("click", () => {
+            openWhatsApp(saudiPhone);
+            Swal.close();
+          });
+      }
+      if (saudiWhatsAppLink) {
+        document
+          .getElementById("wa-saudi-group-btn")
+          ?.addEventListener("click", () => {
+            openWhatsAppGroup(saudiWhatsAppLink);
+            Swal.close();
+          });
       }
       if (externalPhone) {
-        document.getElementById("wa-external-btn")?.addEventListener("click", () => {
-          openWhatsApp(externalPhone);
-          Swal.close();
-        });
+        document
+          .getElementById("wa-external-btn")
+          ?.addEventListener("click", () => {
+            openWhatsApp(externalPhone);
+            Swal.close();
+          });
+      }
+      if (externalWhatsAppLink) {
+        document
+          .getElementById("wa-external-group-btn")
+          ?.addEventListener("click", () => {
+            openWhatsAppGroup(externalWhatsAppLink);
+            Swal.close();
+          });
       }
       if (clientPhone) {
-        document.getElementById("wa-client-btn")?.addEventListener("click", () => {
-          openWhatsApp(clientPhone);
-          Swal.close();
-        });
+        document
+          .getElementById("wa-client-btn")
+          ?.addEventListener("click", () => {
+            openWhatsApp(clientPhone);
+            Swal.close();
+          });
       }
     },
   });

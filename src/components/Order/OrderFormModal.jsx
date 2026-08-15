@@ -22,6 +22,7 @@ const OrderFormModal = ({
   onSubmit,
   initialData,
   clients = [],
+  employees = [],
   saudiOffices = [],
   externalOffices = [],
   statusOptions = [],
@@ -44,7 +45,9 @@ const OrderFormModal = ({
             setLocalSaudiOffices(list);
           }
         })
-        .catch((err) => console.error("Error fetching local saudi offices:", err));
+        .catch((err) =>
+          console.error("Error fetching local saudi offices:", err),
+        );
 
       getExternalOffices({ all: 1, per_page: 500 })
         .then((res) => {
@@ -53,7 +56,9 @@ const OrderFormModal = ({
             setLocalExternalOffices(list);
           }
         })
-        .catch((err) => console.error("Error fetching local external offices:", err));
+        .catch((err) =>
+          console.error("Error fetching local external offices:", err),
+        );
     }
   }, [show]);
 
@@ -63,8 +68,10 @@ const OrderFormModal = ({
     externalOffices && externalOffices.length > 0
       ? externalOffices
       : localExternalOffices;
+
   const [formData, setFormData] = useState({
     client_id: "",
+    employee_id: "",
     visa_holder_name: "",
     visa_holder_phone: "",
     saudi_office_id: "",
@@ -111,6 +118,7 @@ const OrderFormModal = ({
     if (initialData) {
       setFormData({
         client_id: initialData.client_id || "",
+        employee_id: initialData.employee_id || "",
         visa_holder_name: initialData.visa_holder_name || "",
         visa_holder_phone: initialData.visa_holder_phone || "",
         saudi_office_id: initialData.saudi_office_id || "",
@@ -135,12 +143,18 @@ const OrderFormModal = ({
       setPreviewImages({});
       if (initialData.client) {
         setSearchQuery(
-          `${initialData.client.name} (${initialData.client.phone})`,
+          `${initialData.client.phone} (${initialData.client.name || "بدون اسم"})`,
         );
+      } else if (initialData.client_id) {
+        const client = clients?.find((c) => c.id === initialData.client_id);
+        if (client) {
+          setSearchQuery(`${client.phone} (${client.name || "بدون اسم"})`);
+        }
       }
     } else {
       setFormData({
         client_id: "",
+        employee_id: "",
         visa_holder_name: "",
         visa_holder_phone: "",
         saudi_office_id: "",
@@ -169,7 +183,7 @@ const OrderFormModal = ({
     setValidated(false);
     setFieldErrors({});
     setActiveTab("basic");
-  }, [initialData, show]);
+  }, [initialData, show, clients]);
 
   useEffect(() => {
     if (error) {
@@ -268,6 +282,23 @@ const OrderFormModal = ({
     }
   };
 
+  const employeeOptions = employees.map((emp) => ({
+    value: emp.id,
+    label: emp.name || emp.employee_name || `موظف #${emp.id}`,
+  }));
+
+  const getSelectedEmployee = () => {
+    if (!formData.employee_id) return null;
+    const employee = employees.find((e) => e.id === formData.employee_id);
+    return employee
+      ? {
+          value: employee.id,
+          label:
+            employee.name || employee.employee_name || `موظف #${employee.id}`,
+        }
+      : null;
+  };
+
   const totalPrice = parseFloat(formData.total_price) || 0;
   const musanedPaid = parseFloat(formData.musaned_paid) || 0;
   const priceDifference = totalPrice - musanedPaid;
@@ -276,7 +307,6 @@ const OrderFormModal = ({
     e.preventDefault();
     const form = e.currentTarget;
     setValidated(true);
-    // Also check saudi_office_id manually (React Select not covered by HTML5 validation)
     if (form.checkValidity() === false || !formData.saudi_office_id) {
       e.stopPropagation();
       return;
@@ -341,13 +371,7 @@ const OrderFormModal = ({
 
   return (
     <>
-      <Modal
-        show={show}
-        onHide={onHide}
-        centered
-        size="lg"
-        dir="rtl"
-      >
+      <Modal show={show} onHide={onHide} centered size="lg" dir="rtl">
         <Modal.Header closeButton className="border-0 pt-4 px-4">
           <Modal.Title className="fw-bold fs-5">
             {isEdit ? "✏️ تعديل الطلب" : "➕ إضافة طلب جديد"}
@@ -373,142 +397,254 @@ const OrderFormModal = ({
                         <Select
                           className="react-select-container"
                           classNamePrefix="react-select"
-                          options={(effectiveSaudiOffices || []).map((office) => ({ value: office.id, label: office.name }))}
+                          options={(effectiveSaudiOffices || []).map(
+                            (office) => ({
+                              value: office.id,
+                              label: office.name,
+                            }),
+                          )}
                           value={
-                            (effectiveSaudiOffices || []).find((o) => String(o.id) === String(formData.saudi_office_id))
+                            (effectiveSaudiOffices || []).find(
+                              (o) =>
+                                String(o.id) ===
+                                String(formData.saudi_office_id),
+                            )
                               ? {
                                   value: formData.saudi_office_id,
-                                  label: (effectiveSaudiOffices || []).find((o) => String(o.id) === String(formData.saudi_office_id)).name,
+                                  label: (effectiveSaudiOffices || []).find(
+                                    (o) =>
+                                      String(o.id) ===
+                                      String(formData.saudi_office_id),
+                                  ).name,
                                 }
                               : null
                           }
-                          onChange={(option) => setFormData((prev) => ({ ...prev, saudi_office_id: option ? option.value : "" }))}
+                          onChange={(option) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              saudi_office_id: option ? option.value : "",
+                            }))
+                          }
                           placeholder="اختر المكتب السعودي..."
                           noOptionsMessage={() => "لا توجد خيارات"}
                           isClearable
                           isRtl
-                          styles={{ control: (base) => ({ ...base, borderColor: validated && !formData.saudi_office_id ? '#dc3545' : base.borderColor }) }}
+                          styles={{
+                            control: (base) => ({
+                              ...base,
+                              borderColor:
+                                validated && !formData.saudi_office_id
+                                  ? "#dc3545"
+                                  : base.borderColor,
+                            }),
+                          }}
                         />
-                        {validated && !formData.saudi_office_id && (<div className="text-danger small mt-1">يرجى اختيار المكتب السعودي</div>)}
-                        {getFieldError("saudi_office_id") && (<div className="text-danger small mt-1">{getFieldError("saudi_office_id")}</div>)}
+                        {validated && !formData.saudi_office_id && (
+                          <div className="text-danger small mt-1">
+                            يرجى اختيار المكتب السعودي
+                          </div>
+                        )}
+                        {getFieldError("saudi_office_id") && (
+                          <div className="text-danger small mt-1">
+                            {getFieldError("saudi_office_id")}
+                          </div>
+                        )}
                       </Form.Group>
                     </Col>
                     <Col md={6}>
                       <Form.Group className="mb-3">
-                        <Form.Label className="fw-semibold small text-secondary">المكتب الخارجي</Form.Label>
+                        <Form.Label className="fw-semibold small text-secondary">
+                          المكتب الخارجي
+                        </Form.Label>
                         <Select
                           className="react-select-container"
                           classNamePrefix="react-select"
-                          options={(effectiveExternalOffices || []).map((office) => ({ value: office.id, label: office.name }))}
+                          options={(effectiveExternalOffices || []).map(
+                            (office) => ({
+                              value: office.id,
+                              label: office.name,
+                            }),
+                          )}
                           value={
-                            (effectiveExternalOffices || []).find((o) => String(o.id) === String(formData.external_office_id))
+                            (effectiveExternalOffices || []).find(
+                              (o) =>
+                                String(o.id) ===
+                                String(formData.external_office_id),
+                            )
                               ? {
                                   value: formData.external_office_id,
-                                  label: (effectiveExternalOffices || []).find((o) => String(o.id) === String(formData.external_office_id)).name,
+                                  label: (effectiveExternalOffices || []).find(
+                                    (o) =>
+                                      String(o.id) ===
+                                      String(formData.external_office_id),
+                                  ).name,
                                 }
                               : null
                           }
-                          onChange={(option) => setFormData((prev) => ({ ...prev, external_office_id: option ? option.value : "" }))}
+                          onChange={(option) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              external_office_id: option ? option.value : "",
+                            }))
+                          }
                           placeholder="اختر المكتب الخارجي..."
                           noOptionsMessage={() => "لا توجد خيارات"}
                           isClearable
                           isRtl
                         />
-                        {getFieldError("external_office_id") && (<div className="text-danger small mt-1">{getFieldError("external_office_id")}</div>)}
+                        {getFieldError("external_office_id") && (
+                          <div className="text-danger small mt-1">
+                            {getFieldError("external_office_id")}
+                          </div>
+                        )}
                       </Form.Group>
                     </Col>
                   </Row>
-
-                  <Form.Group className="mb-3">
-                    <Form.Label className="fw-semibold small text-secondary">
-                      المندوب
-                    </Form.Label>
-                    <div
-                      className="position-relative"
-                      onBlur={(e) => {
-                        if (!e.currentTarget.contains(e.relatedTarget)) {
-                          setTimeout(() => setShowSearchResults(false), 200);
-                        }
-                      }}
-                    >
-                      <Form.Control
-                        type="text"
-                        placeholder="ابحث عن المندوب برقم الهاتف فقط..."
-                        value={searchQuery}
-                        onChange={(e) => handleClientSearch(e.target.value)}
-                        onFocus={() => {
-                          if (searchQuery.length >= 2) {
-                            setShowSearchResults(true);
-                          }
-                        }}
-                        isInvalid={!!getFieldError("client_id")}
-                        className="rounded-3"
-                      />
-                      {searching && (
-                        <div className="position-absolute top-100 start-0 end-0 bg-white border rounded-3 mt-1 shadow-sm p-2 text-center text-muted small">
-                          جاري البحث...
-                        </div>
-                      )}
-                      {showSearchResults &&
-                        searchResults.length > 0 &&
-                        !searching && (
-                          <div
-                            className="position-absolute top-100 start-0 end-0 bg-white border rounded-3 mt-1 shadow-sm"
-                            style={{
-                              zIndex: 1000,
-                              maxHeight: "200px",
-                              overflowY: "auto",
-                            }}
-                          >
-                            {searchResults.map((client) => (
-                              <div
-                                key={client.id}
-                                className="px-3 py-2 border-bottom"
-                                style={{ cursor: "pointer" }}
-                                onClick={() => selectClient(client)}
-                                onMouseDown={(e) => e.preventDefault()}
-                              >
-                                <strong>{client.phone}</strong> -{" "}
-                                {client.name || "بدون اسم"}
-                              </div>
-                            ))}
-                            <div
-                              className="px-3 py-2 text-primary fw-semibold border-bottom"
-                              style={{ cursor: "pointer" }}
-                              onClick={() => setShowQuickCreate(true)}
-                              onMouseDown={(e) => e.preventDefault()}
-                            >
-                              + إضافة مندوب جديد
-                            </div>
-                          </div>
-                        )}
-                      {showSearchResults &&
-                        searchResults.length === 0 &&
-                        !searching &&
-                        searchQuery.length >= 2 && (
-                          <div className="position-absolute top-100 start-0 end-0 bg-white border rounded-3 mt-1 shadow-sm p-3 text-center">
-                            <div className="text-muted mb-2">لا توجد نتائج</div>
-                            <Button
-                              variant="link"
-                              className="p-0"
-                              onClick={() => setShowQuickCreate(true)}
-                              onMouseDown={(e) => e.preventDefault()}
-                            >
-                              + إضافة مندوب جديد
-                            </Button>
-                          </div>
-                        )}
-                    </div>
-                    <Form.Control.Feedback type="invalid">
-                      {getFieldError("client_id")}
-                    </Form.Control.Feedback>
-                  </Form.Group>
 
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                          اسم صاحب التأشيرة <span className="text-danger">*</span>
+                          المندوب / العميل
+                        </Form.Label>
+                        <div
+                          className="position-relative"
+                          onBlur={(e) => {
+                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                              setTimeout(
+                                () => setShowSearchResults(false),
+                                200,
+                              );
+                            }
+                          }}
+                        >
+                          <Form.Control
+                            type="text"
+                            placeholder="ابحث عن المندوب برقم الهاتف..."
+                            value={searchQuery}
+                            onChange={(e) => handleClientSearch(e.target.value)}
+                            onFocus={() => {
+                              if (searchQuery.length >= 2) {
+                                setShowSearchResults(true);
+                              }
+                            }}
+                            isInvalid={!!getFieldError("client_id")}
+                            className="rounded-3"
+                          />
+                          {searching && (
+                            <div className="position-absolute top-100 start-0 end-0 bg-white border rounded-3 mt-1 shadow-sm p-2 text-center text-muted small">
+                              جاري البحث...
+                            </div>
+                          )}
+                          {showSearchResults &&
+                            searchResults.length > 0 &&
+                            !searching && (
+                              <div
+                                className="position-absolute top-100 start-0 end-0 bg-white border rounded-3 mt-1 shadow-sm"
+                                style={{
+                                  zIndex: 1000,
+                                  maxHeight: "200px",
+                                  overflowY: "auto",
+                                }}
+                              >
+                                {searchResults.map((client) => (
+                                  <div
+                                    key={client.id}
+                                    className="px-3 py-2 border-bottom"
+                                    style={{ cursor: "pointer" }}
+                                    onClick={() => selectClient(client)}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                  >
+                                    <strong>{client.phone}</strong> -{" "}
+                                    {client.name || "بدون اسم"}
+                                  </div>
+                                ))}
+                                <div
+                                  className="px-3 py-2 text-primary fw-semibold border-bottom"
+                                  style={{ cursor: "pointer" }}
+                                  onClick={() => setShowQuickCreate(true)}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                >
+                                  + إضافة مندوب جديد
+                                </div>
+                              </div>
+                            )}
+                          {showSearchResults &&
+                            searchResults.length === 0 &&
+                            !searching &&
+                            searchQuery.length >= 2 && (
+                              <div className="position-absolute top-100 start-0 end-0 bg-white border rounded-3 mt-1 shadow-sm p-3 text-center">
+                                <div className="text-muted mb-2">
+                                  لا توجد نتائج
+                                </div>
+                                <Button
+                                  variant="link"
+                                  className="p-0"
+                                  onClick={() => setShowQuickCreate(true)}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                >
+                                  + إضافة مندوب جديد
+                                </Button>
+                              </div>
+                            )}
+                        </div>
+                        <Form.Control.Feedback type="invalid">
+                          {getFieldError("client_id")}
+                        </Form.Control.Feedback>
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          المسوق / الموظف
+                        </Form.Label>
+                        <Select
+                          className="react-select-container"
+                          classNamePrefix="react-select"
+                          options={employeeOptions}
+                          value={getSelectedEmployee()}
+                          onChange={(option) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              employee_id: option ? option.value : "",
+                            }));
+                            if (fieldErrors.employee_id) {
+                              setFieldErrors((prev) => ({
+                                ...prev,
+                                employee_id: undefined,
+                              }));
+                            }
+                          }}
+                          placeholder="اختر المسوق..."
+                          noOptionsMessage={() => "لا توجد خيارات"}
+                          isClearable
+                          isRtl
+                          styles={{
+                            control: (base) => ({
+                              ...base,
+                              borderColor:
+                                validated && !formData.employee_id
+                                  ? "#dc3545"
+                                  : base.borderColor,
+                            }),
+                          }}
+                        />
+                        {getFieldError("employee_id") && (
+                          <div className="text-danger small mt-1">
+                            {getFieldError("employee_id")}
+                          </div>
+                        )}
+                      </Form.Group>
+                    </Col>
+                  </Row>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          اسم صاحب التأشيرة{" "}
+                          <span className="text-danger">*</span>
                         </Form.Label>
                         <Form.Control
                           type="text"
@@ -521,7 +657,8 @@ const OrderFormModal = ({
                           className="rounded-3"
                         />
                         <Form.Control.Feedback type="invalid">
-                          {getFieldError("visa_holder_name") || "يرجى إدخال اسم صاحب التأشيرة"}
+                          {getFieldError("visa_holder_name") ||
+                            "يرجى إدخال اسم صاحب التأشيرة"}
                         </Form.Control.Feedback>
                       </Form.Group>
                     </Col>
@@ -546,6 +683,7 @@ const OrderFormModal = ({
                     </Col>
                   </Row>
 
+                  {/* باقي الكود كما هو ... */}
                   <Row>
                     <Col md={4}>
                       <Form.Group className="mb-3">
@@ -563,7 +701,8 @@ const OrderFormModal = ({
                           className="rounded-3"
                         />
                         <Form.Control.Feedback type="invalid">
-                          {getFieldError("id_number") || "يرجى إدخال رقم الهوية"}
+                          {getFieldError("id_number") ||
+                            "يرجى إدخال رقم الهوية"}
                         </Form.Control.Feedback>
                       </Form.Group>
                     </Col>
@@ -583,7 +722,8 @@ const OrderFormModal = ({
                           className="rounded-3"
                         />
                         <Form.Control.Feedback type="invalid">
-                          {getFieldError("visa_number") || "يرجى إدخال رقم التأشيرة"}
+                          {getFieldError("visa_number") ||
+                            "يرجى إدخال رقم التأشيرة"}
                         </Form.Control.Feedback>
                       </Form.Group>
                     </Col>
@@ -606,7 +746,8 @@ const OrderFormModal = ({
                                   label:
                                     serviceTypeOptions.find(
                                       (st) =>
-                                        (st.key || st.label) === formData.service_type,
+                                        (st.key || st.label) ===
+                                        formData.service_type,
                                     )?.label || formData.service_type,
                                 }
                               : null
@@ -647,7 +788,8 @@ const OrderFormModal = ({
                           className="rounded-3"
                         />
                         <Form.Control.Feedback type="invalid">
-                          {getFieldError("passport_number") || "يرجى إدخال رقم الجواز"}
+                          {getFieldError("passport_number") ||
+                            "يرجى إدخال رقم الجواز"}
                         </Form.Control.Feedback>
                       </Form.Group>
                     </Col>
@@ -690,7 +832,8 @@ const OrderFormModal = ({
                           className="rounded-3"
                         />
                         <Form.Control.Feedback type="invalid">
-                          {getFieldError("arrival_destination") || "يرجى إدخال جهة القدوم"}
+                          {getFieldError("arrival_destination") ||
+                            "يرجى إدخال جهة القدوم"}
                         </Form.Control.Feedback>
                       </Form.Group>
                     </Col>
@@ -735,9 +878,6 @@ const OrderFormModal = ({
                       </Form.Group>
                     </Col>
                   </Row>
-
-
-
 
                   <Row>
                     <Col md={6}>
@@ -1024,6 +1164,7 @@ const OrderFormModal = ({
         </Form>
       </Modal>
 
+      {/* Modal إضافة مندوب جديد */}
       <Modal
         show={showQuickCreate}
         onHide={() => setShowQuickCreate(false)}
