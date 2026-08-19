@@ -14,7 +14,7 @@ import { showSuccess, showError } from "../../utils/swalHelper";
 import { getSaudiOffices, getExternalOffices } from "../../services/apiService";
 import "../../styles/FormModal.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+const API_URL = import.meta.env.VITE_API_URL || "https://alserage.alfanar-rec.com";
 
 const OrderFormModal = ({
   show,
