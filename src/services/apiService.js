@@ -187,4 +187,7 @@ export const uploadAttachment = (trackingId, data) =>
   api.post(`/order-tracking/${trackingId}/attachments`, data);
 export const deleteAttachment = (id) => api.delete(`/attachments/${id}`);
 
+// =============== Reports ===============
+export const getOrderFollowUpReport = (params) => api.get("/reports/order-follow-up", { params });
+
 export default api;

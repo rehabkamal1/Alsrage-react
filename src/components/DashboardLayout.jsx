@@ -13,6 +13,7 @@ import FinancePage from "../pages/FinancePage";
 import SettingsPage from "../pages/SettingsPage";
 import MarketingPage from "../pages/MarketingPage";
 import WhatsAppTemplatePage from "../pages/WhatsAppTemplatePage";
+import OrderFollowUpReport from "../pages/reports/OrderFollowUpReport";
 
 const DashboardLayout = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -44,6 +45,8 @@ const DashboardLayout = ({ user, onLogout }) => {
         return <MarketingPage />;
       case "whatsapp-template":
         return <WhatsAppTemplatePage />;
+      case "report-order-tracking":
+        return <OrderFollowUpReport />;
       default:
         return <ClientsPage />;
     }

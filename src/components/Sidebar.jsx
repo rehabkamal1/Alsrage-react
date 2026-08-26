@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "react-bootstrap";
 
 const Sidebar = ({ activeTab, onTabChange, onLogout, isOpen, onClose }) => {
+  const [isReportsOpen, setIsReportsOpen] = useState(true);
+
   const menuItems = [
     {
       id: "dashboard",
@@ -111,6 +113,31 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, isOpen, onClose }) => {
       ),
     },
     {
+      id: "reports",
+      type: "dropdown",
+      label: "التقارير",
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
+        </svg>
+      ),
+      subItems: [
+        { id: "report-order-tracking", label: "📊 تقرير متابعة الطلبات" }
+      ]
+    },
+    {
       id: "finance",
       label: "الحسابات والحوالات",
       icon: (
@@ -216,7 +243,21 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, isOpen, onClose }) => {
     {
       id: "whatsapp-template",
       label: "قوالب الواتساب",
-      icon: <i className="fa-brands fa-whatsapp fs-5 text-success"></i>,
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </svg>
+      ),
     },
     {
       id: "settings",
@@ -258,16 +299,64 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, isOpen, onClose }) => {
         </div>
       </div>
       <nav className="sidebar-nav">
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            className={`nav-item ${activeTab === item.id ? "active" : ""}`}
-            onClick={() => onTabChange(item.id)}
-          >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
-          </button>
-        ))}
+        {menuItems.map((item) => {
+          if (item.type === "dropdown") {
+            const isActive = isReportsOpen || item.subItems.some(sub => activeTab === sub.id);
+            return (
+              <div key={item.id} className="mb-2">
+                <button
+                  className={`nav-item w-100 d-flex justify-content-between align-items-center ${isActive ? "active" : ""}`}
+                  onClick={() => setIsReportsOpen(!isReportsOpen)}
+                >
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="nav-icon">{item.icon}</span>
+                    <span className="nav-label">{item.label}</span>
+                  </div>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ transform: isReportsOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                
+                {isReportsOpen && (
+                  <div className="mt-1 ps-3" style={{ background: "rgba(0, 0, 0, 0.15)", borderRadius: "8px", padding: "4px 0" }}>
+                    {item.subItems.map((sub) => (
+                      <button
+                        key={sub.id}
+                        className={`nav-item ${activeTab === sub.id ? "active" : ""}`}
+                        onClick={() => onTabChange(sub.id)}
+                        style={{ fontSize: "0.95rem", padding: "10px 16px" }}
+                      >
+                        <span className="nav-label">{sub.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <button
+              key={item.id}
+              className={`nav-item ${activeTab === item.id ? "active" : ""}`}
+              onClick={() => onTabChange(item.id)}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
       <div className="sidebar-footer">
         <button className="logout-btn" onClick={onLogout}>
