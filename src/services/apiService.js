@@ -27,6 +27,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("auth_user");
+      window.location.href = "/";
+    }
+    return Promise.reject(error);
+  }
+);
+
 // =============== Clients ===============
 export const getClients = (params = {}) => api.get("/clients", { params });
 export const createClient = (data) => api.post("/clients", data);
@@ -189,5 +201,9 @@ export const deleteAttachment = (id) => api.delete(`/attachments/${id}`);
 
 // =============== Reports ===============
 export const getOrderFollowUpReport = (params) => api.get("/reports/order-follow-up", { params });
+export const getCompletedOrdersReport = (params) => api.get("/reports/completed-orders", { params });
+export const getOfficesPerformanceReport = (params) => api.get("/reports/offices-performance", { params });
+export const getFinancialCollectionsReport = (params) => api.get("/reports/financial-collections", { params });
+export const getEmployeesPerformanceReport = (params) => api.get("/reports/employees-performance", { params });
 
 export default api;

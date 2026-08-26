@@ -134,7 +134,11 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, isOpen, onClose }) => {
         </svg>
       ),
       subItems: [
-        { id: "report-order-tracking", label: "📊 تقرير متابعة الطلبات" }
+        { id: "report-order-tracking", label: "📊 تقرير متابعة الطلبات" },
+        { id: "report-completed-orders", label: "✅ تقرير الطلبات المكتملة" },
+        { id: "report-offices-performance", label: "🏢 تقرير أداء المكاتب" },
+        { id: "report-financial-collections", label: "💳 تقرير التحصيلات والمالية" },
+        { id: "report-employees-performance", label: "👥 تقرير أداء الموظفين" }
       ]
     },
     {

@@ -11,6 +11,7 @@ const SettingsCard = ({
   onSave,
   saving,
   emptyMessage,
+  showTargetDays = false,
 }) => {
   const handleDelete = async (id, isNew, idx, label) => {
     const result = await showConfirm(
@@ -54,17 +55,32 @@ const SettingsCard = ({
                 className="mb-2 p-2 border rounded-3"
               >
                 <Row className="g-2 align-items-center">
-                  <Col xs={12} sm={12} md={6} lg={6} className="mb-2 mb-md-0">
+                  <Col xs={12} sm={showTargetDays ? 4 : 5} md={showTargetDays ? 4 : 5}>
                     <Form.Control
                       type="text"
-                      placeholder="القيمة"
+                      placeholder="اسم المرحلة"
                       size="sm"
                       value={item.label}
                       onChange={(e) => onUpdate(idx, "label", e.target.value)}
                       style={{ fontSize: "13px" }}
                     />
                   </Col>
-                  <Col xs={5} sm={5} md={2} lg={2} className="mb-2 mb-md-0">
+
+                  {showTargetDays && (
+                    <Col xs={6} sm={3} md={3}>
+                      <Form.Control
+                        type="number"
+                        placeholder="الأيام مسموحة"
+                        title="الفترة الزمنية المسموحة بالأيام لهذه المرحلة"
+                        size="sm"
+                        value={item.target_days ?? 60}
+                        onChange={(e) => onUpdate(idx, "target_days", e.target.value)}
+                        style={{ fontSize: "12px" }}
+                      />
+                    </Col>
+                  )}
+
+                  <Col xs={showTargetDays ? 3 : 3} sm={showTargetDays ? 2 : 2} md={showTargetDays ? 2 : 2}>
                     <Form.Control
                       type="color"
                       size="sm"
@@ -73,33 +89,28 @@ const SettingsCard = ({
                       style={{ height: "31px", width: "100%" }}
                     />
                   </Col>
-                  <Col xs={4} sm={4} md={2} lg={2} className="mb-2 mb-md-0">
+                  <Col xs={3} sm={showTargetDays ? 3 : 5} md={showTargetDays ? 3 : 5} className="d-flex align-items-center justify-content-between gap-1">
                     {item.label && (
                       <Badge
                         style={{
                           backgroundColor: item.color || "#6c757d",
-                          fontSize: "11px",
-                          width: "100%",
-                          display: "inline-block",
+                          fontSize: "10px",
+                          flex: 1,
                           textAlign: "center",
                         }}
-                        className="py-1 px-2"
+                        className="py-1 px-1 text-truncate"
                       >
-                        {item.label.length > 10
-                          ? item.label.substring(0, 8) + "..."
-                          : item.label}
+                        {item.label}
                       </Badge>
                     )}
-                  </Col>
-                  <Col xs={3} sm={3} md={2} lg={2}>
                     <Button
                       variant="link"
                       size="sm"
-                      className="text-danger p-0 w-100"
+                      className="text-danger p-0 ms-1 flex-shrink-0"
                       onClick={() =>
                         handleDelete(item.id, item.isNew, idx, item.label)
                       }
-                      style={{ fontSize: "12px" }}
+                      style={{ fontSize: "12px", textDecoration: "none" }}
                     >
                       حذف
                     </Button>

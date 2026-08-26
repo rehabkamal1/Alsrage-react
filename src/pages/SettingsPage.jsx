@@ -194,6 +194,7 @@ const SettingsPage = () => {
           label: item.label,
           color: item.color || "#6c757d",
           sort_order: item.sort_order || 0,
+          target_days: item.target_days ? parseInt(item.target_days, 10) : 60,
           is_active: item.is_active !== undefined ? item.is_active : true,
         }));
 
@@ -407,8 +408,9 @@ const SettingsPage = () => {
 
           <Col xs={12} md={6}>
             <SettingsCard
-              title="حالات الطلبات"
+              title="حالات الطلبات (والمراحل المستهدفة بالأيام)"
               items={orderStatuses}
+              showTargetDays={true}
               onAdd={() => addItem(setOrderStatuses)}
               onUpdate={(idx, field, val) =>
                 updateItem(setOrderStatuses, idx, field, val)
@@ -429,7 +431,7 @@ const SettingsPage = () => {
                   orderStatuses,
                   "/settings/order-statuses",
                   "statuses",
-                  "تم حفظ حالات الطلبات بنجاح",
+                  "تم حفظ حالات الطلبات والمدد المستهدفة بنجاح",
                 )
               }
               saving={saving}
