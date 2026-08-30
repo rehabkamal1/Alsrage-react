@@ -13,6 +13,11 @@ import FinancePage from "../pages/FinancePage";
 import SettingsPage from "../pages/SettingsPage";
 import MarketingPage from "../pages/MarketingPage";
 import WhatsAppTemplatePage from "../pages/WhatsAppTemplatePage";
+import OrderFollowUpReport from "../pages/reports/OrderFollowUpReport";
+import CompletedOrdersReport from "../pages/reports/CompletedOrdersReport";
+import OfficesPerformanceReport from "../pages/reports/OfficesPerformanceReport";
+import FinancialCollectionsReport from "../pages/reports/FinancialCollectionsReport";
+import EmployeesPerformanceReport from "../pages/reports/EmployeesPerformanceReport";
 
 const DashboardLayout = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -44,6 +49,16 @@ const DashboardLayout = ({ user, onLogout }) => {
         return <MarketingPage />;
       case "whatsapp-template":
         return <WhatsAppTemplatePage />;
+      case "report-order-tracking":
+        return <OrderFollowUpReport />;
+      case "report-completed-orders":
+        return <CompletedOrdersReport />;
+      case "report-offices-performance":
+        return <OfficesPerformanceReport />;
+      case "report-financial-collections":
+        return <FinancialCollectionsReport />;
+      case "report-employees-performance":
+        return <EmployeesPerformanceReport />;
       default:
         return <ClientsPage />;
     }

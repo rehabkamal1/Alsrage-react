@@ -465,7 +465,6 @@ const OrdersPage = () => {
         employees={employees}
         saudiOffices={saudiOffices}
         externalOffices={externalOffices}
-        employees={employees}
         statusOptions={orderStatuses}
         serviceTypeOptions={serviceTypes}
         searchClients={searchClients}

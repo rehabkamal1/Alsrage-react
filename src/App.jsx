@@ -1,15 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AuthLayout from "./components/AuthLayout";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-import { getUser, logout } from "./services/authService";
+import { getUser, getToken, logout } from "./services/authService";
 import DashboardLayout from "./components/DashboardLayout";
 
 const getInitialView = () => (window.location.hash === "#register" ? "register" : "login");
 
 function App() {
   const [view, setView] = useState(getInitialView);
-  const [user, setUser] = useState(getUser());
+  const [user, setUser] = useState(() => {
+    const token = getToken();
+    const storedUser = getUser();
+    if (!token || !storedUser) {
+      logout();
+      return null;
+    }
+    return storedUser;
+  });
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      setUser(null);
+    }
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -31,7 +46,7 @@ function App() {
     setView("login");
   };
 
-  if (user) {
+  if (user && getToken()) {
     return <DashboardLayout user={user} onLogout={handleLogout} />;
   }
 
