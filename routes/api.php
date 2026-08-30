@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\AttachmentController;
 use App\Http\Controllers\Api\MarketingLeadController;
 use Illuminate\Support\Facades\Route;
+//commits
+
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
