@@ -20,6 +20,8 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import TableSkeleton from "../components/common/TableSkeleton";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
+import { getUser } from "../services/authService";
+
 
 const ClientsPage = () => {
   const [clients, setClients] = useState([]);
@@ -40,6 +42,14 @@ const ClientsPage = () => {
     sort_dir: "desc",
   });
   const itemsPerPage = 8;
+
+  const user = getUser();
+  const isAdmin = user?.role === "admin";
+  const hasPermission = (permission) => {
+    if (isAdmin) return true;
+    return user?.permissions?.includes(permission) || false;
+  };
+
 
   useEffect(() => {
     fetchClients();
@@ -248,14 +258,16 @@ const ClientsPage = () => {
               <i className="fa-solid fa-file-pdf fs-5"></i>
               <span>بي دي اف</span>
             </Button>
-            <Button
-              variant="dark"
-              onClick={handleAddClient}
-              className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
-            >
-              <i className="fa-solid fa-plus"></i>
-              <span>عميل جديد</span>
-            </Button>
+            {hasPermission("create_clients") && (
+              <Button
+                variant="dark"
+                onClick={handleAddClient}
+                className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+              >
+                <i className="fa-solid fa-plus"></i>
+                <span>عميل جديد</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -287,7 +299,10 @@ const ClientsPage = () => {
                   onEdit={handleEditClient}
                   onDelete={handleDeleteClient}
                   onViewOrders={handleShowOrders}
+                  canEdit={hasPermission("edit_clients")}
+                  canDelete={hasPermission("delete_clients")}
                 />
+
 
                 <PaginationComponent
                   currentPage={currentPage}

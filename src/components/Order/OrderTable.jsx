@@ -9,6 +9,8 @@ const OrderTable = ({
   onWhatsApp,
   statusOptions = [],
   serviceTypeOptions = [],
+  canEdit = true,
+  canDelete = true,
 }) => {
   const renderStatusDropdown = (order) => {
     const currentStatus = statusOptions.find(
@@ -21,18 +23,19 @@ const OrderTable = ({
           size="sm"
           value={order.status}
           onChange={(e) => onStatusChange(order, e.target.value)}
+          disabled={!canEdit}
           className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select"
           style={{
             backgroundColor: currentStatus?.color || "#6c757d",
             color: "#fff",
-            cursor: "pointer",
+            cursor: canEdit ? "pointer" : "default",
             fontSize: "0.85rem",
             width: "fit-content",
             minWidth: "130px",
             transition: "all 0.2s ease-in-out",
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           }}
-          title="اضغط لتغيير الحالة"
+          title={canEdit ? "اضغط لتغيير الحالة" : "الحالة الحالية"}
         >
           {statusOptions.map((status) => (
             <option
@@ -103,18 +106,19 @@ const OrderTable = ({
           size="sm"
           value={order.service_type || ""}
           onChange={(e) => onServiceTypeChange(order, e.target.value)}
+          disabled={!canEdit}
           className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select"
           style={{
             backgroundColor: currentType?.color || "#6c757d",
             color: "#fff",
-            cursor: "pointer",
+            cursor: canEdit ? "pointer" : "default",
             fontSize: "0.85rem",
             width: "fit-content",
             minWidth: "120px",
             transition: "all 0.2s ease-in-out",
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           }}
-          title="اضغط لتغيير نوع الخدمة"
+          title={canEdit ? "اضغط لتغيير نوع الخدمة" : "نوع الخدمة"}
         >
           <option value="" style={{ backgroundColor: "#fff", color: "#000" }}>
             -- اختر الخدمة --
@@ -137,6 +141,8 @@ const OrderTable = ({
     );
   };
 
+  const showActionsColumn = canEdit || canDelete || !!onWhatsApp;
+
   return (
     <div className="table-responsive">
       <Table hover className="mb-0 align-middle text-center">
@@ -155,7 +161,7 @@ const OrderTable = ({
             <th>الرصيد المتبقي</th>
             <th>حالة سداد مساند</th>
             <th>التاريخ</th>
-            <th>الإجراءات</th>
+            {showActionsColumn && <th>الإجراءات</th>}
           </tr>
         </thead>
         <tbody>
@@ -202,41 +208,47 @@ const OrderTable = ({
                 <td>
                   {new Date(order.created_at).toLocaleDateString("ar-SA")}
                 </td>
-                <td>
-                  <div className="d-flex align-items-center justify-content-center gap-2">
-                    {onWhatsApp && (
-                      <Button
-                        variant="link"
-                        className="table-action-btn whatsapp-btn"
-                        onClick={() => onWhatsApp(order)}
-                        title="إرسال إشعار واتساب"
-                      >
-                        <i className="fa-brands fa-whatsapp fs-6"></i>
-                      </Button>
-                    )}
-                    <Button
-                      variant="link"
-                      className="table-action-btn edit-btn"
-                      onClick={() => onEdit(order)}
-                      title="تعديل"
-                    >
-                      <i className="fa-solid fa-pen-to-square"></i>
-                    </Button>
-                    <Button
-                      variant="link"
-                      className="table-action-btn delete-btn"
-                      onClick={() => onDelete(order.id)}
-                      title="حذف"
-                    >
-                      <i className="fa-solid fa-trash-can"></i>
-                    </Button>
-                  </div>
-                </td>
+                {showActionsColumn && (
+                  <td>
+                    <div className="d-flex align-items-center justify-content-center gap-2">
+                      {onWhatsApp && (
+                        <Button
+                          variant="link"
+                          className="table-action-btn whatsapp-btn"
+                          onClick={() => onWhatsApp(order)}
+                          title="إرسال إشعار واتساب"
+                        >
+                          <i className="fa-brands fa-whatsapp fs-6"></i>
+                        </Button>
+                      )}
+                      {canEdit && (
+                        <Button
+                          variant="link"
+                          className="table-action-btn edit-btn"
+                          onClick={() => onEdit(order)}
+                          title="تعديل"
+                        >
+                          <i className="fa-solid fa-pen-to-square"></i>
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="link"
+                          className="table-action-btn delete-btn"
+                          onClick={() => onDelete(order.id)}
+                          title="حذف"
+                        >
+                          <i className="fa-solid fa-trash-can"></i>
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           {(!orders || orders.length === 0) && (
             <tr>
-              <td colSpan="14" className="text-center py-5 text-muted">
+              <td colSpan={showActionsColumn ? "14" : "13"} className="text-center py-5 text-muted">
                 لا يوجد طلبات
               </td>
             </tr>

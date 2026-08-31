@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button } from "react-bootstrap";
+import { Button, Card } from "react-bootstrap";
 import Sidebar from "./Sidebar";
 import ClientsPage from "../pages/ClientsPage";
 import SaudiOfficesPage from "../pages/SaudiOfficesPage";
@@ -23,50 +23,69 @@ const DashboardLayout = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  const isAdmin = user?.role === "admin";
+  const hasPermission = (permission) => {
+    if (isAdmin) return true;
+    return user?.permissions?.includes(permission) || false;
+  };
+
+  const renderAccessDenied = () => (
+    <div className="d-flex align-items-center justify-content-center" style={{ minHeight: "80vh" }}>
+      <Card className="text-center p-5 shadow-sm border-0 rounded-4" style={{ maxWidth: "500px" }}>
+        <Card.Body>
+          <div className="fs-1 mb-3">🚫</div>
+          <h3 className="fw-bold mb-3">غير مصرح بالدخول</h3>
+          <p className="text-muted mb-0">عذراً، ليس لديك الصلاحية الكافية للوصول إلى هذه الصفحة.</p>
+        </Card.Body>
+      </Card>
+    </div>
+  );
+
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
         return <DashboardPage />;
       case "clients":
-        return <ClientsPage />;
+        return hasPermission("view_clients") ? <ClientsPage /> : renderAccessDenied();
       case "saudi-offices":
-        return <SaudiOfficesPage />;
+        return isAdmin ? <SaudiOfficesPage /> : renderAccessDenied();
       case "external-offices":
-        return <ExternalOfficesPage />;
+        return isAdmin ? <ExternalOfficesPage /> : renderAccessDenied();
       case "employees":
-        return <EmployeesPage />;
+        return hasPermission("manage_employees") ? <EmployeesPage /> : renderAccessDenied();
       case "orders":
-        return <OrdersPage />;
+        return hasPermission("view_orders") ? <OrdersPage /> : renderAccessDenied();
       case "completed-orders":
-        return <CompletedOrdersPage />;
+        return hasPermission("view_orders") ? <CompletedOrdersPage /> : renderAccessDenied();
       case "tracking":
-        return <TrackingPage />;
+        return hasPermission("view_orders") ? <TrackingPage /> : renderAccessDenied();
       case "finance":
-        return <FinancePage />;
+        return isAdmin ? <FinancePage /> : renderAccessDenied();
       case "settings":
-        return <SettingsPage />;
+        return isAdmin ? <SettingsPage /> : renderAccessDenied();
       case "marketing":
-        return <MarketingPage />;
+        return isAdmin ? <MarketingPage /> : renderAccessDenied();
       case "whatsapp-template":
-        return <WhatsAppTemplatePage />;
+        return isAdmin ? <WhatsAppTemplatePage /> : renderAccessDenied();
       case "report-order-tracking":
-        return <OrderFollowUpReport />;
+        return hasPermission("view_reports") ? <OrderFollowUpReport /> : renderAccessDenied();
       case "report-completed-orders":
-        return <CompletedOrdersReport />;
+        return hasPermission("view_reports") ? <CompletedOrdersReport /> : renderAccessDenied();
       case "report-offices-performance":
-        return <OfficesPerformanceReport />;
+        return hasPermission("view_reports") ? <OfficesPerformanceReport /> : renderAccessDenied();
       case "report-financial-collections":
-        return <FinancialCollectionsReport />;
+        return hasPermission("view_reports") ? <FinancialCollectionsReport /> : renderAccessDenied();
       case "report-employees-performance":
-        return <EmployeesPerformanceReport />;
+        return hasPermission("view_reports") ? <EmployeesPerformanceReport /> : renderAccessDenied();
       default:
-        return <ClientsPage />;
+        return <DashboardPage />;
     }
   };
 
   return (
     <div className={`dashboard-container ${isSidebarOpen ? "sidebar-open" : ""}`}>
       <Sidebar
+        user={user}
         activeTab={activeTab}
         onTabChange={(tab) => {
           setActiveTab(tab);
@@ -103,3 +122,4 @@ const DashboardLayout = ({ user, onLogout }) => {
 };
 
 export default DashboardLayout;
+

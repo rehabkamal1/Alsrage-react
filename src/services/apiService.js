@@ -206,4 +206,6 @@ export const getOfficesPerformanceReport = (params) => api.get("/reports/offices
 export const getFinancialCollectionsReport = (params) => api.get("/reports/financial-collections", { params });
 export const getEmployeesPerformanceReport = (params) => api.get("/reports/employees-performance", { params });
 
+export const getProfile = () => api.get("/me");
+
 export default api;

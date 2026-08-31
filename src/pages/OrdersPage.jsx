@@ -26,6 +26,8 @@ import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
 import { showWhatsAppNotificationModal } from "../utils/whatsappHelper";
+import { getUser } from "../services/authService";
+
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -53,6 +55,14 @@ const OrdersPage = () => {
   });
   const [submitError, setSubmitError] = useState(null);
   const itemsPerPage = 8;
+
+  const user = getUser();
+  const isAdmin = user?.role === "admin";
+  const hasPermission = (permission) => {
+    if (isAdmin) return true;
+    return user?.permissions?.includes(permission) || false;
+  };
+
 
   useEffect(() => {
     fetchAllData();
@@ -391,16 +401,19 @@ const OrdersPage = () => {
               <i className="fa-solid fa-file-pdf fs-5"></i>
               <span>بي دي اف</span>
             </Button>
-            <Button
-              variant="dark"
-              onClick={handleAddOrder}
-              className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
-            >
-              <i className="fa-solid fa-plus"></i>
-              <span>طلب جديد</span>
-            </Button>
+            {hasPermission("create_orders") && (
+              <Button
+                variant="dark"
+                onClick={handleAddOrder}
+                className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+              >
+                <i className="fa-solid fa-plus"></i>
+                <span>طلب جديد</span>
+              </Button>
+            )}
           </div>
         </div>
+
 
         {/* 🆕 Date Filter Bar */}
         <DateFilterBar
@@ -438,7 +451,10 @@ const OrdersPage = () => {
                   onWhatsApp={(order) => handleWhatsAppNotification(order)}
                   statusOptions={orderStatuses}
                   serviceTypeOptions={serviceTypes}
+                  canEdit={hasPermission("edit_orders")}
+                  canDelete={hasPermission("delete_orders")}
                 />
+
                 {totalPages > 1 && (
                   <PaginationComponent
                     currentPage={currentPage}

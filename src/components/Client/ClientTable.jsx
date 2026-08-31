@@ -3,7 +3,14 @@
 import React from "react";
 import { Table, Button, Badge } from "react-bootstrap";
 
-const ClientTable = ({ clients, onEdit, onDelete, onViewOrders }) => {
+const ClientTable = ({
+  clients,
+  onEdit,
+  onDelete,
+  onViewOrders,
+  canEdit = true,
+  canDelete = true,
+}) => {
   return (
     <div className="table-responsive">
       <Table hover className="mb-0 align-middle text-center">
@@ -18,7 +25,7 @@ const ClientTable = ({ clients, onEdit, onDelete, onViewOrders }) => {
             <th>العنوان</th>
             <th>طلبات العميل</th>
             <th>تاريخ التسجيل</th>
-            <th>الإجراءات</th>
+            {(canEdit || canDelete) && <th>الإجراءات</th>}
           </tr>
         </thead>
         <tbody>
@@ -53,26 +60,32 @@ const ClientTable = ({ clients, onEdit, onDelete, onViewOrders }) => {
                 <td>
                   {new Date(client.created_at).toLocaleDateString("ar-SA")}
                 </td>
-                <td>
-                  <div className="d-flex align-items-center justify-content-center gap-2">
-                    <Button
-                      variant="link"
-                      className="table-action-btn edit-btn"
-                      onClick={() => onEdit(client)}
-                      title="تعديل"
-                    >
-                      <i className="fa-solid fa-pen-to-square"></i>
-                    </Button>
-                    <Button
-                      variant="link"
-                      className="table-action-btn delete-btn"
-                      onClick={() => onDelete(client.id)}
-                      title="حذف"
-                    >
-                      <i className="fa-solid fa-trash-can"></i>
-                    </Button>
-                  </div>
-                </td>
+                {(canEdit || canDelete) && (
+                  <td>
+                    <div className="d-flex align-items-center justify-content-center gap-2">
+                      {canEdit && (
+                        <Button
+                          variant="link"
+                          className="table-action-btn edit-btn"
+                          onClick={() => onEdit(client)}
+                          title="تعديل"
+                        >
+                          <i className="fa-solid fa-pen-to-square"></i>
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="link"
+                          className="table-action-btn delete-btn"
+                          onClick={() => onDelete(client.id)}
+                          title="حذف"
+                        >
+                          <i className="fa-solid fa-trash-can"></i>
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           {(!clients || clients.length === 0) && (
@@ -89,3 +102,4 @@ const ClientTable = ({ clients, onEdit, onDelete, onViewOrders }) => {
 };
 
 export default ClientTable;
+

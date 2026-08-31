@@ -4,6 +4,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import { getUser, getToken, logout } from "./services/authService";
 import DashboardLayout from "./components/DashboardLayout";
+import { getProfile } from "./services/apiService";
 
 const getInitialView = () => (window.location.hash === "#register" ? "register" : "login");
 
@@ -23,6 +24,16 @@ function App() {
     const token = getToken();
     if (!token) {
       setUser(null);
+    } else {
+      getProfile()
+        .then((res) => {
+          setUser(res.data);
+          localStorage.setItem("auth_user", JSON.stringify(res.data));
+        })
+        .catch((err) => {
+          console.error("Failed to fetch profile, logging out:", err);
+          handleLogout();
+        });
     }
   }, []);
 

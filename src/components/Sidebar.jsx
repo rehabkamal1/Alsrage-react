@@ -1,8 +1,14 @@
 import React, { useState } from "react";
 import { Button } from "react-bootstrap";
 
-const Sidebar = ({ activeTab, onTabChange, onLogout, isOpen, onClose }) => {
+const Sidebar = ({ user, activeTab, onTabChange, onLogout, isOpen, onClose }) => {
   const [isReportsOpen, setIsReportsOpen] = useState(true);
+
+  const isAdmin = user?.role === "admin";
+  const hasPermission = (permission) => {
+    if (isAdmin) return true;
+    return user?.permissions?.includes(permission) || false;
+  };
 
   const menuItems = [
     {
@@ -279,11 +285,28 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, isOpen, onClose }) => {
           strokeLinejoin="round"
         >
           <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 a2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
         </svg>
       ),
     },
   ];
+
+  const filteredMenuItems = menuItems.filter((item) => {
+    if (item.id === "dashboard") return true;
+    if (item.id === "clients") return hasPermission("view_clients");
+    if (
+      item.id === "orders" ||
+      item.id === "tracking" ||
+      item.id === "completed-orders"
+    ) {
+      return hasPermission("view_orders");
+    }
+    if (item.id === "reports") return hasPermission("view_reports");
+    if (item.id === "employees") return hasPermission("manage_employees");
+
+    // Other tabs are admin-only
+    return isAdmin;
+  });
 
   return (
     <div className={`sidebar ${isOpen ? "open" : ""}`}>
@@ -303,7 +326,7 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, isOpen, onClose }) => {
         </div>
       </div>
       <nav className="sidebar-nav">
-        {menuItems.map((item) => {
+        {filteredMenuItems.map((item) => {
           if (item.type === "dropdown") {
             const isActive = isReportsOpen || item.subItems.some(sub => activeTab === sub.id);
             return (
