@@ -5,6 +5,7 @@ import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
 import SortableHeader from "../../components/common/SortableHeader";
 import { useSortableData } from "../../hooks/useSortableData";
+import useAutoRefresh from "../../hooks/useAutoRefresh";
 import { exportToExcel } from "../../utils/excelHelper";
 import { exportToPDF } from "../../utils/pdfHelper";
 
@@ -48,8 +49,8 @@ const OfficesPerformanceReport = () => {
     fetchData();
   }, []);
 
-  const fetchData = async (currentFilters = filters) => {
-    setLoading(true);
+  const fetchData = async (currentFilters = filters, isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const params = {};
       if (currentFilters.date_from) params.date_from = currentFilters.date_from;
@@ -74,9 +75,12 @@ const OfficesPerformanceReport = () => {
     } catch (err) {
       console.error("Error fetching offices performance report:", err);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
+
+  // Silent auto refresh every 12 seconds and on window focus
+  useAutoRefresh(fetchData, 12000);
 
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));

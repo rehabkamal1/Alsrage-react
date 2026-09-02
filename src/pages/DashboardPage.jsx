@@ -25,6 +25,7 @@ import {
 } from "react-bootstrap";
 import RefreshButton from "../components/common/RefreshButton";
 import DateFilterBar from "../components/common/DateFilterBar";
+import useAutoRefresh from "../hooks/useAutoRefresh";
 import {
   getClients,
   getOrders,
@@ -81,8 +82,8 @@ const DashboardPage = () => {
     data: [0, 0, 0, 0, 0, 0],
   });
 
-  const fetchDashboardData = useCallback(async () => {
-    setLoading(true);
+  const fetchDashboardData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const params = {};
       if (fromDate) params.from_date = fromDate;
@@ -189,13 +190,16 @@ const DashboardPage = () => {
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, [fromDate, toDate]);
 
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  // Silent auto refresh every 12 seconds and on window focus
+  useAutoRefresh(fetchDashboardData, 12000);
 
   const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
     setFromDate(fromDate);

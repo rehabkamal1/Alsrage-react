@@ -28,6 +28,8 @@ import { exportToPDF } from "../utils/pdfHelper";
 import { showWhatsAppNotificationModal } from "../utils/whatsappHelper";
 import { getUser } from "../services/authService";
 
+import useAutoRefresh from "../hooks/useAutoRefresh";
+
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [clients, setClients] = useState([]);
@@ -66,11 +68,13 @@ const OrdersPage = () => {
     fetchAllData();
   }, [currentPage, searchQuery, filters, fromDate, toDate]);
 
-  const fetchAllData = async () => {
-    if (initialLoading) {
-      setInitialLoading(true);
-    } else {
-      setLoading(true);
+  const fetchAllData = async (isSilent = false) => {
+    if (!isSilent) {
+      if (initialLoading) {
+        setInitialLoading(true);
+      } else {
+        setLoading(true);
+      }
     }
     try {
       const params = {
@@ -123,10 +127,15 @@ const OrdersPage = () => {
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
-      setLoading(false);
-      setInitialLoading(false);
+      if (!isSilent) {
+        setLoading(false);
+        setInitialLoading(false);
+      }
     }
   };
+
+  // Silent auto refresh every 10 seconds and on window focus
+  useAutoRefresh(fetchAllData, 10000);
 
   const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
     setFromDate(fromDate);
