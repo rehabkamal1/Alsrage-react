@@ -56,9 +56,22 @@
 }
 
 .modal-body {
-    max-height: 60vh;
+    max-height: 80vh;
     overflow-y: auto;
-    padding: 1.5rem;
+    padding: 2rem;
+}
+
+.order-modal-xl,
+.modal-dialog.order-modal-xl {
+    max-width: 1400px !important;
+    width: 95vw !important;
+    margin: 1.75rem auto !important;
+}
+
+.order-modal-xl .modal-content,
+.modal-dialog.order-modal-xl .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
 }
 
 .modal-body::-webkit-scrollbar {

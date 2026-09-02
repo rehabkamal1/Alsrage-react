@@ -48,9 +48,17 @@ const DashboardLayout = ({ user, onLogout }) => {
       case "clients":
         return hasPermission("view_clients") ? <ClientsPage /> : renderAccessDenied();
       case "saudi-offices":
-        return isAdmin ? <SaudiOfficesPage /> : renderAccessDenied();
+        return hasPermission("view_saudi_offices") ? (
+          <SaudiOfficesPage user={user} />
+        ) : (
+          renderAccessDenied()
+        );
       case "external-offices":
-        return isAdmin ? <ExternalOfficesPage /> : renderAccessDenied();
+        return hasPermission("view_external_offices") ? (
+          <ExternalOfficesPage user={user} />
+        ) : (
+          renderAccessDenied()
+        );
       case "employees":
         return hasPermission("manage_employees") ? <EmployeesPage /> : renderAccessDenied();
       case "orders":

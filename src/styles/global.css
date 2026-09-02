@@ -701,7 +701,7 @@ tr:hover td {
   backdrop-filter: blur(4px);
 }
 
-.modal-content {
+.modal-overlay .modal-content {
   background: #fff;
   padding: 32px;
   border-radius: var(--radius-lg);

@@ -17,7 +17,13 @@ import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
 
-const ExternalOfficesPage = () => {
+const ExternalOfficesPage = ({ user }) => {
+  const isAdmin = user?.role === "admin";
+  const hasPermission = (perm) => isAdmin || user?.permissions?.includes(perm);
+  const canCreate = hasPermission("create_external_offices");
+  const canEdit = hasPermission("edit_external_offices");
+  const canDelete = hasPermission("delete_external_offices");
+
   const [offices, setOffices] = useState([]);
   const [filteredOffices, setFilteredOffices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -246,14 +252,16 @@ const ExternalOfficesPage = () => {
               <i className="fa-solid fa-file-pdf fs-5"></i>
               <span>بي دي اف</span>
             </Button>
-            <Button
-              variant="dark"
-              onClick={handleAddOffice}
-              className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
-            >
-              <i className="fa-solid fa-plus"></i>
-              <span>مكتب جديد</span>
-            </Button>
+            {canCreate && (
+              <Button
+                variant="dark"
+                onClick={handleAddOffice}
+                className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+              >
+                <i className="fa-solid fa-plus"></i>
+                <span>مكتب جديد</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -282,8 +290,8 @@ const ExternalOfficesPage = () => {
               <>
                 <ExternalOfficeTable
                   offices={displayedOffices}
-                  onEdit={handleEditOffice}
-                  onDelete={handleDeleteOffice}
+                  onEdit={canEdit ? handleEditOffice : null}
+                  onDelete={canDelete ? handleDeleteOffice : null}
                 />
                 {totalPages > 1 && (
                   <PaginationComponent

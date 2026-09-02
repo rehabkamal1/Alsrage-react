@@ -303,6 +303,8 @@ const Sidebar = ({ user, activeTab, onTabChange, onLogout, isOpen, onClose }) =>
     }
     if (item.id === "reports") return hasPermission("view_reports");
     if (item.id === "employees") return hasPermission("manage_employees");
+    if (item.id === "saudi-offices") return hasPermission("view_saudi_offices");
+    if (item.id === "external-offices") return hasPermission("view_external_offices");
 
     // Other tabs are admin-only
     return isAdmin;

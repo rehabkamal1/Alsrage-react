@@ -17,7 +17,13 @@ import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
 
-const SaudiOfficesPage = () => {
+const SaudiOfficesPage = ({ user }) => {
+  const isAdmin = user?.role === "admin";
+  const hasPermission = (perm) => isAdmin || user?.permissions?.includes(perm);
+  const canCreate = hasPermission("create_saudi_offices");
+  const canEdit = hasPermission("edit_saudi_offices");
+  const canDelete = hasPermission("delete_saudi_offices");
+
   const [offices, setOffices] = useState([]);
   const [filteredOffices, setFilteredOffices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -243,14 +249,16 @@ const SaudiOfficesPage = () => {
               <i className="fa-solid fa-file-pdf fs-5"></i>
               <span>بي دي اف</span>
             </Button>
-            <Button
-              variant="dark"
-              onClick={handleAddOffice}
-              className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
-            >
-              <i className="fa-solid fa-plus"></i>
-              <span>مكتب جديد</span>
-            </Button>
+            {canCreate && (
+              <Button
+                variant="dark"
+                onClick={handleAddOffice}
+                className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+              >
+                <i className="fa-solid fa-plus"></i>
+                <span>مكتب جديد</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -305,8 +313,8 @@ const SaudiOfficesPage = () => {
               <>
                 <SaudiOfficeTable
                   offices={displayedOffices}
-                  onEdit={handleEditOffice}
-                  onDelete={handleDeleteOffice}
+                  onEdit={canEdit ? handleEditOffice : null}
+                  onDelete={canDelete ? handleDeleteOffice : null}
                 />
                 {totalPages > 1 && (
                   <PaginationComponent

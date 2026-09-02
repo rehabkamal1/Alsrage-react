@@ -10,11 +10,38 @@ import {
   InputGroup,
 } from "react-bootstrap";
 import Select from "react-select";
+import CreatableSelect from "react-select/creatable";
 import { showSuccess, showError } from "../../utils/swalHelper";
-import { getSaudiOffices, getExternalOffices } from "../../services/apiService";
+import {
+  getSaudiOffices,
+  getExternalOffices,
+  createSaudiOffice,
+  createExternalOffice,
+} from "../../services/apiService";
 import "../../styles/FormModal.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "https://alserage.alfanar-rec.com";
+
+const NATIONALITY_OPTIONS = [
+  { value: "فلبيني", label: "فلبيني" },
+  { value: "إندونيسي", label: "إندونيسي" },
+  { value: "هندي", label: "هندي" },
+  { value: "بنجلاديشي", label: "بنجلاديشي" },
+  { value: "سريلانكي", label: "سريلانكي" },
+  { value: "كيني", label: "كيني" },
+  { value: "أوغندي", label: "أوغندي" },
+  { value: "إثيوبي", label: "إثيوبي" },
+  { value: "مالي", label: "مالي" },
+  { value: "نيبالي", label: "نيبالي" },
+  { value: "باكستاني", label: "باكستاني" },
+  { value: "مصري", label: "مصري" },
+  { value: "سوداني", label: "سوداني" },
+  { value: "يمني", label: "يمني" },
+  { value: "مغربي", label: "مغربي" },
+  { value: "تونسي", label: "تونسي" },
+  { value: "أردني", label: "أردني" },
+  { value: "سوري", label: "سوري" },
+];
 
 const OrderFormModal = ({
   show,
@@ -62,12 +89,22 @@ const OrderFormModal = ({
     }
   }, [show]);
 
+  useEffect(() => {
+    if (Array.isArray(saudiOffices) && saudiOffices.length > 0) {
+      setLocalSaudiOffices(saudiOffices);
+    }
+  }, [saudiOffices]);
+
+  useEffect(() => {
+    if (Array.isArray(externalOffices) && externalOffices.length > 0) {
+      setLocalExternalOffices(externalOffices);
+    }
+  }, [externalOffices]);
+
   const effectiveSaudiOffices =
-    saudiOffices && saudiOffices.length > 0 ? saudiOffices : localSaudiOffices;
+    localSaudiOffices.length > 0 ? localSaudiOffices : saudiOffices;
   const effectiveExternalOffices =
-    externalOffices && externalOffices.length > 0
-      ? externalOffices
-      : localExternalOffices;
+    localExternalOffices.length > 0 ? localExternalOffices : externalOffices;
 
   const [formData, setFormData] = useState({
     client_id: "",
@@ -109,6 +146,21 @@ const OrderFormModal = ({
   const [newClientPhone, setNewClientPhone] = useState("");
   const [newClientType, setNewClientType] = useState("individual");
   const [quickCreateLoading, setQuickCreateLoading] = useState(false);
+
+  // Saudi Office quick add states
+  const [showQuickSaudiOffice, setShowQuickSaudiOffice] = useState(false);
+  const [newSaudiOfficeName, setNewSaudiOfficeName] = useState("");
+  const [newSaudiOfficeCity, setNewSaudiOfficeCity] = useState("");
+  const [newSaudiOfficePhone, setNewSaudiOfficePhone] = useState("");
+  const [quickSaudiOfficeLoading, setQuickSaudiOfficeLoading] = useState(false);
+
+  // External Office quick add states
+  const [showQuickExternalOffice, setShowQuickExternalOffice] = useState(false);
+  const [newExternalOfficeName, setNewExternalOfficeName] = useState("");
+  const [newExternalOfficeCountry, setNewExternalOfficeCountry] = useState("");
+  const [newExternalOfficePhone, setNewExternalOfficePhone] = useState("");
+  const [quickExternalOfficeLoading, setQuickExternalOfficeLoading] = useState(false);
+
   const [fieldErrors, setFieldErrors] = useState({});
   const [attachmentRows, setAttachmentRows] = useState([
     { title: "", file: null },
@@ -282,6 +334,76 @@ const OrderFormModal = ({
     }
   };
 
+  const handleQuickCreateSaudiOffice = async () => {
+    if (!newSaudiOfficeName.trim()) {
+      showError("خطأ", "يرجى إدخال اسم المكتب السعودي");
+      return;
+    }
+    setQuickSaudiOfficeLoading(true);
+    try {
+      const res = await createSaudiOffice({
+        name: newSaudiOfficeName.trim(),
+        city: newSaudiOfficeCity.trim(),
+        phone: newSaudiOfficePhone.trim(),
+      });
+      const newOffice = res.data?.data || res.data;
+      setLocalSaudiOffices((prev) => [newOffice, ...prev]);
+      setFormData((prev) => ({
+        ...prev,
+        saudi_office_id: newOffice.id,
+      }));
+      if (fieldErrors.saudi_office_id) {
+        setFieldErrors((prev) => ({ ...prev, saudi_office_id: undefined }));
+      }
+      showSuccess("تمت الإضافة", "تم إضافة المكتب السعودي بنجاح واختياره للطلب");
+      setShowQuickSaudiOffice(false);
+      setNewSaudiOfficeName("");
+      setNewSaudiOfficeCity("");
+      setNewSaudiOfficePhone("");
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message || "حدث خطأ أثناء إضافة المكتب السعودي";
+      showError("خطأ", errorMsg);
+    } finally {
+      setQuickSaudiOfficeLoading(false);
+    }
+  };
+
+  const handleQuickCreateExternalOffice = async () => {
+    if (!newExternalOfficeName.trim()) {
+      showError("خطأ", "يرجى إدخال اسم المكتب الخارجي");
+      return;
+    }
+    setQuickExternalOfficeLoading(true);
+    try {
+      const res = await createExternalOffice({
+        name: newExternalOfficeName.trim(),
+        country: newExternalOfficeCountry.trim(),
+        phone: newExternalOfficePhone.trim() || "0",
+      });
+      const newOffice = res.data?.data || res.data;
+      setLocalExternalOffices((prev) => [newOffice, ...prev]);
+      setFormData((prev) => ({
+        ...prev,
+        external_office_id: newOffice.id,
+      }));
+      if (fieldErrors.external_office_id) {
+        setFieldErrors((prev) => ({ ...prev, external_office_id: undefined }));
+      }
+      showSuccess("تمت الإضافة", "تم إضافة المكتب الخارجي بنجاح واختياره للطلب");
+      setShowQuickExternalOffice(false);
+      setNewExternalOfficeName("");
+      setNewExternalOfficeCountry("");
+      setNewExternalOfficePhone("");
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message || "حدث خطأ أثناء إضافة المكتب الخارجي";
+      showError("خطأ", errorMsg);
+    } finally {
+      setQuickExternalOfficeLoading(false);
+    }
+  };
+
   const employeeOptions = employees.map((emp) => ({
     value: emp.id,
     label: emp.name || emp.employee_name || `موظف #${emp.id}`,
@@ -292,10 +414,10 @@ const OrderFormModal = ({
     const employee = employees.find((e) => e.id === formData.employee_id);
     return employee
       ? {
-          value: employee.id,
-          label:
-            employee.name || employee.employee_name || `موظف #${employee.id}`,
-        }
+        value: employee.id,
+        label:
+          employee.name || employee.employee_name || `موظف #${employee.id}`,
+      }
       : null;
   };
 
@@ -371,7 +493,14 @@ const OrderFormModal = ({
 
   return (
     <>
-      <Modal show={show} onHide={onHide} centered size="lg" dir="rtl">
+      <Modal
+        show={show}
+        onHide={onHide}
+        centered
+        size="xl"
+        dialogClassName="order-modal-xl"
+        dir="rtl"
+      >
         <Modal.Header closeButton className="border-0 pt-4 px-4">
           <Modal.Title className="fw-bold fs-5">
             {isEdit ? "✏️ تعديل الطلب" : "➕ إضافة طلب جديد"}
@@ -397,12 +526,16 @@ const OrderFormModal = ({
                         <Select
                           className="react-select-container"
                           classNamePrefix="react-select"
-                          options={(effectiveSaudiOffices || []).map(
-                            (office) => ({
+                          options={[
+                            {
+                              value: "__ADD_NEW__",
+                              label: "➕ إضافة مكتب سعودي جديد...",
+                            },
+                            ...(effectiveSaudiOffices || []).map((office) => ({
                               value: office.id,
                               label: office.name,
-                            }),
-                          )}
+                            })),
+                          ]}
                           value={
                             (effectiveSaudiOffices || []).find(
                               (o) =>
@@ -410,21 +543,25 @@ const OrderFormModal = ({
                                 String(formData.saudi_office_id),
                             )
                               ? {
-                                  value: formData.saudi_office_id,
-                                  label: (effectiveSaudiOffices || []).find(
-                                    (o) =>
-                                      String(o.id) ===
-                                      String(formData.saudi_office_id),
-                                  ).name,
-                                }
+                                value: formData.saudi_office_id,
+                                label: (effectiveSaudiOffices || []).find(
+                                  (o) =>
+                                    String(o.id) ===
+                                    String(formData.saudi_office_id),
+                                ).name,
+                              }
                               : null
                           }
-                          onChange={(option) =>
+                          onChange={(option) => {
+                            if (option?.value === "__ADD_NEW__") {
+                              setShowQuickSaudiOffice(true);
+                              return;
+                            }
                             setFormData((prev) => ({
                               ...prev,
                               saudi_office_id: option ? option.value : "",
-                            }))
-                          }
+                            }));
+                          }}
                           placeholder="اختر المكتب السعودي..."
                           noOptionsMessage={() => "لا توجد خيارات"}
                           isClearable
@@ -437,6 +574,21 @@ const OrderFormModal = ({
                                   ? "#dc3545"
                                   : base.borderColor,
                             }),
+                            option: (base, state) => {
+                              if (state.data?.value === "__ADD_NEW__") {
+                                return {
+                                  ...base,
+                                  fontWeight: "bold",
+                                  color: "#0d6efd",
+                                  backgroundColor: state.isFocused
+                                    ? "#e7f1ff"
+                                    : "#f8f9fa",
+                                  borderBottom: "1px solid #e9ecef",
+                                  cursor: "pointer",
+                                };
+                              }
+                              return base;
+                            },
                           }}
                         />
                         {validated && !formData.saudi_office_id && (
@@ -459,12 +611,18 @@ const OrderFormModal = ({
                         <Select
                           className="react-select-container"
                           classNamePrefix="react-select"
-                          options={(effectiveExternalOffices || []).map(
-                            (office) => ({
-                              value: office.id,
-                              label: office.name,
-                            }),
-                          )}
+                          options={[
+                            {
+                              value: "__ADD_NEW__",
+                              label: "➕ إضافة مكتب خارجي جديد...",
+                            },
+                            ...(effectiveExternalOffices || []).map(
+                              (office) => ({
+                                value: office.id,
+                                label: office.name,
+                              }),
+                            ),
+                          ]}
                           value={
                             (effectiveExternalOffices || []).find(
                               (o) =>
@@ -472,25 +630,46 @@ const OrderFormModal = ({
                                 String(formData.external_office_id),
                             )
                               ? {
-                                  value: formData.external_office_id,
-                                  label: (effectiveExternalOffices || []).find(
-                                    (o) =>
-                                      String(o.id) ===
-                                      String(formData.external_office_id),
-                                  ).name,
-                                }
+                                value: formData.external_office_id,
+                                label: (effectiveExternalOffices || []).find(
+                                  (o) =>
+                                    String(o.id) ===
+                                    String(formData.external_office_id),
+                                ).name,
+                              }
                               : null
                           }
-                          onChange={(option) =>
+                          onChange={(option) => {
+                            if (option?.value === "__ADD_NEW__") {
+                              setShowQuickExternalOffice(true);
+                              return;
+                            }
                             setFormData((prev) => ({
                               ...prev,
                               external_office_id: option ? option.value : "",
-                            }))
-                          }
+                            }));
+                          }}
                           placeholder="اختر المكتب الخارجي..."
                           noOptionsMessage={() => "لا توجد خيارات"}
                           isClearable
                           isRtl
+                          styles={{
+                            option: (base, state) => {
+                              if (state.data?.value === "__ADD_NEW__") {
+                                return {
+                                  ...base,
+                                  fontWeight: "bold",
+                                  color: "#0d6efd",
+                                  backgroundColor: state.isFocused
+                                    ? "#e7f1ff"
+                                    : "#f8f9fa",
+                                  borderBottom: "1px solid #e9ecef",
+                                  cursor: "pointer",
+                                };
+                              }
+                              return base;
+                            },
+                          }}
                         />
                         {getFieldError("external_office_id") && (
                           <div className="text-danger small mt-1">
@@ -742,14 +921,14 @@ const OrderFormModal = ({
                           value={
                             formData.service_type
                               ? {
-                                  value: formData.service_type,
-                                  label:
-                                    serviceTypeOptions.find(
-                                      (st) =>
-                                        (st.key || st.label) ===
-                                        formData.service_type,
-                                    )?.label || formData.service_type,
-                                }
+                                value: formData.service_type,
+                                label:
+                                  serviceTypeOptions.find(
+                                    (st) =>
+                                      (st.key || st.label) ===
+                                      formData.service_type,
+                                  )?.label || formData.service_type,
+                              }
                               : null
                           }
                           onChange={(option) =>
@@ -798,19 +977,54 @@ const OrderFormModal = ({
                         <Form.Label className="fw-semibold small text-secondary">
                           الجنسية <span className="text-danger">*</span>
                         </Form.Label>
-                        <Form.Control
-                          type="text"
-                          name="nationality"
-                          value={formData.nationality}
-                          onChange={handleChange}
-                          required
-                          isInvalid={!!getFieldError("nationality")}
-                          placeholder="أدخل الجنسية"
-                          className="rounded-3"
+                        <CreatableSelect
+                          className="react-select-container"
+                          classNamePrefix="react-select"
+                          options={NATIONALITY_OPTIONS}
+                          value={
+                            formData.nationality
+                              ? {
+                                value: formData.nationality,
+                                label:
+                                  NATIONALITY_OPTIONS.find(
+                                    (n) => n.value === formData.nationality,
+                                  )?.label || formData.nationality,
+                              }
+                              : null
+                          }
+                          onChange={(option) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              nationality: option ? option.value : "",
+                            }))
+                          }
+                          placeholder="اختر أو ابحث عن الجنسية..."
+                          formatCreateLabel={(inputValue) =>
+                            `إضافة "${inputValue}"`
+                          }
+                          isClearable
+                          isSearchable
+                          isRtl
+                          styles={{
+                            control: (base) => ({
+                              ...base,
+                              borderColor:
+                                validated && !formData.nationality
+                                  ? "#dc3545"
+                                  : base.borderColor,
+                            }),
+                          }}
                         />
-                        <Form.Control.Feedback type="invalid">
-                          {getFieldError("nationality") || "يرجى إدخال الجنسية"}
-                        </Form.Control.Feedback>
+                        {validated && !formData.nationality && (
+                          <div className="text-danger small mt-1">
+                            يرجى اختيار أو إدخال الجنسية
+                          </div>
+                        )}
+                        {getFieldError("nationality") && (
+                          <div className="text-danger small mt-1">
+                            {getFieldError("nationality")}
+                          </div>
+                        )}
                       </Form.Group>
                     </Col>
                   </Row>
@@ -913,13 +1127,13 @@ const OrderFormModal = ({
                           value={
                             formData.status && formData.status !== ""
                               ? {
-                                  value: formData.status,
-                                  label:
-                                    statusOptions.find(
-                                      (s) =>
-                                        (s.key || s.id) === formData.status,
-                                    )?.label || formData.status,
-                                }
+                                value: formData.status,
+                                label:
+                                  statusOptions.find(
+                                    (s) =>
+                                      (s.key || s.id) === formData.status,
+                                  )?.label || formData.status,
+                              }
                               : null
                           }
                           onChange={(option) =>
@@ -1242,6 +1456,142 @@ const OrderFormModal = ({
             className="px-3 rounded-3"
           >
             {quickCreateLoading ? "جاري الإضافة..." : "حفظ المندوب"}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Modal إضافة مكتب سعودي جديد */}
+      <Modal
+        show={showQuickSaudiOffice}
+        onHide={() => setShowQuickSaudiOffice(false)}
+        centered
+        size="sm"
+        dir="rtl"
+      >
+        <Modal.Header closeButton className="border-0 pt-4 px-4">
+          <Modal.Title className="fw-bold fs-5">🏢 إضافة مكتب سعودي جديد</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="px-4">
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary">
+              اسم المكتب <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Control
+              type="text"
+              value={newSaudiOfficeName}
+              onChange={(e) => setNewSaudiOfficeName(e.target.value)}
+              placeholder="أدخل اسم المكتب السعودي"
+              className="rounded-3"
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary">
+              المدينة
+            </Form.Label>
+            <Form.Control
+              type="text"
+              value={newSaudiOfficeCity}
+              onChange={(e) => setNewSaudiOfficeCity(e.target.value)}
+              placeholder="أدخل المدينة"
+              className="rounded-3"
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary">
+              رقم الهاتف / الجوال
+            </Form.Label>
+            <Form.Control
+              type="text"
+              value={newSaudiOfficePhone}
+              onChange={(e) => setNewSaudiOfficePhone(e.target.value)}
+              placeholder="أدخل رقم الهاتف"
+              className="rounded-3"
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer className="border-0 pb-4 px-4">
+          <Button
+            variant="light"
+            onClick={() => setShowQuickSaudiOffice(false)}
+            className="px-3 rounded-3"
+          >
+            إلغاء
+          </Button>
+          <Button
+            variant="dark"
+            onClick={handleQuickCreateSaudiOffice}
+            disabled={quickSaudiOfficeLoading}
+            className="px-3 rounded-3"
+          >
+            {quickSaudiOfficeLoading ? "جاري الإضافة..." : "حفظ المكتب"}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Modal إضافة مكتب خارجي جديد */}
+      <Modal
+        show={showQuickExternalOffice}
+        onHide={() => setShowQuickExternalOffice(false)}
+        centered
+        size="sm"
+        dir="rtl"
+      >
+        <Modal.Header closeButton className="border-0 pt-4 px-4">
+          <Modal.Title className="fw-bold fs-5">🌍 إضافة مكتب خارجي جديد</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="px-4">
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary">
+              اسم المكتب <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Control
+              type="text"
+              value={newExternalOfficeName}
+              onChange={(e) => setNewExternalOfficeName(e.target.value)}
+              placeholder="أدخل اسم المكتب الخارجي"
+              className="rounded-3"
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary">
+              الدولة
+            </Form.Label>
+            <Form.Control
+              type="text"
+              value={newExternalOfficeCountry}
+              onChange={(e) => setNewExternalOfficeCountry(e.target.value)}
+              placeholder="أدخل الدولة"
+              className="rounded-3"
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary">
+              رقم الهاتف
+            </Form.Label>
+            <Form.Control
+              type="text"
+              value={newExternalOfficePhone}
+              onChange={(e) => setNewExternalOfficePhone(e.target.value)}
+              placeholder="أدخل رقم الهاتف"
+              className="rounded-3"
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer className="border-0 pb-4 px-4">
+          <Button
+            variant="light"
+            onClick={() => setShowQuickExternalOffice(false)}
+            className="px-3 rounded-3"
+          >
+            إلغاء
+          </Button>
+          <Button
+            variant="dark"
+            onClick={handleQuickCreateExternalOffice}
+            disabled={quickExternalOfficeLoading}
+            className="px-3 rounded-3"
+          >
+            {quickExternalOfficeLoading ? "جاري الإضافة..." : "حفظ المكتب"}
           </Button>
         </Modal.Footer>
       </Modal>

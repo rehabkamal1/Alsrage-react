@@ -23,6 +23,26 @@ const PERMISSION_GROUPS = [
     ],
   },
   {
+    module: "المكاتب السعودية",
+    icon: "🏢",
+    permissions: [
+      { id: "view_saudi_offices", label: "عرض فقط" },
+      { id: "create_saudi_offices", label: "إنشاء" },
+      { id: "edit_saudi_offices", label: "تعديل" },
+      { id: "delete_saudi_offices", label: "حذف" },
+    ],
+  },
+  {
+    module: "المكاتب الخارجية",
+    icon: "🌐",
+    permissions: [
+      { id: "view_external_offices", label: "عرض فقط" },
+      { id: "create_external_offices", label: "إنشاء" },
+      { id: "edit_external_offices", label: "تعديل" },
+      { id: "delete_external_offices", label: "حذف" },
+    ],
+  },
+  {
     module: "أخرى",
     icon: "⚙️",
     permissions: [
