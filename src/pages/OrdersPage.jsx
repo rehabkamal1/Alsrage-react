@@ -28,7 +28,6 @@ import { exportToPDF } from "../utils/pdfHelper";
 import { showWhatsAppNotificationModal } from "../utils/whatsappHelper";
 import { getUser } from "../services/authService";
 
-
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [clients, setClients] = useState([]);
@@ -62,7 +61,6 @@ const OrdersPage = () => {
     if (isAdmin) return true;
     return user?.permissions?.includes(permission) || false;
   };
-
 
   useEffect(() => {
     fetchAllData();
@@ -264,7 +262,6 @@ const OrdersPage = () => {
     } catch (error) {
       const errorData = error.response?.data;
       setSubmitError(errorData);
-      showError("خطأ!", errorData?.message || "حدث خطأ أثناء العملية");
     } finally {
       setLoading(false);
     }
@@ -414,8 +411,6 @@ const OrdersPage = () => {
           </div>
         </div>
 
-
-        {/* 🆕 Date Filter Bar */}
         <DateFilterBar
           onFilterChange={handleDateFilterChange}
           initialFromDate={fromDate}
