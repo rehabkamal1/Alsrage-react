@@ -4,6 +4,7 @@ export const DEFAULT_WHATSAPP_TEMPLATE =
   `المندوب / العميل: {delegate_name}\n` +
   `رقم التأشيرة: {visa_number}\n` +
   `رقم عقد مساند: {contract_number}\n` +
+  `رقم عقد التوثيق: {authentication_contract_number}\n` +
   `حالة الطلب: {status}`;
 
 export const getWhatsAppTemplate = () => {
@@ -87,6 +88,14 @@ export const showWhatsAppNotificationModal = ({
     .replace(
       /\{contract_number\}/g,
       order.musaned_contract_number || "غير محدد",
+    )
+    .replace(
+      /\{authentication_contract_number\}/g,
+      order.authentication_contract_number || "غير محدد",
+    )
+    .replace(
+      /\{auth_contract_number\}/g,
+      order.authentication_contract_number || "غير محدد",
     )
     .replace(/\{status\}/g, statusLabel);
 

@@ -17,6 +17,10 @@ const WhatsAppTemplateCard = () => {
     { tag: "{delegate_name}", label: "المندوب / العميل" },
     { tag: "{visa_number}", label: "رقم التأشيرة" },
     { tag: "{contract_number}", label: "رقم عقد مساند" },
+    {
+      tag: "{authentication_contract_number}",
+      label: "رقم عقد التوثيق",
+    },
     { tag: "{status}", label: "حالة الطلب" },
   ];
 
@@ -55,6 +59,8 @@ const WhatsAppTemplateCard = () => {
     .replace(/\{delegate_name\}/g, "مكتب السرعة للخدمات")
     .replace(/\{visa_number\}/g, "2005489632")
     .replace(/\{contract_number\}/g, "MS-88942")
+    .replace(/\{authentication_contract_number\}/g, "ATH-99320")
+    .replace(/\{auth_contract_number\}/g, "ATH-99320")
     .replace(/\{status\}/g, "تم الصدور والربط 🟢");
 
   return (

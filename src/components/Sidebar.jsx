@@ -312,20 +312,24 @@ const Sidebar = ({ user, activeTab, onTabChange, onLogout, isOpen, onClose }) =>
 
   return (
     <div className={`sidebar ${isOpen ? "open" : ""}`}>
-      <div className="sidebar-header">
-        <div className="d-flex justify-content-between align-items-center w-100">
-          <div>
-            <h2>السراج</h2>
-            <p>للإستقدام</p>
-          </div>
-          <Button 
-            variant="link" 
-            className="text-white d-lg-none p-0" 
-            onClick={onClose}
-          >
-            <i className="fa-solid fa-xmark fs-4"></i>
-          </Button>
+      <div className="sidebar-header position-relative">
+        <div className="d-flex flex-column align-items-center w-100 text-center">
+          <img 
+            src="/logo3.png" 
+            alt="لوجو الفنار للاستقدام" 
+            className="sidebar-logo mb-2"
+            style={{ maxHeight: "80px", width: "auto", objectFit: "contain", filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.3))" }} 
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
+          <h2 className="fs-5 fw-bold mb-0">الفنار للاستقدام</h2>
         </div>
+        <Button 
+          variant="link" 
+          className="text-white d-lg-none p-0 position-absolute top-0 end-0 m-3" 
+          onClick={onClose}
+        >
+          <i className="fa-solid fa-xmark fs-4"></i>
+        </Button>
       </div>
       <nav className="sidebar-nav">
         {filteredMenuItems.map((item) => {
