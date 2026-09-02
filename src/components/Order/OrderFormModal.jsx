@@ -17,6 +17,9 @@ import {
     getExternalOffices,
     createSaudiOffice,
     createExternalOffice,
+    getClients,
+    getEmployees,
+    createEmployee,
 } from "../../services/apiService";
 import "../../styles/FormModal.css";
 
@@ -63,6 +66,14 @@ const OrderFormModal = ({
 }) => {
     const [localSaudiOffices, setLocalSaudiOffices] = useState([]);
     const [localExternalOffices, setLocalExternalOffices] = useState([]);
+    const [localClients, setLocalClients] = useState([]);
+    const [localEmployees, setLocalEmployees] = useState([]);
+
+    const [showQuickEmployee, setShowQuickEmployee] = useState(false);
+    const [newEmpName, setNewEmpName] = useState("");
+    const [newEmpPhone, setNewEmpPhone] = useState("");
+    const [newEmpPosition, setNewEmpPosition] = useState("");
+    const [quickEmployeeLoading, setQuickEmployeeLoading] = useState(false);
 
     useEffect(() => {
         if (show) {
@@ -90,6 +101,28 @@ const OrderFormModal = ({
                         err,
                     ),
                 );
+
+            getClients({ all: 1, per_page: 500 })
+                .then((res) => {
+                    const list = res.data?.data || res.data || [];
+                    if (Array.isArray(list) && list.length > 0) {
+                        setLocalClients(list);
+                    }
+                })
+                .catch((err) =>
+                    console.error("Error fetching local clients:", err),
+                );
+
+            getEmployees({ all: 1, per_page: 500 })
+                .then((res) => {
+                    const list = res.data?.data || res.data || [];
+                    if (Array.isArray(list) && list.length > 0) {
+                        setLocalEmployees(list);
+                    }
+                })
+                .catch((err) =>
+                    console.error("Error fetching local employees:", err),
+                );
         }
     }, [show]);
 
@@ -105,12 +138,28 @@ const OrderFormModal = ({
         }
     }, [externalOffices]);
 
+    useEffect(() => {
+        if (Array.isArray(clients) && clients.length > 0) {
+            setLocalClients(clients);
+        }
+    }, [clients]);
+
+    useEffect(() => {
+        if (Array.isArray(employees) && employees.length > 0) {
+            setLocalEmployees(employees);
+        }
+    }, [employees]);
+
     const effectiveSaudiOffices =
         localSaudiOffices.length > 0 ? localSaudiOffices : saudiOffices;
     const effectiveExternalOffices =
         localExternalOffices.length > 0
             ? localExternalOffices
             : externalOffices;
+    const effectiveClients =
+        localClients.length > 0 ? localClients : clients;
+    const effectiveEmployees =
+        localEmployees.length > 0 ? localEmployees : employees;
 
     const [formData, setFormData] = useState({
         client_id: "",
@@ -320,25 +369,27 @@ const OrderFormModal = ({
     };
 
     const handleQuickCreate = async () => {
-        if (!newClientName || !newClientPhone) {
+        if (!newClientName.trim() || !newClientPhone.trim()) {
+            showError("خطأ", "يرجى إدخال اسم ورقم هاتف المندوب / العميل");
             return;
         }
         setQuickCreateLoading(true);
         try {
             const response = await quickCreateClient({
-                name: newClientName,
-                phone: newClientPhone,
+                name: newClientName.trim(),
+                phone: newClientPhone.trim(),
                 client_type: newClientType,
             });
-            const newClient = response.data.data;
+            const newClient = response.data?.data || response.data;
+            setLocalClients((prev) => [newClient, ...prev]);
             setFormData((prev) => ({
                 ...prev,
                 client_id: newClient.id,
             }));
-            setSearchQuery(
-                `${newClient.phone} (${newClient.name || "بدون اسم"})`,
-            );
-            showSuccess("تمت الإضافة", "تم إضافة العميل بنجاح واختياره للطلب");
+            if (fieldErrors.client_id) {
+                setFieldErrors((prev) => ({ ...prev, client_id: undefined }));
+            }
+            showSuccess("تمت الإضافة", "تم إضافة المندوب / العميل بنجاح واختياره للطلب");
             setShowQuickCreate(false);
             setNewClientName("");
             setNewClientPhone("");
@@ -347,6 +398,7 @@ const OrderFormModal = ({
             if (errorData?.errors) {
                 setFieldErrors(errorData.errors);
             }
+            showError("خطأ", errorData?.message || "حدث خطأ أثناء إضافة المندوب");
         } finally {
             setQuickCreateLoading(false);
         }
@@ -436,14 +488,92 @@ const OrderFormModal = ({
         }
     };
 
-    const employeeOptions = employees.map((emp) => ({
-        value: emp.id,
-        label: emp.name || emp.employee_name || `موظف #${emp.id}`,
-    }));
+    const handleQuickCreateEmployee = async () => {
+        if (!newEmpName.trim() || !newEmpPhone.trim()) {
+            showError("خطأ", "يرجى إدخال اسم ورقم هاتف المسوق / الموظف");
+            return;
+        }
+        setQuickEmployeeLoading(true);
+        try {
+            const res = await createEmployee({
+                name: newEmpName.trim(),
+                phone: newEmpPhone.trim(),
+                position: newEmpPosition.trim() || "مسوق",
+            });
+            const newEmp = res.data?.data || res.data;
+            setLocalEmployees((prev) => [newEmp, ...prev]);
+            setFormData((prev) => ({
+                ...prev,
+                employee_id: newEmp.id,
+            }));
+            if (fieldErrors.employee_id) {
+                setFieldErrors((prev) => ({
+                    ...prev,
+                    employee_id: undefined,
+                }));
+            }
+            showSuccess(
+                "تمت الإضافة",
+                "تم إضافة المسوق / الموظف بنجاح واختياره للطلب",
+            );
+            setShowQuickEmployee(false);
+            setNewEmpName("");
+            setNewEmpPhone("");
+            setNewEmpPosition("");
+        } catch (err) {
+            const errorMsg =
+                err.response?.data?.message ||
+                "حدث خطأ أثناء إضافة المسوق / الموظف";
+            showError("خطأ", errorMsg);
+        } finally {
+            setQuickEmployeeLoading(false);
+        }
+    };
+
+    const clientOptions = [
+        {
+            value: "__ADD_NEW__",
+            label: "➕ إضافة مندوب / عميل جديد...",
+        },
+        ...(effectiveClients || []).map((c) => ({
+            value: c.id,
+            label: c.phone
+                ? `${c.name || "بدون اسم"} - (${c.phone})`
+                : c.name || `عميل #${c.id}`,
+        })),
+    ];
+
+    const getSelectedClient = () => {
+        if (!formData.client_id) return null;
+        const client = effectiveClients.find(
+            (c) => String(c.id) === String(formData.client_id),
+        );
+        return client
+            ? {
+                  value: client.id,
+                  label: client.phone
+                      ? `${client.name || "بدون اسم"} - (${client.phone})`
+                      : client.name || `عميل #${client.id}`,
+              }
+            : null;
+    };
+
+    const employeeOptions = [
+        {
+            value: "__ADD_NEW__",
+            label: "➕ إضافة مسوق / موظف جديد...",
+        },
+        ...(effectiveEmployees || []).map((emp) => ({
+            value: emp.id,
+            label: emp.name || emp.employee_name || `موظف #${emp.id}`,
+        })),
+    ];
 
     const getSelectedEmployee = () => {
         if (!formData.employee_id) return null;
-        const employee = employees.find((e) => e.id === formData.employee_id);
+        const employee = effectiveEmployees.find(
+            (e) => String(e.id) === String(formData.employee_id),
+        );
         return employee
             ? {
                   value: employee.id,
@@ -592,20 +722,20 @@ const OrderFormModal = ({
                                                                 ),
                                                         )
                                                             ? {
-                                                                  value: formData.saudi_office_id,
-                                                                  label: (
-                                                                      effectiveSaudiOffices ||
-                                                                      []
-                                                                  ).find(
-                                                                      (o) =>
-                                                                          String(
-                                                                              o.id,
-                                                                          ) ===
-                                                                          String(
-                                                                              formData.saudi_office_id,
-                                                                          ),
-                                                                  ).name,
-                                                              }
+                                                                value: formData.saudi_office_id,
+                                                                label: (
+                                                                    effectiveSaudiOffices ||
+                                                                    []
+                                                                ).find(
+                                                                    (o) =>
+                                                                        String(
+                                                                            o.id,
+                                                                        ) ===
+                                                                        String(
+                                                                            formData.saudi_office_id,
+                                                                        ),
+                                                                ).name,
+                                                            }
                                                             : null
                                                     }
                                                     onChange={(option) => {
@@ -672,12 +802,12 @@ const OrderFormModal = ({
                                                 {getFieldError(
                                                     "saudi_office_id",
                                                 ) && (
-                                                    <div className="text-danger small mt-1">
-                                                        {getFieldError(
-                                                            "saudi_office_id",
-                                                        )}
-                                                    </div>
-                                                )}
+                                                        <div className="text-danger small mt-1">
+                                                            {getFieldError(
+                                                                "saudi_office_id",
+                                                            )}
+                                                        </div>
+                                                    )}
                                             </Form.Group>
                                         </Col>
                                         <Col md={6}>
@@ -713,20 +843,20 @@ const OrderFormModal = ({
                                                                 ),
                                                         )
                                                             ? {
-                                                                  value: formData.external_office_id,
-                                                                  label: (
-                                                                      effectiveExternalOffices ||
-                                                                      []
-                                                                  ).find(
-                                                                      (o) =>
-                                                                          String(
-                                                                              o.id,
-                                                                          ) ===
-                                                                          String(
-                                                                              formData.external_office_id,
-                                                                          ),
-                                                                  ).name,
-                                                              }
+                                                                value: formData.external_office_id,
+                                                                label: (
+                                                                    effectiveExternalOffices ||
+                                                                    []
+                                                                ).find(
+                                                                    (o) =>
+                                                                        String(
+                                                                            o.id,
+                                                                        ) ===
+                                                                        String(
+                                                                            formData.external_office_id,
+                                                                        ),
+                                                                ).name,
+                                                            }
                                                             : null
                                                     }
                                                     onChange={(option) => {
@@ -793,12 +923,12 @@ const OrderFormModal = ({
                                                 {getFieldError(
                                                     "external_office_id",
                                                 ) && (
-                                                    <div className="text-danger small mt-1">
-                                                        {getFieldError(
-                                                            "external_office_id",
-                                                        )}
-                                                    </div>
-                                                )}
+                                                        <div className="text-danger small mt-1">
+                                                            {getFieldError(
+                                                                "external_office_id",
+                                                            )}
+                                                        </div>
+                                                    )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -807,158 +937,88 @@ const OrderFormModal = ({
                                         <Col md={6}>
                                             <Form.Group className="mb-3">
                                                 <Form.Label className="fw-semibold small text-secondary">
-                                                    المندوب / العميل
+                                                    المندوب / العميل <span className="text-danger">*</span>
                                                 </Form.Label>
-                                                <div
-                                                    className="position-relative"
-                                                    onBlur={(e) => {
+                                                <Select
+                                                    className="react-select-container"
+                                                    classNamePrefix="react-select"
+                                                    options={clientOptions}
+                                                    value={getSelectedClient()}
+                                                    onChange={(option) => {
                                                         if (
-                                                            !e.currentTarget.contains(
-                                                                e.relatedTarget,
-                                                            )
+                                                            option?.value ===
+                                                            "__ADD_NEW__"
                                                         ) {
-                                                            setTimeout(
-                                                                () =>
-                                                                    setShowSearchResults(
-                                                                        false,
-                                                                    ),
-                                                                200,
+                                                            setShowQuickCreate(
+                                                                true,
+                                                            );
+                                                            return;
+                                                        }
+                                                        setFormData((prev) => ({
+                                                            ...prev,
+                                                            client_id: option
+                                                                ? option.value
+                                                                : "",
+                                                        }));
+                                                        if (
+                                                            fieldErrors.client_id
+                                                        ) {
+                                                            setFieldErrors(
+                                                                (prev) => ({
+                                                                    ...prev,
+                                                                    client_id:
+                                                                        undefined,
+                                                                }),
                                                             );
                                                         }
                                                     }}
-                                                >
-                                                    <Form.Control
-                                                        type="text"
-                                                        placeholder="ابحث عن المندوب برقم الهاتف..."
-                                                        value={searchQuery}
-                                                        onChange={(e) =>
-                                                            handleClientSearch(
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                        onFocus={() => {
+                                                    placeholder="اختر أو ابحث عن المندوب / العميل..."
+                                                    noOptionsMessage={() =>
+                                                        "لا توجد نتائج"
+                                                    }
+                                                    isClearable
+                                                    isSearchable
+                                                    isRtl
+                                                    styles={{
+                                                        control: (base) => ({
+                                                            ...base,
+                                                            borderColor:
+                                                                getFieldError(
+                                                                    "client_id",
+                                                                )
+                                                                    ? "#dc3545"
+                                                                    : base.borderColor,
+                                                        }),
+                                                        option: (
+                                                            base,
+                                                            state,
+                                                        ) => {
                                                             if (
-                                                                searchQuery.length >=
-                                                                2
+                                                                state.data
+                                                                    ?.value ===
+                                                                "__ADD_NEW__"
                                                             ) {
-                                                                setShowSearchResults(
-                                                                    true,
-                                                                );
+                                                                return {
+                                                                    ...base,
+                                                                    fontWeight:
+                                                                        "bold",
+                                                                    color: "#0d6efd",
+                                                                    backgroundColor:
+                                                                        state.isFocused
+                                                                            ? "#e7f1ff"
+                                                                            : "#f8f9fa",
+                                                                    borderBottom:
+                                                                        "1px solid #e9ecef",
+                                                                    cursor: "pointer",
+                                                                };
                                                             }
-                                                        }}
-                                                        isInvalid={
-                                                            !!getFieldError(
-                                                                "client_id",
-                                                            )
-                                                        }
-                                                        className="rounded-3"
-                                                    />
-                                                    {searching && (
-                                                        <div className="position-absolute top-100 start-0 end-0 bg-white border rounded-3 mt-1 shadow-sm p-2 text-center text-muted small">
-                                                            جاري البحث...
-                                                        </div>
-                                                    )}
-                                                    {showSearchResults &&
-                                                        searchResults.length >
-                                                            0 &&
-                                                        !searching && (
-                                                            <div
-                                                                className="position-absolute top-100 start-0 end-0 bg-white border rounded-3 mt-1 shadow-sm"
-                                                                style={{
-                                                                    zIndex: 1000,
-                                                                    maxHeight:
-                                                                        "200px",
-                                                                    overflowY:
-                                                                        "auto",
-                                                                }}
-                                                            >
-                                                                {searchResults.map(
-                                                                    (
-                                                                        client,
-                                                                    ) => (
-                                                                        <div
-                                                                            key={
-                                                                                client.id
-                                                                            }
-                                                                            className="px-3 py-2 border-bottom"
-                                                                            style={{
-                                                                                cursor: "pointer",
-                                                                            }}
-                                                                            onClick={() =>
-                                                                                selectClient(
-                                                                                    client,
-                                                                                )
-                                                                            }
-                                                                            onMouseDown={(
-                                                                                e,
-                                                                            ) =>
-                                                                                e.preventDefault()
-                                                                            }
-                                                                        >
-                                                                            <strong>
-                                                                                {
-                                                                                    client.phone
-                                                                                }
-                                                                            </strong>{" "}
-                                                                            -{" "}
-                                                                            {client.name ||
-                                                                                "بدون اسم"}
-                                                                        </div>
-                                                                    ),
-                                                                )}
-                                                                <div
-                                                                    className="px-3 py-2 text-primary fw-semibold border-bottom"
-                                                                    style={{
-                                                                        cursor: "pointer",
-                                                                    }}
-                                                                    onClick={() =>
-                                                                        setShowQuickCreate(
-                                                                            true,
-                                                                        )
-                                                                    }
-                                                                    onMouseDown={(
-                                                                        e,
-                                                                    ) =>
-                                                                        e.preventDefault()
-                                                                    }
-                                                                >
-                                                                    + إضافة
-                                                                    مندوب جديد
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    {showSearchResults &&
-                                                        searchResults.length ===
-                                                            0 &&
-                                                        !searching &&
-                                                        searchQuery.length >=
-                                                            2 && (
-                                                            <div className="position-absolute top-100 start-0 end-0 bg-white border rounded-3 mt-1 shadow-sm p-3 text-center">
-                                                                <div className="text-muted mb-2">
-                                                                    لا توجد
-                                                                    نتائج
-                                                                </div>
-                                                                <Button
-                                                                    variant="link"
-                                                                    className="p-0"
-                                                                    onClick={() =>
-                                                                        setShowQuickCreate(
-                                                                            true,
-                                                                        )
-                                                                    }
-                                                                    onMouseDown={(
-                                                                        e,
-                                                                    ) =>
-                                                                        e.preventDefault()
-                                                                    }
-                                                                >
-                                                                    + إضافة
-                                                                    مندوب جديد
-                                                                </Button>
-                                                            </div>
-                                                        )}
-                                                </div>
-                                                {getFieldError("client_id") && (
+                                                            return base;
+                                                        },
+                                                    }}
+                                                />
+                                                {getFieldError(
+                                                    "client_id",
+                                                ) && (
                                                     <div className="text-danger small mt-1">
                                                         {getFieldError(
                                                             "client_id",
@@ -979,6 +1039,15 @@ const OrderFormModal = ({
                                                     options={employeeOptions}
                                                     value={getSelectedEmployee()}
                                                     onChange={(option) => {
+                                                        if (
+                                                            option?.value ===
+                                                            "__ADD_NEW__"
+                                                        ) {
+                                                            setShowQuickEmployee(
+                                                                true,
+                                                            );
+                                                            return;
+                                                        }
                                                         setFormData((prev) => ({
                                                             ...prev,
                                                             employee_id: option
@@ -997,11 +1066,12 @@ const OrderFormModal = ({
                                                             );
                                                         }
                                                     }}
-                                                    placeholder="اختر المسوق..."
+                                                    placeholder="اختر أو ابحث عن المسوق / الموظف..."
                                                     noOptionsMessage={() =>
-                                                        "لا توجد خيارات"
+                                                        "لا توجد نتائج"
                                                     }
                                                     isClearable
+                                                    isSearchable
                                                     isRtl
                                                     styles={{
                                                         control: (base) => ({
@@ -1013,17 +1083,42 @@ const OrderFormModal = ({
                                                                     ? "#dc3545"
                                                                     : base.borderColor,
                                                         }),
+                                                        option: (
+                                                            base,
+                                                            state,
+                                                        ) => {
+                                                            if (
+                                                                state.data
+                                                                    ?.value ===
+                                                                "__ADD_NEW__"
+                                                            ) {
+                                                                return {
+                                                                    ...base,
+                                                                    fontWeight:
+                                                                        "bold",
+                                                                    color: "#0d6efd",
+                                                                    backgroundColor:
+                                                                        state.isFocused
+                                                                            ? "#e7f1ff"
+                                                                            : "#f8f9fa",
+                                                                    borderBottom:
+                                                                        "1px solid #e9ecef",
+                                                                    cursor: "pointer",
+                                                                };
+                                                            }
+                                                            return base;
+                                                        },
                                                     }}
                                                 />
                                                 {getFieldError(
                                                     "employee_id",
                                                 ) && (
-                                                    <div className="text-danger small mt-1">
-                                                        {getFieldError(
-                                                            "employee_id",
-                                                        )}
-                                                    </div>
-                                                )}
+                                                        <div className="text-danger small mt-1">
+                                                            {getFieldError(
+                                                                "employee_id",
+                                                            )}
+                                                        </div>
+                                                    )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -1170,19 +1265,19 @@ const OrderFormModal = ({
                                                     value={
                                                         formData.service_type
                                                             ? {
-                                                                  value: formData.service_type,
-                                                                  label:
-                                                                      serviceTypeOptions.find(
-                                                                          (
-                                                                              st,
-                                                                          ) =>
-                                                                              (st.key ||
-                                                                                  st.label) ===
-                                                                              formData.service_type,
-                                                                      )
-                                                                          ?.label ||
-                                                                      formData.service_type,
-                                                              }
+                                                                value: formData.service_type,
+                                                                label:
+                                                                    serviceTypeOptions.find(
+                                                                        (
+                                                                            st,
+                                                                        ) =>
+                                                                            (st.key ||
+                                                                                st.label) ===
+                                                                            formData.service_type,
+                                                                    )
+                                                                        ?.label ||
+                                                                    formData.service_type,
+                                                            }
                                                             : null
                                                     }
                                                     onChange={(option) =>
@@ -1211,12 +1306,12 @@ const OrderFormModal = ({
                                                 {getFieldError(
                                                     "service_type",
                                                 ) && (
-                                                    <div className="text-danger small mt-1">
-                                                        {getFieldError(
-                                                            "service_type",
-                                                        )}
-                                                    </div>
-                                                )}
+                                                        <div className="text-danger small mt-1">
+                                                            {getFieldError(
+                                                                "service_type",
+                                                            )}
+                                                        </div>
+                                                    )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -1271,16 +1366,16 @@ const OrderFormModal = ({
                                                     value={
                                                         formData.nationality
                                                             ? {
-                                                                  value: formData.nationality,
-                                                                  label:
-                                                                      NATIONALITY_OPTIONS.find(
-                                                                          (n) =>
-                                                                              n.value ===
-                                                                              formData.nationality,
-                                                                      )
-                                                                          ?.label ||
-                                                                      formData.nationality,
-                                                              }
+                                                                value: formData.nationality,
+                                                                label:
+                                                                    NATIONALITY_OPTIONS.find(
+                                                                        (n) =>
+                                                                            n.value ===
+                                                                            formData.nationality,
+                                                                    )
+                                                                        ?.label ||
+                                                                    formData.nationality,
+                                                            }
                                                             : null
                                                     }
                                                     onChange={(option) =>
@@ -1315,12 +1410,12 @@ const OrderFormModal = ({
                                                 {getFieldError(
                                                     "nationality",
                                                 ) && (
-                                                    <div className="text-danger small mt-1">
-                                                        {getFieldError(
-                                                            "nationality",
-                                                        )}
-                                                    </div>
-                                                )}
+                                                        <div className="text-danger small mt-1">
+                                                            {getFieldError(
+                                                                "nationality",
+                                                            )}
+                                                        </div>
+                                                    )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -1459,19 +1554,19 @@ const OrderFormModal = ({
                                                     )}
                                                     value={
                                                         formData.status &&
-                                                        formData.status !== ""
+                                                            formData.status !== ""
                                                             ? {
-                                                                  value: formData.status,
-                                                                  label:
-                                                                      statusOptions.find(
-                                                                          (s) =>
-                                                                              (s.key ||
-                                                                                  s.id) ===
-                                                                              formData.status,
-                                                                      )
-                                                                          ?.label ||
-                                                                      formData.status,
-                                                              }
+                                                                value: formData.status,
+                                                                label:
+                                                                    statusOptions.find(
+                                                                        (s) =>
+                                                                            (s.key ||
+                                                                                s.id) ===
+                                                                            formData.status,
+                                                                    )
+                                                                        ?.label ||
+                                                                    formData.status,
+                                                            }
                                                             : null
                                                     }
                                                     onChange={(option) =>
@@ -1672,7 +1767,7 @@ const OrderFormModal = ({
                                                                         "file",
                                                                         e.target
                                                                             .files?.[0] ||
-                                                                            null,
+                                                                        null,
                                                                     )
                                                                 }
                                                                 className="rounded-3 border-light-subtle shadow-none"
@@ -1686,7 +1781,7 @@ const OrderFormModal = ({
                                                         className="w-100 text-danger text-decoration-none fw-semibold"
                                                         disabled={
                                                             attachmentRows.length ===
-                                                                1 &&
+                                                            1 &&
                                                             !row.file &&
                                                             !row.title
                                                         }
@@ -1996,6 +2091,77 @@ const OrderFormModal = ({
                         {quickExternalOfficeLoading
                             ? "جاري الإضافة..."
                             : "حفظ المكتب"}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal
+                show={showQuickEmployee}
+                onHide={() => setShowQuickEmployee(false)}
+                centered
+                size="sm"
+                dir="rtl"
+            >
+                <Modal.Header closeButton className="border-0 pt-4 px-4">
+                    <Modal.Title className="fw-bold fs-5">
+                        👔 إضافة مسوق / موظف جديد
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="px-4">
+                    <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                            اسم المسوق / الموظف <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Form.Control
+                            type="text"
+                            value={newEmpName}
+                            onChange={(e) => setNewEmpName(e.target.value)}
+                            placeholder="أدخل اسم المسوق / الموظف"
+                            className="rounded-3"
+                        />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                            رقم الجوال <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Form.Control
+                            type="text"
+                            value={newEmpPhone}
+                            onChange={(e) => setNewEmpPhone(e.target.value)}
+                            placeholder="أدخل رقم الجوال"
+                            className="rounded-3"
+                        />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                            المسمى الوظيفي / المنصب
+                        </Form.Label>
+                        <Form.Control
+                            type="text"
+                            value={newEmpPosition}
+                            onChange={(e) => setNewEmpPosition(e.target.value)}
+                            placeholder="مثال: مسوق / مندوب مبيعات"
+                            className="rounded-3"
+                        />
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer className="border-0 pb-4 px-4">
+                    <Button
+                        variant="light"
+                        onClick={() => setShowQuickEmployee(false)}
+                        className="px-3 rounded-3"
+                    >
+                        إلغاء
+                    </Button>
+                    <Button
+                        variant="dark"
+                        onClick={handleQuickCreateEmployee}
+                        disabled={quickEmployeeLoading}
+                        className="px-3 rounded-3"
+                    >
+                        {quickEmployeeLoading
+                            ? "جاري الإضافة..."
+                            : "حفظ وتحديد"}
                     </Button>
                 </Modal.Footer>
             </Modal>

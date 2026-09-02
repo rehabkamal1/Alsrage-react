@@ -4,6 +4,8 @@ import { getCompletedOrdersReport, getEmployees, getSaudiOffices, getExternalOff
 import ReportFilters from "../../components/ReportFilters";
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
+import SortableHeader from "../../components/common/SortableHeader";
+import { useSortableData } from "../../hooks/useSortableData";
 import { exportToExcel } from "../../utils/excelHelper";
 import { exportToPDF } from "../../utils/pdfHelper";
 
@@ -21,6 +23,8 @@ const CompletedOrdersReport = () => {
   const [employees, setEmployees] = useState([]);
   const [saudiOffices, setSaudiOffices] = useState([]);
   const [externalOffices, setExternalOffices] = useState([]);
+
+  const { items: sortedOrders, requestSort, sortConfig } = useSortableData(orders);
 
   useEffect(() => {
     fetchFilterOptions();
@@ -72,7 +76,7 @@ const CompletedOrdersReport = () => {
       { header: "مدة الإنجاز (يوم)", key: "completion_days" },
       { header: "تاريخ الإكتمال", key: "completed_at" },
     ];
-    exportToExcel(orders, columns, "تقرير_الطلبات_المكتملة.xlsx");
+    exportToExcel(sortedOrders, columns, "تقرير_الطلبات_المكتملة.xlsx");
   };
 
   const handleExportPDF = () => {
@@ -87,11 +91,11 @@ const CompletedOrdersReport = () => {
       { header: "مدة الإنجاز (يوم)", key: "completion_days" },
       { header: "تاريخ الإكتمال", key: "completed_at" },
     ];
-    exportToPDF(orders, columns, "تقرير_الطلبات_المكتملة.pdf");
+    exportToPDF(sortedOrders, columns, "تقرير_الطلبات_المكتملة.pdf");
   };
 
   return (
-    <div style={{ backgroundColor: "#f8fafc", minHeight: "100vh", padding: "24px" }}>
+    <div style={{ backgroundColor: "#f8fafc", minHeight: "100vh", padding: "24px" }} dir="rtl">
       <Container fluid>
         {/* Header Title & Actions */}
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
@@ -208,7 +212,7 @@ const CompletedOrdersReport = () => {
               <div className="p-4">
                 <TableSkeleton rows={5} columns={8} />
               </div>
-            ) : orders.length === 0 ? (
+            ) : sortedOrders.length === 0 ? (
               <div className="text-center py-5">
                 <i className="fa-solid fa-folder-open display-4 text-muted mb-3 d-block"></i>
                 <h5 className="text-secondary fw-semibold">لا توجد طلبات مكتملة تطابق فلاتر البحث</h5>
@@ -218,20 +222,20 @@ const CompletedOrdersReport = () => {
                 <Table hover align="middle" className="mb-0 text-center">
                   <thead className="bg-light text-secondary border-bottom">
                     <tr>
-                      <th className="py-3">#</th>
-                      <th className="py-3">رقم التأشيرة</th>
-                      <th className="py-3">العميل</th>
-                      <th className="py-3">المكتب السعودي</th>
-                      <th className="py-3">المكتب الخارجي</th>
-                      <th className="py-3">نوع الخدمة</th>
-                      <th className="py-3">إجمالي المبلغ</th>
-                      <th className="py-3">مدة الإنجاز</th>
-                      <th className="py-3">تاريخ الإكتمال</th>
-                      <th className="py-3">حالة SLA</th>
+                      <SortableHeader title="#" sortKey="id" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
+                      <SortableHeader title="رقم التأشيرة" sortKey="visa_number" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
+                      <SortableHeader title="العميل" sortKey="client_name" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
+                      <SortableHeader title="المكتب السعودي" sortKey="saudi_office" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
+                      <SortableHeader title="المكتب الخارجي" sortKey="external_office" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
+                      <SortableHeader title="نوع الخدمة" sortKey="service_type" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
+                      <SortableHeader title="إجمالي المبلغ" sortKey="total_price" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
+                      <SortableHeader title="مدة الإنجاز" sortKey="completion_days" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
+                      <SortableHeader title="تاريخ الإكتمال" sortKey="completed_at" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
+                      <SortableHeader title="حالة SLA" sortKey="within_sla" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order, idx) => (
+                    {sortedOrders.map((order, idx) => (
                       <tr key={order.id || idx}>
                         <td className="fw-bold">{order.id}</td>
                         <td>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Card, Table, Badge, Spinner, Alert } from "react-bootstrap";
 import ReportFilters from "../../components/ReportFilters";
+import SortableHeader from "../../components/common/SortableHeader";
+import { useSortableData } from "../../hooks/useSortableData";
 import { getOrderFollowUpReport } from "../../services/apiService";
 
 const OrderFollowUpReport = () => {
@@ -16,6 +18,8 @@ const OrderFollowUpReport = () => {
     orders: [],
   });
   const [error, setError] = useState(null);
+
+  const { items: sortedOrders, requestSort, sortConfig } = useSortableData(reportData.orders || []);
 
   const fetchReport = async (appliedFilters) => {
     setLoading(true);
@@ -40,7 +44,7 @@ const OrderFollowUpReport = () => {
   };
 
   return (
-    <Container fluid className="py-4">
+    <Container fluid className="py-4" dir="rtl">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="text-primary fw-bold mb-0">تقرير متابعة الطلبات (SLA)</h2>
       </div>
@@ -109,27 +113,27 @@ const OrderFollowUpReport = () => {
             </div>
           ) : (
             <div className="table-responsive">
-              <Table hover className="mb-0 align-middle">
+              <Table hover className="mb-0 align-middle text-center">
                 <thead className="bg-light">
                   <tr>
-                    <th>رقم الطلب</th>
-                    <th>العميل</th>
-                    <th>حالة الطلب</th>
-                    <th>آخر تحديث</th>
-                    <th>أيام التأخير</th>
-                    <th>حالة SLA</th>
-                    <th>المندوب</th>
+                    <SortableHeader title="رقم الطلب" sortKey="order_number" sortConfig={sortConfig} onRequestSort={requestSort} />
+                    <SortableHeader title="العميل" sortKey="client_name" sortConfig={sortConfig} onRequestSort={requestSort} />
+                    <SortableHeader title="حالة الطلب" sortKey="status" sortConfig={sortConfig} onRequestSort={requestSort} />
+                    <SortableHeader title="آخر تحديث" sortKey="last_update_date" sortConfig={sortConfig} onRequestSort={requestSort} />
+                    <SortableHeader title="أيام التأخير" sortKey="delay_days" sortConfig={sortConfig} onRequestSort={requestSort} />
+                    <SortableHeader title="حالة SLA" sortKey="exceeded_sla" sortConfig={sortConfig} onRequestSort={requestSort} />
+                    <SortableHeader title="المندوب" sortKey="employee_name" sortConfig={sortConfig} onRequestSort={requestSort} />
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.orders.length > 0 ? (
-                    reportData.orders.map((order) => (
+                  {sortedOrders.length > 0 ? (
+                    sortedOrders.map((order) => (
                       <tr key={order.id}>
                         <td className="fw-bold text-primary">#{order.order_number}</td>
-                        <td>{order.client?.name || "-"}</td>
+                        <td>{order.client?.name || order.client_name || "-"}</td>
                         <td>
                           <Badge bg="secondary" className="px-2 py-1">
-                            {order.status?.name || "غير محدد"}
+                            {order.status?.name || order.status || "غير محدد"}
                           </Badge>
                         </td>
                         <td>{order.last_update_date || "-"}</td>
@@ -145,7 +149,7 @@ const OrderFollowUpReport = () => {
                             <Badge bg="success">ضمن المدة</Badge>
                           )}
                         </td>
-                        <td>{order.employee?.name || "-"}</td>
+                        <td>{order.employee?.name || order.employee_name || "-"}</td>
                       </tr>
                     ))
                   ) : (

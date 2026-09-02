@@ -18,8 +18,8 @@ const LoginPage = ({ goToRegister, onLoginSuccess }) => {
 
   const validate = () => {
     const errs = {};
-    if (!form.email) errs.email = "Email is required.";
-    if (!form.password) errs.password = "Password is required.";
+    if (!form.email) errs.email = "اسم المستخدم أو البريد الإلكتروني مطلوب.";
+    if (!form.password) errs.password = "كلمة المرور مطلوبة.";
     return errs;
   };
 
@@ -39,7 +39,7 @@ const LoginPage = ({ goToRegister, onLoginSuccess }) => {
       const data = await loginUser(form);
       saveToken(data.token);
       saveUser(data.user);
-      setSuccess(`Welcome back, ${data.user.name}! Redirecting…`);
+      setSuccess(`مرحباً بك، ${data.user.name}! جاري التوجيه…`);
       setForm({ email: "", password: "" });
       
       // Update App state immediately
@@ -50,7 +50,7 @@ const LoginPage = ({ goToRegister, onLoginSuccess }) => {
         email: apiErrors.email?.[0] || "",
         password: apiErrors.password?.[0] || "",
       });
-      setServerError(error.response?.data?.message || "Invalid credentials.");
+      setServerError(error.response?.data?.message || "بيانات الدخول غير صحيحة.");
     } finally {
       setLoading(false);
     }
@@ -58,13 +58,13 @@ const LoginPage = ({ goToRegister, onLoginSuccess }) => {
 
   return (
     <AuthCard
-      title="Welcome Back 👋"
-      subtitle="Sign in to your account to continue."
+      title="مرحباً بك 👋"
+      subtitle="قم بتسجيل الدخول للحساب للمتابعة."
       footer={
         <>
-          Don't have an account?{" "}
+          ليس لديك حساب؟{" "}
           <button className="auth-switch-btn" onClick={goToRegister}>
-            Create one
+            إنشاء حساب جديد
           </button>
         </>
       }
@@ -75,28 +75,28 @@ const LoginPage = ({ goToRegister, onLoginSuccess }) => {
       <form onSubmit={handleSubmit} noValidate>
         <FormInput
           id="login-email"
-          type="email"
-          label="Email Address"
+          type="text"
+          label="اسم المستخدم / البريد الإلكتروني / رقم الهاتف"
           icon="email"
           value={form.email}
           onChange={handleChange("email")}
-          placeholder="name@company.com"
+          placeholder="أدخل اسم المستخدم أو رقم الهاتف"
           error={errors.email}
         />
 
         <FormInput
           id="login-password"
           type="password"
-          label="Password"
+          label="كلمة المرور"
           icon="lock"
           value={form.password}
           onChange={handleChange("password")}
-          placeholder="Enter your password"
+          placeholder="أدخل كلمة المرور"
           error={errors.password}
         />
 
         <button className="auth-btn" type="submit" disabled={loading}>
-          {loading ? "Signing in…" : "Sign In"}
+          {loading ? "جاري الدخول…" : "تسجيل الدخول"}
         </button>
       </form>
     </AuthCard>

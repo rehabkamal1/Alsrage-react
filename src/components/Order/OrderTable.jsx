@@ -1,7 +1,9 @@
 import { Table, Button, Form } from "react-bootstrap";
+import SortableHeader from "../common/SortableHeader";
+import { useSortableData } from "../../hooks/useSortableData";
 
 const OrderTable = ({
-  orders,
+  orders = [],
   onEdit,
   onDelete,
   onStatusChange,
@@ -12,6 +14,8 @@ const OrderTable = ({
   canEdit = true,
   canDelete = true,
 }) => {
+  const { items: sortedOrders, requestSort, sortConfig } = useSortableData(orders);
+
   const renderStatusDropdown = (order) => {
     const currentStatus = statusOptions.find(
       (s) => String(s.key || s.id) === String(order.status),
@@ -148,25 +152,25 @@ const OrderTable = ({
       <Table hover className="mb-0 align-middle text-center">
         <thead className="table-light">
           <tr>
-            <th>#</th>
-            <th>المكتب السعودي</th>
-            <th>المندوب</th>
-            <th>صاحب التأشيرة</th>
-            <th>رقم صاحب التأشيرة</th>
-            <th>رقم التأشيرة</th>
-            <th>نوع الخدمة</th>
-            <th>رقم عقد مساند</th>
-            <th>إجمالي السعر</th>
-            <th>سداد مساند</th>
-            <th>الرصيد المتبقي</th>
-            <th>حالة سداد مساند</th>
-            <th>التاريخ</th>
+            <SortableHeader title="#" sortKey="id" sortConfig={sortConfig} onRequestSort={requestSort} />
+            <SortableHeader title="المكتب السعودي" sortKey="saudi_office_id" sortConfig={sortConfig} onRequestSort={requestSort} />
+            <SortableHeader title="المندوب" sortKey="client_id" sortConfig={sortConfig} onRequestSort={requestSort} />
+            <SortableHeader title="صاحب التأشيرة" sortKey="visa_holder_name" sortConfig={sortConfig} onRequestSort={requestSort} />
+            <SortableHeader title="رقم صاحب التأشيرة" sortKey="visa_holder_phone" sortConfig={sortConfig} onRequestSort={requestSort} />
+            <SortableHeader title="رقم التأشيرة" sortKey="visa_number" sortConfig={sortConfig} onRequestSort={requestSort} />
+            <SortableHeader title="نوع الخدمة" sortKey="service_type" sortConfig={sortConfig} onRequestSort={requestSort} />
+            <SortableHeader title="رقم عقد مساند" sortKey="musaned_contract_number" sortConfig={sortConfig} onRequestSort={requestSort} />
+            <SortableHeader title="إجمالي السعر" sortKey="total_price" sortConfig={sortConfig} onRequestSort={requestSort} />
+            <SortableHeader title="سداد مساند" sortKey="musaned_paid" sortConfig={sortConfig} onRequestSort={requestSort} />
+            <SortableHeader title="الرصيد المتبقي" sortKey="price_difference" sortConfig={sortConfig} onRequestSort={requestSort} />
+            <SortableHeader title="حالة سداد مساند" sortKey="status" sortConfig={sortConfig} onRequestSort={requestSort} />
+            <SortableHeader title="التاريخ" sortKey="created_at" sortConfig={sortConfig} onRequestSort={requestSort} />
             {showActionsColumn && <th>الإجراءات</th>}
           </tr>
         </thead>
         <tbody>
-          {orders &&
-            orders.map((order) => (
+          {sortedOrders &&
+            sortedOrders.map((order) => (
               <tr key={order.id}>
                 <td className="fw-semibold">#{order.id}</td>
                 <td className="fw-semibold text-primary">
@@ -246,7 +250,7 @@ const OrderTable = ({
                 )}
               </tr>
             ))}
-          {(!orders || orders.length === 0) && (
+          {(!sortedOrders || sortedOrders.length === 0) && (
             <tr>
               <td colSpan={showActionsColumn ? "14" : "13"} className="text-center py-5 text-muted">
                 لا يوجد طلبات
