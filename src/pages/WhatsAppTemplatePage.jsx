@@ -17,6 +17,11 @@ const WhatsAppTemplatePage = () => {
     { tag: "{delegate_name}", label: "المندوب / العميل", icon: "fa-user" },
     { tag: "{visa_number}", label: "رقم التأشيرة", icon: "fa-id-card" },
     { tag: "{contract_number}", label: "رقم عقد مساند", icon: "fa-file-contract" },
+    {
+      tag: "{authentication_contract_number}",
+      label: "رقم عقد التوثيق",
+      icon: "fa-file-signature",
+    },
     { tag: "{status}", label: "حالة الطلب", icon: "fa-circle-check" },
   ];
 
@@ -55,6 +60,8 @@ const WhatsAppTemplatePage = () => {
     .replace(/\{delegate_name\}/g, "مكتب السرعة للخدمات")
     .replace(/\{visa_number\}/g, "2005489632")
     .replace(/\{contract_number\}/g, "MS-88942")
+    .replace(/\{authentication_contract_number\}/g, "ATH-99320")
+    .replace(/\{auth_contract_number\}/g, "ATH-99320")
     .replace(/\{status\}/g, "تم الصدور والربط 🟢");
 
   return (
