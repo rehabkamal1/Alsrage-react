@@ -1,0 +1,146 @@
+/* =============== Table Action Buttons =============== */
+.table-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.table-action-btn:hover {
+    transform: translateY(-2px);
+}
+
+.table-action-btn.edit-btn:hover {
+    background: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+}
+
+.table-action-btn.delete-btn:hover {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+}
+
+/* =============== Sortable Header =============== */
+.sortable-header {
+    position: relative;
+    user-select: none;
+}
+
+.sortable-header .drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #6c757d;
+    margin-left: 4px;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+.sortable-header:hover .drag-handle {
+    opacity: 1;
+}
+
+.sortable-header.dragging {
+    background-color: #e3f2fd !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+}
+
+.sortable-header.dragging .drag-handle {
+    opacity: 1;
+    color: #0d6efd;
+}
+
+.sortable-header:active {
+    cursor: grabbing;
+}
+
+/* =============== Status Dropdowns =============== */
+.status-select:hover,
+.priority-select:hover,
+.payment-select:hover,
+.bank-select:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15) !important;
+}
+
+.status-select:focus,
+.priority-select:focus,
+.payment-select:focus,
+.bank-select:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    outline: 0;
+}
+
+/* ============ Tracking Table Styles ============ */
+.tracking-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.tracking-table tbody tr:hover {
+    background-color: var(--priority-color, #6c757d) !important;
+    background-color: color-mix(in srgb, var(--priority-color, #6c757d) 15%, white) !important;
+}
+
+.tracking-table tbody tr .priority-strip {
+    transition: none !important;
+}
+
+.tracking-table tbody tr:hover .priority-strip {
+    background-color: var(--priority-color, #6c757d) !important;
+}
+
+/* ============ Finance Table Styles ============ */
+.finance-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.finance-table tbody tr:hover {
+    background-color: var(--priority-color, #6c757d) !important;
+    background-color: color-mix(in srgb, var(--priority-color, #6c757d) 15%, white) !important;
+}
+
+.finance-table tbody tr .priority-strip {
+    transition: none !important;
+}
+
+.finance-table tbody tr:hover .priority-strip {
+    background-color: var(--priority-color, #6c757d) !important;
+}
+
+/* ============ Phone Badge ============ */
+.phone-badge {
+    font-family: "Courier New", monospace;
+    font-weight: 500;
+    font-size: 0.85rem;
+    background: #f8f9fa;
+    padding: 2px 10px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+.sortable-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.sortable-table tbody tr:hover {
+    background-color: var(--priority-color, #f8f9fa);
+    background-color: color-mix(in srgb, var(--priority-color, #f8f9fa) 15%, white);
+}
+
+.sortable-table tbody tr .priority-strip {
+    transition: none !important;
+}
+
+.sortable-table tbody tr:hover .priority-strip {
+    background-color: var(--priority-color, #6c757d) !important;
+}

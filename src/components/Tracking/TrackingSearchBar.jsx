@@ -13,6 +13,7 @@ const TrackingSearchBar = ({
   saudiOffices = [],
   externalOffices = [],
   clients = [],
+  employees = [],
   filters = {},
   onFilterChange,
   sortField,
@@ -154,6 +155,20 @@ const TrackingSearchBar = ({
             />
           </Form.Group>
         </Col>
+        <Col md={3}>
+          <Form.Group>
+            <Form.Label className="small text-secondary">المسوق / الموظف</Form.Label>
+            <Select
+              options={[{ value: "", label: "الكل" }, ...(employees || []).map(e => ({ value: e.id, label: e.name }))]}
+              value={employees?.find(e => e.id === parseInt(filters.employee_id)) ? { value: filters.employee_id, label: employees.find(e => e.id === parseInt(filters.employee_id)).name } : { value: "", label: "الكل" }}
+              onChange={(opt) => onFilterChange("employee_id", opt ? opt.value : "")}
+              isRtl
+            />
+          </Form.Group>
+        </Col>
+      </Row>
+
+      <Row className="g-2 align-items-end">
         <Col md={3}>
           <Form.Group>
             <Form.Label className="small text-secondary">ترتيب حسب</Form.Label>

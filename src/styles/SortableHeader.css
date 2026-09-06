@@ -1,0 +1,54 @@
+/* styles/SortableHeader.css */
+
+.sortable-header {
+    position: relative;
+    user-select: none;
+}
+
+.sortable-header .drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #6c757d;
+    margin-left: 4px;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+.sortable-header:hover .drag-handle {
+    opacity: 1;
+}
+
+.sortable-header.dragging {
+    background-color: #e3f2fd !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+}
+
+.sortable-header.dragging .drag-handle {
+    opacity: 1;
+    color: #0d6efd;
+}
+
+.sortable-header:active {
+    cursor: grabbing;
+}
+
+.sort-icon {
+    display: inline-block;
+    transition: all 0.2s ease;
+}
+
+.sortable-header:hover .sort-icon {
+    opacity: 1 !important;
+}
+
+.sortable-header .fa-sort {
+    color: #adb5bd;
+}
+
+.sortable-header .fa-arrow-up-wide-short,
+.sortable-header .fa-arrow-down-wide-short {
+    color: #0d6efd;
+}

@@ -428,6 +428,8 @@ const TrackingTable = ({
                 className="tracking-row"
                 style={{
                   "--priority-color": priorityColor,
+                  backgroundColor: priorityColor,
+                  backgroundColor: `color-mix(in srgb, ${priorityColor} 8%, white)`,
                 }}
               >
                 <td
@@ -624,12 +626,13 @@ const TrackingTable = ({
         }
 
         .tracking-table tbody tr {
-          transition: background-color 0.2s ease;
+          transition: all 0.2s ease;
         }
 
         .tracking-table tbody tr:hover {
           background-color: var(--priority-color, #6c757d) !important;
-          background-color: color-mix(in srgb, var(--priority-color, #6c757d) 15%, white) !important;
+          background-color: color-mix(in srgb, var(--priority-color, #6c757d) 20%, white) !important;
+          filter: brightness(0.98);
         }
 
         .tracking-table tbody tr .priority-strip {
@@ -638,6 +641,7 @@ const TrackingTable = ({
 
         .tracking-table tbody tr:hover .priority-strip {
           background-color: var(--priority-color, #6c757d) !important;
+          filter: brightness(0.85);
         }
       `}</style>
 

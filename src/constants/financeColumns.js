@@ -1,0 +1,17 @@
+export const defaultColumns = [
+    { id: "strip", label: "", width: "5px" },
+    { id: "id", label: "#", width: "60px" },
+    { id: "employee", label: "الموظف المسؤول", width: "130px" },
+    { id: "type", label: "نوع المعاملة", width: "110px" },
+    { id: "client", label: "رقم المندوب", width: "120px" },
+    { id: "order", label: "رقم الطلب", width: "90px" },
+    { id: "amount", label: "المبلغ", width: "110px" },
+    { id: "visa_holder", label: "صاحب التأشيرة", width: "130px" },
+    { id: "transfer_number", label: "رقم الحوالة", width: "110px" },
+    { id: "payment_method", label: "طريقة الدفع", width: "140px" },
+    { id: "bank_name", label: "بنك المستفيد", width: "140px" },
+    { id: "transfer_date", label: "تاريخ الحوالة", width: "110px" },
+    { id: "is_reviewed", label: "مراجعة", width: "100px" },
+    { id: "created_at", label: "تاريخ الإنشاء", width: "110px" },
+    { id: "actions", label: "الإجراءات", width: "100px" },
+];

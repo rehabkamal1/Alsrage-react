@@ -21,6 +21,7 @@ const TrackingFormModal = ({
   authenticationStatuses = [],
   authorizationStatuses = [],
   externalOffices = [],
+  saudiOffices = [],
   loading,
   isEdit,
   error,
@@ -42,6 +43,7 @@ const TrackingFormModal = ({
     authentication_status: "",
     authorization_status: "",
     external_office_id: "",
+    saudi_office_id: "",
   });
 
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -52,7 +54,7 @@ const TrackingFormModal = ({
     if (initialData && Object.keys(initialData).length > 0) {
       const order = orders?.find((o) => o.id === initialData.order_id);
 
-      const newFormData = {
+      setFormData({
         order_id: initialData.order_id || "",
         is_authenticated: initialData.is_authenticated || false,
         authentication_date: formatDateForInput(
@@ -77,9 +79,9 @@ const TrackingFormModal = ({
         authorization_status: initialData.authorization_status || "",
         external_office_id:
           initialData.external_office_id || order?.external_office_id || "",
-      };
-
-      setFormData(newFormData);
+        saudi_office_id:
+          initialData.saudi_office_id || order?.saudi_office_id || "",
+      });
       setSelectedOrder(order || null);
     } else {
       setFormData({
@@ -99,6 +101,7 @@ const TrackingFormModal = ({
         authentication_status: "",
         authorization_status: "",
         external_office_id: "",
+        saudi_office_id: "",
       });
       setSelectedOrder(null);
     }
@@ -121,6 +124,21 @@ const TrackingFormModal = ({
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
     }
+  };
+
+  const handleOrderChange = (selected) => {
+    const orderId = selected ? selected.value : "";
+    const foundOrder = orders?.find((o) => o.id === parseInt(orderId)) || null;
+
+    setFormData((prev) => ({
+      ...prev,
+      order_id: orderId,
+      external_office_id: foundOrder?.external_office_id || "",
+      saudi_office_id: foundOrder?.saudi_office_id || "",
+      delegate_phone: foundOrder?.client?.phone || "",
+      sponsor_number: foundOrder?.client?.phone || "",
+    }));
+    setSelectedOrder(foundOrder);
   };
 
   const handleSubmit = (e) => {
@@ -160,6 +178,11 @@ const TrackingFormModal = ({
     label: `${office.country || ""} - ${office.name}`,
   }));
 
+  const saudiOfficeOptions = (saudiOffices || []).map((office) => ({
+    value: office.id,
+    label: office.name,
+  }));
+
   const getSelectedOption = (options, value) => {
     if (!value || !options || options.length === 0) return null;
     const found = options.find((opt) => String(opt.value) === String(value));
@@ -170,17 +193,10 @@ const TrackingFormModal = ({
   };
 
   const handleSelectChange = (field, selected) => {
-    if (selected && selected.value) {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: selected.value,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: "",
-      }));
-    }
+    setFormData((prev) => ({
+      ...prev,
+      [field]: selected ? selected.value : "",
+    }));
   };
 
   return (
@@ -212,20 +228,7 @@ const TrackingFormModal = ({
                       })),
                       formData.order_id,
                     )}
-                    onChange={(opt) => {
-                      const orderId = opt ? opt.value : "";
-                      const foundOrder =
-                        orders?.find((o) => o.id === parseInt(orderId)) || null;
-                      setFormData((prev) => ({
-                        ...prev,
-                        order_id: orderId,
-                        external_office_id:
-                          foundOrder?.external_office_id || "",
-                        delegate_phone: foundOrder?.client?.phone || "",
-                        sponsor_number: foundOrder?.client?.phone || "",
-                      }));
-                      setSelectedOrder(foundOrder);
-                    }}
+                    onChange={handleOrderChange}
                     isDisabled={isEdit}
                     placeholder="-- اختر طلباً --"
                     isClearable
@@ -272,6 +275,59 @@ const TrackingFormModal = ({
                     {getFieldError("delegate_phone") ||
                       getFieldError("sponsor_number")}
                   </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold small text-secondary">
+                    المكتب السعودي
+                  </Form.Label>
+                  <Select
+                    options={saudiOfficeOptions}
+                    value={getSelectedOption(
+                      saudiOfficeOptions,
+                      formData.saudi_office_id,
+                    )}
+                    onChange={(opt) =>
+                      handleSelectChange("saudi_office_id", opt)
+                    }
+                    placeholder="-- اختر المكتب السعودي --"
+                    isClearable
+                    isRtl
+                  />
+                  {getFieldError("saudi_office_id") && (
+                    <div className="text-danger small mt-1">
+                      {getFieldError("saudi_office_id")}
+                    </div>
+                  )}
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold small text-secondary">
+                    المكتب الخارجي
+                  </Form.Label>
+                  <Select
+                    options={externalOfficeOptions}
+                    value={getSelectedOption(
+                      externalOfficeOptions,
+                      formData.external_office_id,
+                    )}
+                    onChange={(opt) =>
+                      handleSelectChange("external_office_id", opt)
+                    }
+                    placeholder="-- اختر المكتب الخارجي --"
+                    isClearable
+                    isRtl
+                  />
+                  {getFieldError("external_office_id") && (
+                    <div className="text-danger small mt-1">
+                      {getFieldError("external_office_id")}
+                    </div>
+                  )}
                 </Form.Group>
               </Col>
             </Row>
@@ -344,6 +400,7 @@ const TrackingFormModal = ({
               </Col>
             </Row>
 
+            {/* باقي الكود كما هو */}
             <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
@@ -420,26 +477,6 @@ const TrackingFormModal = ({
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold small text-secondary">
-                    المكتب الخارجي
-                  </Form.Label>
-                  <Select
-                    options={externalOfficeOptions}
-                    value={getSelectedOption(
-                      externalOfficeOptions,
-                      formData.external_office_id,
-                    )}
-                    onChange={(opt) =>
-                      handleSelectChange("external_office_id", opt)
-                    }
-                    placeholder="-- اختر --"
-                    isClearable
-                    isRtl
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label className="fw-semibold small text-secondary">
                     درجة الأهمية
                   </Form.Label>
                   <Select
@@ -462,9 +499,6 @@ const TrackingFormModal = ({
                   )}
                 </Form.Group>
               </Col>
-            </Row>
-
-            <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold small text-secondary">
@@ -490,6 +524,9 @@ const TrackingFormModal = ({
                   )}
                 </Form.Group>
               </Col>
+            </Row>
+
+            <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold small text-secondary">
@@ -515,9 +552,6 @@ const TrackingFormModal = ({
                   )}
                 </Form.Group>
               </Col>
-            </Row>
-
-            <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold small text-secondary">
@@ -553,6 +587,9 @@ const TrackingFormModal = ({
                   />
                 </Form.Group>
               </Col>
+            </Row>
+
+            <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold small text-secondary">

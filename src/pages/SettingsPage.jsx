@@ -10,6 +10,8 @@ import api, {
   deleteServiceType,
   deleteAuthenticationStatus,
   deleteAuthorizationStatus,
+  deleteNationality,
+  deleteProfession,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import TableSkeleton from "../components/common/TableSkeleton";
@@ -25,6 +27,8 @@ const SettingsPage = () => {
   const [serviceTypes, setServiceTypes] = useState([]);
   const [authenticationStatuses, setAuthenticationStatuses] = useState([]);
   const [authorizationStatuses, setAuthorizationStatuses] = useState([]);
+  const [nationalities, setNationalities] = useState([]);
+  const [professions, setProfessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -45,6 +49,8 @@ const SettingsPage = () => {
         serviceTypesRes,
         authRes,
         authzRes,
+        nationalitiesRes,
+        professionsRes,
       ] = await Promise.all([
         api.get("/settings/priority-levels"),
         api.get("/settings/passport-statuses"),
@@ -55,6 +61,8 @@ const SettingsPage = () => {
         api.get("/settings/service-types"),
         api.get("/settings/authentication-statuses"),
         api.get("/settings/authorization-statuses"),
+        api.get("/settings/nationalities"),
+        api.get("/settings/professions"),
       ]);
       setPriorityLevels(
         priorityRes.data.data.map((item) => ({
@@ -114,6 +122,20 @@ const SettingsPage = () => {
       );
       setAuthorizationStatuses(
         (authzRes.data?.data || []).map((item) => ({
+          ...item,
+          isNew: false,
+          uniqueId: Date.now() + Math.random(),
+        })),
+      );
+      setNationalities(
+        (nationalitiesRes.data?.data || []).map((item) => ({
+          ...item,
+          isNew: false,
+          uniqueId: Date.now() + Math.random(),
+        })),
+      );
+      setProfessions(
+        (professionsRes.data?.data || []).map((item) => ({
           ...item,
           isNew: false,
           uniqueId: Date.now() + Math.random(),
@@ -506,7 +528,7 @@ const SettingsPage = () => {
           </Col>
         </Row>
 
-        <Row className="mt-4">
+        <Row className="mt-4 g-4">
           <Col xs={12} md={6}>
             <SettingsCard
               title="حالات التفويض"
@@ -536,6 +558,72 @@ const SettingsPage = () => {
               }
               saving={saving}
               emptyMessage="لا توجد حالات تفويض"
+            />
+          </Col>
+
+          <Col xs={12} md={6}>
+            <SettingsCard
+              title="الجنسيات"
+              items={nationalities}
+              onAdd={() => addItem(setNationalities)}
+              onUpdate={(idx, field, val) =>
+                updateItem(setNationalities, idx, field, val)
+              }
+              onDelete={(id, isNew, idx) =>
+                deleteItem(
+                  id,
+                  isNew,
+                  idx,
+                  nationalities,
+                  setNationalities,
+                  deleteNationality,
+                  "الجنسيات",
+                )
+              }
+              onSave={() =>
+                saveItems(
+                  nationalities,
+                  "/settings/nationalities",
+                  "nationalities",
+                  "تم حفظ الجنسيات بنجاح",
+                )
+              }
+              saving={saving}
+              emptyMessage="لا توجد جنسيات"
+            />
+          </Col>
+        </Row>
+
+        <Row className="mt-4">
+          <Col xs={12} md={6}>
+            <SettingsCard
+              title="المهن"
+              items={professions}
+              onAdd={() => addItem(setProfessions)}
+              onUpdate={(idx, field, val) =>
+                updateItem(setProfessions, idx, field, val)
+              }
+              onDelete={(id, isNew, idx) =>
+                deleteItem(
+                  id,
+                  isNew,
+                  idx,
+                  professions,
+                  setProfessions,
+                  deleteProfession,
+                  "المهن",
+                )
+              }
+              onSave={() =>
+                saveItems(
+                  professions,
+                  "/settings/professions",
+                  "professions",
+                  "تم حفظ المهن بنجاح",
+                )
+              }
+              saving={saving}
+              emptyMessage="لا توجد مهن"
             />
           </Col>
         </Row>

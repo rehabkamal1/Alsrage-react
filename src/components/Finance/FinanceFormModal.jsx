@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import Select from "react-select";
+import { getOrdersByClient } from "../../services/apiService";
 import "../../styles/FormModal.css";
 
 const FinanceFormModal = ({
@@ -8,13 +9,11 @@ const FinanceFormModal = ({
   onHide,
   onSubmit,
   initialData,
-  orders,
+  orders: allOrders = [],
   clients,
   employees,
   paymentMethods,
   bankNames,
-  priorityLevels,
-  transferStatuses,
   loading,
   isEdit,
   error,
@@ -30,11 +29,12 @@ const FinanceFormModal = ({
     bank_name: "",
     transfer_date: "",
     transfer_number: "",
-    status: "pending",
-    priority_level: "medium",
+    is_reviewed: false,
     notes: "",
   });
 
+  const [clientOrders, setClientOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const [validated, setValidated] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
@@ -74,8 +74,32 @@ const FinanceFormModal = ({
 
   const normalizedPaymentMethods = normalizeOptions(paymentMethods);
   const normalizedBankNames = normalizeOptions(bankNames);
-  const normalizedTransferStatuses = normalizeOptions(transferStatuses);
-  const normalizedPriorityLevels = normalizeOptions(priorityLevels);
+
+  const fetchClientOrders = async (clientId) => {
+    if (!clientId) {
+      setClientOrders([]);
+      return;
+    }
+    setLoadingOrders(true);
+    try {
+      const response = await getOrdersByClient(clientId);
+      const orders = response.data?.data || [];
+      setClientOrders(orders);
+    } catch (err) {
+      console.error("Error fetching client orders:", err);
+      setClientOrders([]);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  useEffect(() => {
+    if (formData.client_id) {
+      fetchClientOrders(formData.client_id);
+    } else {
+      setClientOrders([]);
+    }
+  }, [formData.client_id]);
 
   useEffect(() => {
     if (initialData) {
@@ -95,18 +119,6 @@ const FinanceFormModal = ({
         "",
       );
 
-      const statusValue = findValueInList(
-        transferStatuses,
-        initialData.status,
-        "pending",
-      );
-
-      const priorityValue = findValueInList(
-        priorityLevels,
-        initialData.priority_level,
-        "medium",
-      );
-
       setFormData({
         type: initialData.type || "receipt",
         amount: initialData.amount || "",
@@ -118,10 +130,13 @@ const FinanceFormModal = ({
         bank_name: bankNameValue,
         transfer_date: formattedTransferDate,
         transfer_number: initialData.transfer_number || "",
-        status: statusValue,
-        priority_level: priorityValue,
+        is_reviewed: initialData.is_reviewed || false,
         notes: initialData.notes || "",
       });
+
+      if (initialData.client_id) {
+        fetchClientOrders(initialData.client_id);
+      }
     } else {
       setFormData({
         type: "receipt",
@@ -134,10 +149,10 @@ const FinanceFormModal = ({
         bank_name: "",
         transfer_date: "",
         transfer_number: "",
-        status: "pending",
-        priority_level: "medium",
+        is_reviewed: false,
         notes: "",
       });
+      setClientOrders([]);
     }
     setValidated(false);
     setFieldErrors({});
@@ -146,8 +161,6 @@ const FinanceFormModal = ({
     show,
     paymentMethods,
     bankNames,
-    priorityLevels,
-    transferStatuses,
   ]);
 
   useEffect(() => {
@@ -157,8 +170,12 @@ const FinanceFormModal = ({
   }, [error]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    if (type === "checkbox") {
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
     }
@@ -192,10 +209,17 @@ const FinanceFormModal = ({
     label: e.name || `موظف #${e.id}`,
   }));
 
-  const orderOptions = (orders || []).map((o) => ({
+  const orderOptions = (clientOrders.length > 0 ? clientOrders : []).map((o) => ({
     value: o.id,
     label: `#${o.id} - ${o.visa_holder_name || o.client?.visa_holder_name || "بدون اسم"} - ${o.visa_number || ""}`,
   }));
+
+  const allOrderOptions = (allOrders || []).map((o) => ({
+    value: o.id,
+    label: `#${o.id} - ${o.visa_holder_name || o.client?.visa_holder_name || "بدون اسم"} - ${o.visa_number || ""}`,
+  }));
+
+  const displayOrderOptions = isEdit ? allOrderOptions : orderOptions;
 
   return (
     <Modal show={show} onHide={onHide} centered size="xl" dir="rtl">
@@ -277,12 +301,14 @@ const FinanceFormModal = ({
                 <Select
                   options={clientOptions}
                   value={getSelectedOption(clientOptions, formData.client_id)}
-                  onChange={(opt) =>
+                  onChange={(opt) => {
+                    const clientId = opt ? opt.value : "";
                     setFormData((prev) => ({
                       ...prev,
-                      client_id: opt ? opt.value : "",
-                    }))
-                  }
+                      client_id: clientId,
+                      order_ids: [],
+                    }));
+                  }}
                   placeholder="-- اختر المندوب --"
                   isClearable
                   isRtl
@@ -302,8 +328,9 @@ const FinanceFormModal = ({
                 </Form.Label>
                 <Select
                   isMulti
-                  options={orderOptions}
-                  value={orderOptions.filter((o) =>
+                  options={displayOrderOptions}
+                  isLoading={loadingOrders}
+                  value={displayOrderOptions.filter((o) =>
                     formData.order_ids?.includes(o.value),
                   )}
                   onChange={(selected) =>
@@ -312,9 +339,29 @@ const FinanceFormModal = ({
                       order_ids: selected ? selected.map((s) => s.value) : [],
                     }))
                   }
-                  placeholder="-- اختر طلباً (يمكن اختيار أكثر من واحد) --"
+                  placeholder={
+                    isEdit
+                      ? "-- اختر طلباً (يمكن اختيار أكثر من واحد) --"
+                      : loadingOrders
+                      ? "جاري تحميل الطلبات..."
+                      : formData.client_id
+                      ? clientOrders.length === 0
+                        ? "لا توجد طلبات لهذا المندوب"
+                        : "-- اختر طلباً (يمكن اختيار أكثر من واحد) --"
+                      : "يرجى اختيار المندوب أولاً"
+                  }
                   isClearable
                   isRtl
+                  isDisabled={!isEdit && !formData.client_id}
+                  noOptionsMessage={() =>
+                    isEdit
+                      ? "لا توجد طلبات"
+                      : formData.client_id
+                      ? clientOrders.length === 0
+                        ? "لا توجد طلبات لهذا المندوب"
+                        : "لا توجد خيارات"
+                      : "يرجى اختيار المندوب أولاً"
+                  }
                 />
                 {getFieldError("order_ids") && (
                   <div className="text-danger small mt-1">
@@ -448,58 +495,19 @@ const FinanceFormModal = ({
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
-                  حالة الحوالة
+                  مراجعة
                 </Form.Label>
-                <Select
-                  options={normalizedTransferStatuses}
-                  value={getSelectedOption(
-                    normalizedTransferStatuses,
-                    formData.status,
-                  )}
-                  onChange={(opt) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      status: opt ? opt.value : "",
-                    }))
-                  }
-                  placeholder="-- اختر --"
-                  isClearable
-                  isRtl
+                <Form.Check
+                  type="checkbox"
+                  id="is_reviewed"
+                  name="is_reviewed"
+                  label="تمت المراجعة"
+                  checked={formData.is_reviewed || false}
+                  onChange={handleChange}
                 />
-                {getFieldError("status") && (
+                {getFieldError("is_reviewed") && (
                   <div className="text-danger small mt-1">
-                    {getFieldError("status")}
-                  </div>
-                )}
-              </Form.Group>
-            </Col>
-          </Row>
-
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold small text-secondary">
-                  درجة الأهمية
-                </Form.Label>
-                <Select
-                  options={normalizedPriorityLevels}
-                  value={getSelectedOption(
-                    normalizedPriorityLevels,
-                    formData.priority_level,
-                  )}
-                  onChange={(opt) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      priority_level: opt ? opt.value : "",
-                    }))
-                  }
-                  placeholder="-- اختر --"
-                  isClearable
-                  isRtl
-                />
-                {getFieldError("priority_level") && (
-                  <div className="text-danger small mt-1">
-                    {getFieldError("priority_level")}
+                    {getFieldError("is_reviewed")}
                   </div>
                 )}
               </Form.Group>

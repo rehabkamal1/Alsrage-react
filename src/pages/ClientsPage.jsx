@@ -1,14 +1,13 @@
-// src/pages/ClientsPage.jsx
-
 import React, { useState, useEffect } from "react";
 import { Container, Card, Button, Badge } from "react-bootstrap";
 import RefreshButton from "../components/common/RefreshButton";
 import DateFilterBar from "../components/common/DateFilterBar";
 import {
-  getClients,
-  createClient,
-  updateClient,
-  deleteClient,
+    getClients,
+    createClient,
+    updateClient,
+    deleteClient,
+    getSettingsOrderStatuses,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import ClientFormModal from "../components/Client/ClientFormModal";
@@ -22,321 +21,330 @@ import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
 import { getUser } from "../services/authService";
 
-
 const ClientsPage = () => {
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [showOrdersModal, setShowOrdersModal] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [editingClient, setEditingClient] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [filters, setFilters] = useState({
-    client_type: "",
-    sort_by: "created_at",
-    sort_dir: "desc",
-  });
-  const itemsPerPage = 8;
-
-  const user = getUser();
-  const isAdmin = user?.role === "admin";
-  const hasPermission = (permission) => {
-    if (isAdmin) return true;
-    return user?.permissions?.includes(permission) || false;
-  };
-
-
-  useEffect(() => {
-    fetchClients();
-  }, [currentPage, searchQuery, filters, fromDate, toDate]);
-
-  const fetchClients = async () => {
-    if (initialLoading) {
-      setInitialLoading(true);
-    } else {
-      setLoading(true);
-    }
-    try {
-      const params = {
-        page: currentPage,
-        per_page: itemsPerPage,
-        search: searchQuery || undefined,
-        client_type: filters.client_type || undefined,
-        sort_by: filters.sort_by,
-        sort_dir: filters.sort_dir,
-      };
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
-
-      const response = await getClients(params);
-      setClients(response.data.data || []);
-      setTotalPages(response.data.meta?.last_page || 1);
-    } catch (error) {
-      console.error("Error fetching clients:", error);
-    } finally {
-      setLoading(false);
-      setInitialLoading(false);
-    }
-  };
-
-  const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
-    setFromDate(fromDate);
-    setToDate(toDate);
-    setCurrentPage(1);
-  };
-
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-    setCurrentPage(1);
-  };
-
-  const handleClearSearch = () => {
-    setSearchQuery("");
-    setFilters({
-      client_type: "",
-      sort_by: "created_at",
-      sort_dir: "desc",
+    const [clients, setClients] = useState([]);
+    const [orderStatuses, setOrderStatuses] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
+    const [showModal, setShowModal] = useState(false);
+    const [showOrdersModal, setShowOrdersModal] = useState(false);
+    const [selectedClient, setSelectedClient] = useState(null);
+    const [editingClient, setEditingClient] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+    const [filters, setFilters] = useState({
+        client_type: "",
+        sort_by: "created_at",
+        sort_dir: "desc",
     });
-    setFromDate("");
-    setToDate("");
-    setCurrentPage(1);
-  };
+    const itemsPerPage = 8;
 
-  const handleFilterChange = (field, value) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-    setCurrentPage(1);
-  };
+    const user = getUser();
+    const isAdmin = user?.role === "admin";
+    const hasPermission = (permission) => {
+        if (isAdmin) return true;
+        return user?.permissions?.includes(permission) || false;
+    };
 
-  const handleAddClient = () => {
-    setEditingClient(null);
-    setShowModal(true);
-  };
-
-  const handleEditClient = (client) => {
-    setEditingClient(client);
-    setShowModal(true);
-  };
-
-  const handleShowOrders = (client) => {
-    setSelectedClient(client);
-    setShowOrdersModal(true);
-  };
-
-  const handleSubmit = async (formData) => {
-    setLoading(true);
-    try {
-      if (editingClient) {
-        await updateClient(editingClient.id, formData);
-        showSuccess("تم التحديث!", "تم تحديث بيانات العميل بنجاح");
-      } else {
-        await createClient(formData);
-        showSuccess("تمت الإضافة!", "تم إضافة العميل بنجاح");
-      }
-      setShowModal(false);
-      setEditingClient(null);
-      fetchClients();
-    } catch (error) {
-      const data = error.response?.data;
-      let errorMsg = "حدث خطأ أثناء العملية.";
-      if (data?.errors) {
-        errorMsg = Object.values(data.errors).flat().join("\n");
-      } else if (data?.message) {
-        errorMsg = data.message;
-      }
-      showError("خطأ!", errorMsg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteClient = async (id) => {
-    const result = await showConfirm(
-      "هل أنت متأكد؟",
-      "سيتم حذف العميل نهائياً",
-    );
-    if (result.isConfirmed) {
-      setLoading(true);
-      try {
-        await deleteClient(id);
-        showSuccess("تم الحذف", "تم حذف العميل بنجاح");
+    useEffect(() => {
         fetchClients();
-      } catch (error) {
-        showError("خطأ", "حدث خطأ أثناء الحذف");
-      } finally {
-        setLoading(false);
-      }
+        fetchSettings();
+    }, [currentPage, searchQuery, filters, fromDate, toDate]);
+
+    const fetchSettings = async () => {
+        try {
+            const orderStatusesRes = await getSettingsOrderStatuses();
+            setOrderStatuses(orderStatusesRes.data?.data || []);
+        } catch (error) {
+            console.error("Error fetching settings:", error);
+        }
+    };
+
+    const fetchClients = async () => {
+        if (initialLoading) {
+            setInitialLoading(true);
+        } else {
+            setLoading(true);
+        }
+        try {
+            const params = {
+                page: currentPage,
+                per_page: itemsPerPage,
+                search: searchQuery || undefined,
+                client_type: filters.client_type || undefined,
+                sort_by: filters.sort_by,
+                sort_dir: filters.sort_dir,
+            };
+            if (fromDate) params.from_date = fromDate;
+            if (toDate) params.to_date = toDate;
+
+            const response = await getClients(params);
+            setClients(response.data.data || []);
+            setTotalPages(response.data.meta?.last_page || 1);
+        } catch (error) {
+            console.error("Error fetching clients:", error);
+        } finally {
+            setLoading(false);
+            setInitialLoading(false);
+        }
+    };
+
+    const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
+        setFromDate(fromDate);
+        setToDate(toDate);
+        setCurrentPage(1);
+    };
+
+    const handleSearch = (query) => {
+        setSearchQuery(query);
+        setCurrentPage(1);
+    };
+
+    const handleClearSearch = () => {
+        setSearchQuery("");
+        setFilters({
+            client_type: "",
+            sort_by: "created_at",
+            sort_dir: "desc",
+        });
+        setFromDate("");
+        setToDate("");
+        setCurrentPage(1);
+    };
+
+    const handleFilterChange = (field, value) => {
+        setFilters((prev) => ({ ...prev, [field]: value }));
+        setCurrentPage(1);
+    };
+
+    const handleAddClient = () => {
+        setEditingClient(null);
+        setShowModal(true);
+    };
+
+    const handleEditClient = (client) => {
+        setEditingClient(client);
+        setShowModal(true);
+    };
+
+    const handleShowOrders = (client) => {
+        setSelectedClient(client);
+        setShowOrdersModal(true);
+    };
+
+    const handleSubmit = async (formData) => {
+        setLoading(true);
+        try {
+            if (editingClient) {
+                await updateClient(editingClient.id, formData);
+                showSuccess("تم التحديث!", "تم تحديث بيانات العميل بنجاح");
+            } else {
+                await createClient(formData);
+                showSuccess("تمت الإضافة!", "تم إضافة العميل بنجاح");
+            }
+            setShowModal(false);
+            setEditingClient(null);
+            fetchClients();
+        } catch (error) {
+            const data = error.response?.data;
+            let errorMsg = "حدث خطأ أثناء العملية.";
+            if (data?.errors) {
+                errorMsg = Object.values(data.errors).flat().join("\n");
+            } else if (data?.message) {
+                errorMsg = data.message;
+            }
+            showError("خطأ!", errorMsg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteClient = async (id) => {
+        const result = await showConfirm(
+            "هل أنت متأكد؟",
+            "سيتم حذف العميل نهائياً",
+        );
+        if (result.isConfirmed) {
+            setLoading(true);
+            try {
+                await deleteClient(id);
+                showSuccess("تم الحذف", "تم حذف العميل بنجاح");
+                fetchClients();
+            } catch (error) {
+                showError("خطأ", "حدث خطأ أثناء الحذف");
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const handleExport = () => {
+        const columns = [
+            { header: "نوع العميل", key: "client_type" },
+            { header: "رقم هاتف المندوب", key: "phone" },
+            { header: "المندوب", key: "name" },
+            { header: "رقم هاتف إضافي", key: "additional_phone" },
+            { header: "المدينة", key: "city" },
+            { header: "العنوان", key: "address" },
+        ];
+        exportToExcel(clients, columns, "العملاء.xlsx");
+    };
+
+    const handleExportPDF = () => {
+        const columns = [
+            { header: "نوع العميل", key: "client_type" },
+            { header: "رقم هاتف المندوب", key: "phone" },
+            { header: "المندوب", key: "name" },
+            { header: "رقم هاتف إضافي", key: "additional_phone" },
+            { header: "المدينة", key: "city" },
+            { header: "العنوان", key: "address" },
+        ];
+        exportToPDF(clients, columns, "العملاء.pdf");
+    };
+
+    if (initialLoading) {
+        return (
+            <div
+                style={{
+                    backgroundColor: "#f5f7fa",
+                    minHeight: "100vh",
+                    padding: "24px",
+                }}
+            >
+                <Container fluid>
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                        <h1 className="h3 mb-0 fw-bold">العملاء</h1>
+                        <Button variant="dark" disabled>
+                            + عميل جديد
+                        </Button>
+                    </div>
+                    <Card className="shadow-sm border-0 rounded-4">
+                        <Card.Body className="p-0">
+                            <TableSkeleton rows={5} columns={8} />
+                        </Card.Body>
+                    </Card>
+                </Container>
+            </div>
+        );
     }
-  };
 
-  const handleExport = () => {
-    const columns = [
-      { header: "نوع العميل", key: "client_type" },
-      { header: "رقم هاتف المندوب", key: "phone" },
-      { header: "المندوب", key: "name" },
-      { header: "رقم هاتف إضافي", key: "additional_phone" },
-      { header: "المدينة", key: "city" },
-      { header: "العنوان", key: "address" },
-    ];
-    exportToExcel(clients, columns, "العملاء.xlsx");
-  };
-
-  const handleExportPDF = () => {
-    const columns = [
-      { header: "نوع العميل", key: "client_type" },
-      { header: "رقم هاتف المندوب", key: "phone" },
-      { header: "المندوب", key: "name" },
-      { header: "رقم هاتف إضافي", key: "additional_phone" },
-      { header: "المدينة", key: "city" },
-      { header: "العنوان", key: "address" },
-    ];
-    exportToPDF(clients, columns, "العملاء.pdf");
-  };
-
-  if (initialLoading) {
     return (
-      <div
-        style={{
-          backgroundColor: "#f5f7fa",
-          minHeight: "100vh",
-          padding: "24px",
-        }}
-      >
-        <Container fluid>
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-            <h1 className="h3 mb-0 fw-bold">العملاء</h1>
-            <Button variant="dark" disabled>
-              + عميل جديد
-            </Button>
-          </div>
-          <Card className="shadow-sm border-0 rounded-4">
-            <Card.Body className="p-0">
-              <TableSkeleton rows={5} columns={8} />
-            </Card.Body>
-          </Card>
-        </Container>
-      </div>
-    );
-  }
+        <div
+            style={{
+                backgroundColor: "#f5f7fa",
+                minHeight: "100vh",
+                padding: "24px",
+            }}
+        >
+            <Container fluid>
+                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                    <h1 className="h3 mb-0 fw-bold">العملاء</h1>
+                    <div className="d-flex flex-wrap gap-2">
+                        <RefreshButton
+                            onClick={fetchClients}
+                            loading={loading}
+                            className="border shadow-sm text-primary fw-semibold"
+                        />
+                        <Button
+                            variant="light"
+                            onClick={handleExport}
+                            className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
+                            disabled={clients.length === 0}
+                        >
+                            <i className="fa-solid fa-file-excel fs-5"></i>
+                            <span>إكسيل</span>
+                        </Button>
+                        <Button
+                            variant="light"
+                            onClick={handleExportPDF}
+                            className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
+                            disabled={clients.length === 0}
+                        >
+                            <i className="fa-solid fa-file-pdf fs-5"></i>
+                            <span>بي دي اف</span>
+                        </Button>
+                        {hasPermission("create_clients") && (
+                            <Button
+                                variant="dark"
+                                onClick={handleAddClient}
+                                className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+                            >
+                                <i className="fa-solid fa-plus"></i>
+                                <span>عميل جديد</span>
+                            </Button>
+                        )}
+                    </div>
+                </div>
 
-  return (
-    <div
-      style={{
-        backgroundColor: "#f5f7fa",
-        minHeight: "100vh",
-        padding: "24px",
-      }}
-    >
-      <Container fluid>
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-          <h1 className="h3 mb-0 fw-bold">العملاء</h1>
-          <div className="d-flex flex-wrap gap-2">
-            <RefreshButton
-              onClick={fetchClients}
-              loading={loading}
-              className="border shadow-sm text-primary fw-semibold"
+                <DateFilterBar
+                    onFilterChange={handleDateFilterChange}
+                    initialFromDate={fromDate}
+                    initialToDate={toDate}
+                    initialPreset="all"
+                    size="md"
+                />
+
+                <ClientSearchBar
+                    searchQuery={searchQuery}
+                    onSearch={handleSearch}
+                    onClear={handleClearSearch}
+                    filters={filters}
+                    onFilterChange={handleFilterChange}
+                    loading={loading}
+                />
+
+                <Card className="shadow-sm border-0 rounded-4">
+                    <Card.Body className="p-0">
+                        {loading ? (
+                            <TableSkeleton rows={5} columns={8} />
+                        ) : (
+                            <>
+                                <ClientTable
+                                    clients={clients}
+                                    onEdit={handleEditClient}
+                                    onDelete={handleDeleteClient}
+                                    onViewOrders={handleShowOrders}
+                                    canEdit={hasPermission("edit_clients")}
+                                    canDelete={hasPermission("delete_clients")}
+                                />
+
+                                <PaginationComponent
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={setCurrentPage}
+                                />
+                            </>
+                        )}
+                    </Card.Body>
+                </Card>
+            </Container>
+
+            <ClientFormModal
+                show={showModal}
+                onHide={() => {
+                    setShowModal(false);
+                    setEditingClient(null);
+                }}
+                onSubmit={handleSubmit}
+                initialData={editingClient}
+                loading={loading}
+                isEdit={!!editingClient}
             />
-            <Button
-              variant="light"
-              onClick={handleExport}
-              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
-              disabled={clients.length === 0}
-            >
-              <i className="fa-solid fa-file-excel fs-5"></i>
-              <span>إكسيل</span>
-            </Button>
-            <Button
-              variant="light"
-              onClick={handleExportPDF}
-              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
-              disabled={clients.length === 0}
-            >
-              <i className="fa-solid fa-file-pdf fs-5"></i>
-              <span>بي دي اف</span>
-            </Button>
-            {hasPermission("create_clients") && (
-              <Button
-                variant="dark"
-                onClick={handleAddClient}
-                className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
-              >
-                <i className="fa-solid fa-plus"></i>
-                <span>عميل جديد</span>
-              </Button>
-            )}
-          </div>
+
+            <ClientOrdersModal
+                show={showOrdersModal}
+                onHide={() => {
+                    setShowOrdersModal(false);
+                    setSelectedClient(null);
+                }}
+                client={selectedClient}
+                orderStatuses={orderStatuses}
+            />
         </div>
-
-        <DateFilterBar
-          onFilterChange={handleDateFilterChange}
-          initialFromDate={fromDate}
-          initialToDate={toDate}
-          initialPreset="all"
-          size="md"
-        />
-
-        <ClientSearchBar
-          searchQuery={searchQuery}
-          onSearch={handleSearch}
-          onClear={handleClearSearch}
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          loading={loading}
-        />
-
-        <Card className="shadow-sm border-0 rounded-4">
-          <Card.Body className="p-0">
-            {loading ? (
-              <TableSkeleton rows={5} columns={8} />
-            ) : (
-              <>
-                <ClientTable
-                  clients={clients}
-                  onEdit={handleEditClient}
-                  onDelete={handleDeleteClient}
-                  onViewOrders={handleShowOrders}
-                  canEdit={hasPermission("edit_clients")}
-                  canDelete={hasPermission("delete_clients")}
-                />
-
-
-                <PaginationComponent
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
-              </>
-            )}
-          </Card.Body>
-        </Card>
-      </Container>
-
-      <ClientFormModal
-        show={showModal}
-        onHide={() => {
-          setShowModal(false);
-          setEditingClient(null);
-        }}
-        onSubmit={handleSubmit}
-        initialData={editingClient}
-        loading={loading}
-        isEdit={!!editingClient}
-      />
-
-      <ClientOrdersModal
-        show={showOrdersModal}
-        onHide={() => {
-          setShowOrdersModal(false);
-          setSelectedClient(null);
-        }}
-        client={selectedClient}
-      />
-    </div>
-  );
+    );
 };
 
 export default ClientsPage;

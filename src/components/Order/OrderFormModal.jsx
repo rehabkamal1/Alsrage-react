@@ -20,32 +20,13 @@ import {
     getClients,
     getEmployees,
     createEmployee,
+    getSettingsNationalities,
+    getSettingsProfessions,
 } from "../../services/apiService";
 import "../../styles/FormModal.css";
 
 const API_URL =
     import.meta.env.VITE_API_URL || "https://alserage.alfanar-rec.com";
-
-const NATIONALITY_OPTIONS = [
-    { value: "فلبيني", label: "فلبيني" },
-    { value: "إندونيسي", label: "إندونيسي" },
-    { value: "هندي", label: "هندي" },
-    { value: "بنجلاديشي", label: "بنجلاديشي" },
-    { value: "سريلانكي", label: "سريلانكي" },
-    { value: "كيني", label: "كيني" },
-    { value: "أوغندي", label: "أوغندي" },
-    { value: "إثيوبي", label: "إثيوبي" },
-    { value: "مالي", label: "مالي" },
-    { value: "نيبالي", label: "نيبالي" },
-    { value: "باكستاني", label: "باكستاني" },
-    { value: "مصري", label: "مصري" },
-    { value: "سوداني", label: "سوداني" },
-    { value: "يمني", label: "يمني" },
-    { value: "مغربي", label: "مغربي" },
-    { value: "تونسي", label: "تونسي" },
-    { value: "أردني", label: "أردني" },
-    { value: "سوري", label: "سوري" },
-];
 
 const OrderFormModal = ({
     show,
@@ -68,6 +49,8 @@ const OrderFormModal = ({
     const [localExternalOffices, setLocalExternalOffices] = useState([]);
     const [localClients, setLocalClients] = useState([]);
     const [localEmployees, setLocalEmployees] = useState([]);
+    const [nationalityOptions, setNationalityOptions] = useState([]);
+    const [professionOptions, setProfessionOptions] = useState([]);
 
     const [showQuickEmployee, setShowQuickEmployee] = useState(false);
     const [newEmpName, setNewEmpName] = useState("");
@@ -123,6 +106,30 @@ const OrderFormModal = ({
                 .catch((err) =>
                     console.error("Error fetching local employees:", err),
                 );
+
+            Promise.all([
+                getSettingsNationalities().catch(() => ({
+                    data: { data: [] },
+                })),
+                getSettingsProfessions().catch(() => ({ data: { data: [] } })),
+            ]).then(([nationalitiesRes, professionsRes]) => {
+                const nationalities = nationalitiesRes.data?.data || [];
+                const professions = professionsRes.data?.data || [];
+                setNationalityOptions(
+                    nationalities.map((item) => ({
+                        value: item.key,
+                        label: item.label,
+                        color: item.color,
+                    })),
+                );
+                setProfessionOptions(
+                    professions.map((item) => ({
+                        value: item.key,
+                        label: item.label,
+                        color: item.color,
+                    })),
+                );
+            });
         }
     }, [show]);
 
@@ -156,8 +163,7 @@ const OrderFormModal = ({
         localExternalOffices.length > 0
             ? localExternalOffices
             : externalOffices;
-    const effectiveClients =
-        localClients.length > 0 ? localClients : clients;
+    const effectiveClients = localClients.length > 0 ? localClients : clients;
     const effectiveEmployees =
         localEmployees.length > 0 ? localEmployees : employees;
 
@@ -179,6 +185,7 @@ const OrderFormModal = ({
         contract_date: "",
         total_price: "",
         musaned_paid: "",
+        is_paid_by_office: false,
         status: "",
         notes: "",
         visa_image: null,
@@ -245,6 +252,7 @@ const OrderFormModal = ({
                 contract_date: initialData.contract_date || "",
                 total_price: initialData.total_price || "",
                 musaned_paid: initialData.musaned_paid || "",
+                is_paid_by_office: initialData.is_paid_by_office || false,
                 status: initialData.status || "",
                 notes: initialData.notes || "",
                 visa_image: null,
@@ -285,6 +293,7 @@ const OrderFormModal = ({
                 contract_date: "",
                 total_price: "",
                 musaned_paid: "",
+                is_paid_by_office: false,
                 status: "",
                 notes: "",
                 visa_image: null,
@@ -308,8 +317,18 @@ const OrderFormModal = ({
     }, [error]);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value || "" }));
+        const { name, value, type, checked } = e.target;
+        if (type === "checkbox") {
+            setFormData((prev) => {
+                const newData = { ...prev, [name]: checked };
+                if (name === "is_paid_by_office" && checked) {
+                    newData.musaned_paid = 0;
+                }
+                return newData;
+            });
+        } else {
+            setFormData((prev) => ({ ...prev, [name]: value || "" }));
+        }
         if (fieldErrors[name]) {
             setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
         }
@@ -389,7 +408,10 @@ const OrderFormModal = ({
             if (fieldErrors.client_id) {
                 setFieldErrors((prev) => ({ ...prev, client_id: undefined }));
             }
-            showSuccess("تمت الإضافة", "تم إضافة المندوب / العميل بنجاح واختياره للطلب");
+            showSuccess(
+                "تمت الإضافة",
+                "تم إضافة المندوب / العميل بنجاح واختياره للطلب",
+            );
             setShowQuickCreate(false);
             setNewClientName("");
             setNewClientPhone("");
@@ -398,7 +420,10 @@ const OrderFormModal = ({
             if (errorData?.errors) {
                 setFieldErrors(errorData.errors);
             }
-            showError("خطأ", errorData?.message || "حدث خطأ أثناء إضافة المندوب");
+            showError(
+                "خطأ",
+                errorData?.message || "حدث خطأ أثناء إضافة المندوب",
+            );
         } finally {
             setQuickCreateLoading(false);
         }
@@ -586,7 +611,9 @@ const OrderFormModal = ({
     };
 
     const totalPrice = parseFloat(formData.total_price) || 0;
-    const musanedPaid = parseFloat(formData.musaned_paid) || 0;
+    const musanedPaid = formData.is_paid_by_office
+        ? 0
+        : parseFloat(formData.musaned_paid) || 0;
     const priceDifference = totalPrice - musanedPaid;
 
     const getFieldError = (fieldName) => {
@@ -611,7 +638,9 @@ const OrderFormModal = ({
                 formData[key] !== undefined &&
                 key !== "price_difference"
             ) {
-                if (
+                if (key === "is_paid_by_office") {
+                    submitData.append(key, formData[key] ? "1" : "0");
+                } else if (
                     key === "status" &&
                     (!formData[key] || formData[key] === "")
                 ) {
@@ -722,20 +751,20 @@ const OrderFormModal = ({
                                                                 ),
                                                         )
                                                             ? {
-                                                                value: formData.saudi_office_id,
-                                                                label: (
-                                                                    effectiveSaudiOffices ||
-                                                                    []
-                                                                ).find(
-                                                                    (o) =>
-                                                                        String(
-                                                                            o.id,
-                                                                        ) ===
-                                                                        String(
-                                                                            formData.saudi_office_id,
-                                                                        ),
-                                                                ).name,
-                                                            }
+                                                                  value: formData.saudi_office_id,
+                                                                  label: (
+                                                                      effectiveSaudiOffices ||
+                                                                      []
+                                                                  ).find(
+                                                                      (o) =>
+                                                                          String(
+                                                                              o.id,
+                                                                          ) ===
+                                                                          String(
+                                                                              formData.saudi_office_id,
+                                                                          ),
+                                                                  ).name,
+                                                              }
                                                             : null
                                                     }
                                                     onChange={(option) => {
@@ -802,12 +831,12 @@ const OrderFormModal = ({
                                                 {getFieldError(
                                                     "saudi_office_id",
                                                 ) && (
-                                                        <div className="text-danger small mt-1">
-                                                            {getFieldError(
-                                                                "saudi_office_id",
-                                                            )}
-                                                        </div>
-                                                    )}
+                                                    <div className="text-danger small mt-1">
+                                                        {getFieldError(
+                                                            "saudi_office_id",
+                                                        )}
+                                                    </div>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                         <Col md={6}>
@@ -843,20 +872,20 @@ const OrderFormModal = ({
                                                                 ),
                                                         )
                                                             ? {
-                                                                value: formData.external_office_id,
-                                                                label: (
-                                                                    effectiveExternalOffices ||
-                                                                    []
-                                                                ).find(
-                                                                    (o) =>
-                                                                        String(
-                                                                            o.id,
-                                                                        ) ===
-                                                                        String(
-                                                                            formData.external_office_id,
-                                                                        ),
-                                                                ).name,
-                                                            }
+                                                                  value: formData.external_office_id,
+                                                                  label: (
+                                                                      effectiveExternalOffices ||
+                                                                      []
+                                                                  ).find(
+                                                                      (o) =>
+                                                                          String(
+                                                                              o.id,
+                                                                          ) ===
+                                                                          String(
+                                                                              formData.external_office_id,
+                                                                          ),
+                                                                  ).name,
+                                                              }
                                                             : null
                                                     }
                                                     onChange={(option) => {
@@ -923,12 +952,12 @@ const OrderFormModal = ({
                                                 {getFieldError(
                                                     "external_office_id",
                                                 ) && (
-                                                        <div className="text-danger small mt-1">
-                                                            {getFieldError(
-                                                                "external_office_id",
-                                                            )}
-                                                        </div>
-                                                    )}
+                                                    <div className="text-danger small mt-1">
+                                                        {getFieldError(
+                                                            "external_office_id",
+                                                        )}
+                                                    </div>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -937,7 +966,10 @@ const OrderFormModal = ({
                                         <Col md={6}>
                                             <Form.Group className="mb-3">
                                                 <Form.Label className="fw-semibold small text-secondary">
-                                                    المندوب / العميل <span className="text-danger">*</span>
+                                                    المندوب / العميل{" "}
+                                                    <span className="text-danger">
+                                                        *
+                                                    </span>
                                                 </Form.Label>
                                                 <Select
                                                     className="react-select-container"
@@ -1016,9 +1048,7 @@ const OrderFormModal = ({
                                                         },
                                                     }}
                                                 />
-                                                {getFieldError(
-                                                    "client_id",
-                                                ) && (
+                                                {getFieldError("client_id") && (
                                                     <div className="text-danger small mt-1">
                                                         {getFieldError(
                                                             "client_id",
@@ -1113,12 +1143,12 @@ const OrderFormModal = ({
                                                 {getFieldError(
                                                     "employee_id",
                                                 ) && (
-                                                        <div className="text-danger small mt-1">
-                                                            {getFieldError(
-                                                                "employee_id",
-                                                            )}
-                                                        </div>
-                                                    )}
+                                                    <div className="text-danger small mt-1">
+                                                        {getFieldError(
+                                                            "employee_id",
+                                                        )}
+                                                    </div>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -1265,19 +1295,19 @@ const OrderFormModal = ({
                                                     value={
                                                         formData.service_type
                                                             ? {
-                                                                value: formData.service_type,
-                                                                label:
-                                                                    serviceTypeOptions.find(
-                                                                        (
-                                                                            st,
-                                                                        ) =>
-                                                                            (st.key ||
-                                                                                st.label) ===
-                                                                            formData.service_type,
-                                                                    )
-                                                                        ?.label ||
-                                                                    formData.service_type,
-                                                            }
+                                                                  value: formData.service_type,
+                                                                  label:
+                                                                      serviceTypeOptions.find(
+                                                                          (
+                                                                              st,
+                                                                          ) =>
+                                                                              (st.key ||
+                                                                                  st.label) ===
+                                                                              formData.service_type,
+                                                                      )
+                                                                          ?.label ||
+                                                                      formData.service_type,
+                                                              }
                                                             : null
                                                     }
                                                     onChange={(option) =>
@@ -1306,12 +1336,12 @@ const OrderFormModal = ({
                                                 {getFieldError(
                                                     "service_type",
                                                 ) && (
-                                                        <div className="text-danger small mt-1">
-                                                            {getFieldError(
-                                                                "service_type",
-                                                            )}
-                                                        </div>
-                                                    )}
+                                                    <div className="text-danger small mt-1">
+                                                        {getFieldError(
+                                                            "service_type",
+                                                        )}
+                                                    </div>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -1357,25 +1387,23 @@ const OrderFormModal = ({
                                                         *
                                                     </span>
                                                 </Form.Label>
-                                                <CreatableSelect
+                                                <Select
                                                     className="react-select-container"
                                                     classNamePrefix="react-select"
-                                                    options={
-                                                        NATIONALITY_OPTIONS
-                                                    }
+                                                    options={nationalityOptions}
                                                     value={
                                                         formData.nationality
                                                             ? {
-                                                                value: formData.nationality,
-                                                                label:
-                                                                    NATIONALITY_OPTIONS.find(
-                                                                        (n) =>
-                                                                            n.value ===
-                                                                            formData.nationality,
-                                                                    )
-                                                                        ?.label ||
-                                                                    formData.nationality,
-                                                            }
+                                                                  value: formData.nationality,
+                                                                  label:
+                                                                      nationalityOptions.find(
+                                                                          (n) =>
+                                                                              n.value ===
+                                                                              formData.nationality,
+                                                                      )
+                                                                          ?.label ||
+                                                                      formData.nationality,
+                                                              }
                                                             : null
                                                     }
                                                     onChange={(option) =>
@@ -1387,11 +1415,6 @@ const OrderFormModal = ({
                                                         }))
                                                     }
                                                     placeholder="اختر أو ابحث عن الجنسية..."
-                                                    formatCreateLabel={(
-                                                        inputValue,
-                                                    ) =>
-                                                        `إضافة "${inputValue}"`
-                                                    }
                                                     isClearable
                                                     isSearchable
                                                     isRtl
@@ -1410,12 +1433,12 @@ const OrderFormModal = ({
                                                 {getFieldError(
                                                     "nationality",
                                                 ) && (
-                                                        <div className="text-danger small mt-1">
-                                                            {getFieldError(
-                                                                "nationality",
-                                                            )}
-                                                        </div>
-                                                    )}
+                                                    <div className="text-danger small mt-1">
+                                                        {getFieldError(
+                                                            "nationality",
+                                                        )}
+                                                    </div>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -1458,24 +1481,58 @@ const OrderFormModal = ({
                                                 <Form.Label className="fw-semibold small text-secondary">
                                                     المهنة
                                                 </Form.Label>
-                                                <Form.Control
-                                                    type="text"
-                                                    name="profession"
-                                                    value={formData.profession}
-                                                    onChange={handleChange}
-                                                    isInvalid={
-                                                        !!getFieldError(
-                                                            "profession",
-                                                        )
+                                                <Select
+                                                    className="react-select-container"
+                                                    classNamePrefix="react-select"
+                                                    options={professionOptions}
+                                                    value={
+                                                        formData.profession
+                                                            ? {
+                                                                  value: formData.profession,
+                                                                  label:
+                                                                      professionOptions.find(
+                                                                          (p) =>
+                                                                              p.value ===
+                                                                              formData.profession,
+                                                                      )
+                                                                          ?.label ||
+                                                                      formData.profession,
+                                                              }
+                                                            : null
                                                     }
-                                                    placeholder="أدخل المهنة"
-                                                    className="rounded-3"
+                                                    onChange={(option) =>
+                                                        setFormData((prev) => ({
+                                                            ...prev,
+                                                            profession: option
+                                                                ? option.value
+                                                                : "",
+                                                        }))
+                                                    }
+                                                    placeholder="اختر أو ابحث عن المهنة..."
+                                                    isClearable
+                                                    isSearchable
+                                                    isRtl
+                                                    styles={{
+                                                        control: (base) => ({
+                                                            ...base,
+                                                            borderColor:
+                                                                getFieldError(
+                                                                    "profession",
+                                                                )
+                                                                    ? "#dc3545"
+                                                                    : base.borderColor,
+                                                        }),
+                                                    }}
                                                 />
-                                                <Form.Control.Feedback type="invalid">
-                                                    {getFieldError(
-                                                        "profession",
-                                                    )}
-                                                </Form.Control.Feedback>
+                                                {getFieldError(
+                                                    "profession",
+                                                ) && (
+                                                    <div className="text-danger small mt-1">
+                                                        {getFieldError(
+                                                            "profession",
+                                                        )}
+                                                    </div>
+                                                )}
                                             </Form.Group>
                                         </Col>
                                     </Row>
@@ -1554,19 +1611,19 @@ const OrderFormModal = ({
                                                     )}
                                                     value={
                                                         formData.status &&
-                                                            formData.status !== ""
+                                                        formData.status !== ""
                                                             ? {
-                                                                value: formData.status,
-                                                                label:
-                                                                    statusOptions.find(
-                                                                        (s) =>
-                                                                            (s.key ||
-                                                                                s.id) ===
-                                                                            formData.status,
-                                                                    )
-                                                                        ?.label ||
-                                                                    formData.status,
-                                                            }
+                                                                  value: formData.status,
+                                                                  label:
+                                                                      statusOptions.find(
+                                                                          (s) =>
+                                                                              (s.key ||
+                                                                                  s.id) ===
+                                                                              formData.status,
+                                                                      )
+                                                                          ?.label ||
+                                                                      formData.status,
+                                                              }
                                                             : null
                                                     }
                                                     onChange={(option) =>
@@ -1637,6 +1694,9 @@ const OrderFormModal = ({
                                                     name="total_price"
                                                     value={formData.total_price}
                                                     onChange={handleChange}
+                                                    disabled={
+                                                        formData.is_paid_by_office
+                                                    }
                                                     isInvalid={
                                                         !!getFieldError(
                                                             "total_price",
@@ -1664,6 +1724,9 @@ const OrderFormModal = ({
                                                         formData.musaned_paid
                                                     }
                                                     onChange={handleChange}
+                                                    disabled={
+                                                        formData.is_paid_by_office
+                                                    }
                                                     isInvalid={
                                                         !!getFieldError(
                                                             "musaned_paid",
@@ -1689,6 +1752,24 @@ const OrderFormModal = ({
                                                     readOnly
                                                     disabled
                                                     className={`rounded-3 fw-bold ${priceDifference >= 0 ? "text-success bg-success bg-opacity-10" : "text-danger bg-danger bg-opacity-10"}`}
+                                                />
+                                            </Form.Group>
+                                        </Col>
+                                    </Row>
+
+                                    <Row>
+                                        <Col md={12}>
+                                            <Form.Group className="mb-3">
+                                                <Form.Check
+                                                    type="checkbox"
+                                                    id="is_paid_by_office"
+                                                    name="is_paid_by_office"
+                                                    label="السداد من قبل المكتب (سيتم احتساب سداد مساند بصفر والقيمة كاملة علينا)"
+                                                    checked={
+                                                        formData.is_paid_by_office ||
+                                                        false
+                                                    }
+                                                    onChange={handleChange}
                                                 />
                                             </Form.Group>
                                         </Col>
@@ -1767,7 +1848,7 @@ const OrderFormModal = ({
                                                                         "file",
                                                                         e.target
                                                                             .files?.[0] ||
-                                                                        null,
+                                                                            null,
                                                                     )
                                                                 }
                                                                 className="rounded-3 border-light-subtle shadow-none"
@@ -1781,7 +1862,7 @@ const OrderFormModal = ({
                                                         className="w-100 text-danger text-decoration-none fw-semibold"
                                                         disabled={
                                                             attachmentRows.length ===
-                                                            1 &&
+                                                                1 &&
                                                             !row.file &&
                                                             !row.title
                                                         }
@@ -1802,11 +1883,10 @@ const OrderFormModal = ({
                                                         {row.file.name}
                                                     </span>
                                                     <span className="text-muted extra-small">
-                                                        (
                                                         {(
                                                             row.file.size / 1024
                                                         ).toFixed(1)}{" "}
-                                                        KB)
+                                                        KB
                                                     </span>
                                                 </div>
                                             )}
@@ -2110,7 +2190,8 @@ const OrderFormModal = ({
                 <Modal.Body className="px-4">
                     <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                            اسم المسوق / الموظف <span className="text-danger">*</span>
+                            اسم المسوق / الموظف{" "}
+                            <span className="text-danger">*</span>
                         </Form.Label>
                         <Form.Control
                             type="text"

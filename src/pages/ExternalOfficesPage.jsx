@@ -3,10 +3,10 @@ import { Container, Card, Button } from "react-bootstrap";
 import RefreshButton from "../components/common/RefreshButton";
 import DateFilterBar from "../components/common/DateFilterBar";
 import {
-  getExternalOffices,
-  createExternalOffice,
-  updateExternalOffice,
-  deleteExternalOffice,
+    getExternalOffices,
+    createExternalOffice,
+    updateExternalOffice,
+    deleteExternalOffice,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import ExternalOfficeFormModal from "../components/ExternalOffice/ExternalOfficeFormModal";
@@ -18,309 +18,312 @@ import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
 
 const ExternalOfficesPage = ({ user }) => {
-  const isAdmin = user?.role === "admin";
-  const hasPermission = (perm) => isAdmin || user?.permissions?.includes(perm);
-  const canCreate = hasPermission("create_external_offices");
-  const canEdit = hasPermission("edit_external_offices");
-  const canDelete = hasPermission("delete_external_offices");
+    const isAdmin = user?.role === "admin";
+    const hasPermission = (perm) =>
+        isAdmin || user?.permissions?.includes(perm);
+    const canCreate = hasPermission("create_external_offices");
+    const canEdit = hasPermission("edit_external_offices");
+    const canDelete = hasPermission("delete_external_offices");
 
-  const [offices, setOffices] = useState([]);
-  const [filteredOffices, setFilteredOffices] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editingOffice, setEditingOffice] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [submitError, setSubmitError] = useState(null);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const itemsPerPage = 8;
+    const [offices, setOffices] = useState([]);
+    const [filteredOffices, setFilteredOffices] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
+    const [showModal, setShowModal] = useState(false);
+    const [editingOffice, setEditingOffice] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [submitError, setSubmitError] = useState(null);
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+    const itemsPerPage = 8;
 
-  useEffect(() => {
-    fetchOffices();
-  }, [fromDate, toDate]);
-
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      const filtered = offices.filter((office) => {
-        const nameMatch = office.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase());
-        const countryMatch = office.country
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase());
-        return nameMatch || countryMatch;
-      });
-      setFilteredOffices(filtered);
-    } else {
-      setFilteredOffices(offices);
-    }
-    setCurrentPage(1);
-  }, [searchQuery, offices]);
-
-  const fetchOffices = async () => {
-    setInitialLoading(true);
-    try {
-      const params = {};
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
-      const response = await getExternalOffices(params);
-      setOffices(response.data.data || []);
-      setFilteredOffices(response.data.data || []);
-    } catch (error) {
-      console.error("Error fetching offices:", error);
-    } finally {
-      setInitialLoading(false);
-    }
-  };
-
-  const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
-    setFromDate(fromDate);
-    setToDate(toDate);
-    setCurrentPage(1);
-  };
-
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-  };
-
-  const handleClearSearch = () => {
-    setSearchQuery("");
-    setFilteredOffices(offices);
-  };
-
-  const handleAddOffice = () => {
-    setEditingOffice(null);
-    setSubmitError(null);
-    setShowModal(true);
-  };
-
-  const handleEditOffice = (office) => {
-    setEditingOffice(office);
-    setSubmitError(null);
-    setShowModal(true);
-  };
-
-  const handleSubmit = async (formData) => {
-    setLoading(true);
-    setSubmitError(null);
-    try {
-      if (editingOffice) {
-        await updateExternalOffice(editingOffice.id, formData);
-        showSuccess("تم التحديث!", "تم تحديث بيانات المكتب بنجاح");
-      } else {
-        await createExternalOffice(formData);
-        showSuccess("تمت الإضافة!", "تم إضافة المكتب الخارجي بنجاح");
-      }
-      setShowModal(false);
-      setEditingOffice(null);
-      fetchOffices();
-    } catch (error) {
-      setSubmitError(error.response?.data);
-      showError(
-        "خطأ!",
-        error.response?.data?.message || "حدث خطأ أثناء العملية",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteOffice = async (id) => {
-    const result = await showConfirm(
-      "هل أنت متأكد؟",
-      "سيتم حذف المكتب الخارجي نهائياً",
-    );
-    if (result.isConfirmed) {
-      setLoading(true);
-      try {
-        await deleteExternalOffice(id);
-        showSuccess("تم الحذف", "تم حذف المكتب الخارجي بنجاح");
+    useEffect(() => {
         fetchOffices();
-      } catch (error) {
-        showError("خطأ", "حدث خطأ أثناء الحذف");
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
+    }, [fromDate, toDate]);
 
-  const handleExport = () => {
-    const columns = [
-      { header: "الدولة", key: "country" },
-      { header: "اسم المكتب", key: "name" },
-      {
-        header: "أسماء الموظفين",
-        format: (office) =>
-          office.contacts?.map((c) => c.name).join("، ") || "-",
-      },
-      {
-        header: "أرقام التواصل",
-        format: (office) =>
-          office.contacts?.map((c) => c.phone).join("، ") || "-",
-      },
-      { header: "ملاحظات", key: "notes" },
-    ];
-    exportToExcel(filteredOffices, columns, "المكاتب_الخارجية.xlsx");
-  };
+    useEffect(() => {
+        if (searchQuery.trim()) {
+            const filtered = offices.filter((office) => {
+                const nameMatch = office.name
+                    ?.toLowerCase()
+                    .includes(searchQuery.toLowerCase());
+                const countryMatch = office.country
+                    ?.toLowerCase()
+                    .includes(searchQuery.toLowerCase());
+                return nameMatch || countryMatch;
+            });
+            setFilteredOffices(filtered);
+        } else {
+            setFilteredOffices(offices);
+        }
+        setCurrentPage(1);
+    }, [searchQuery, offices]);
 
-  const handleExportPDF = () => {
-    const columns = [
-      { header: "الدولة", key: "country" },
-      { header: "اسم المكتب", key: "name" },
-      {
-        header: "أسماء الموظفين",
-        format: (office) =>
-          office.contacts?.map((c) => c.name).join("، ") || "-",
-      },
-      {
-        header: "أرقام التواصل",
-        format: (office) =>
-          office.contacts?.map((c) => c.phone).join("، ") || "-",
-      },
-      { header: "ملاحظات", key: "notes" },
-    ];
-    exportToPDF(filteredOffices, columns, "المكاتب_الخارجية.pdf");
-  };
+    const fetchOffices = async () => {
+        setInitialLoading(true);
+        try {
+            const params = {};
+            if (fromDate) params.from_date = fromDate;
+            if (toDate) params.to_date = toDate;
+            const response = await getExternalOffices(params);
+            setOffices(response.data.data || []);
+            setFilteredOffices(response.data.data || []);
+        } catch (error) {
+            console.error("Error fetching offices:", error);
+        } finally {
+            setInitialLoading(false);
+        }
+    };
 
-  const totalPages = Math.ceil(filteredOffices.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedOffices = filteredOffices.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  );
+    const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
+        setFromDate(fromDate);
+        setToDate(toDate);
+        setCurrentPage(1);
+    };
 
-  if (initialLoading) {
-    return (
-      <div
-        style={{
-          backgroundColor: "#f5f7fa",
-          minHeight: "100vh",
-          padding: "24px",
-        }}
-      >
-        <Container fluid>
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <h1 className="h3 mb-0 fw-bold">المكاتب الخارجية</h1>
-            <Button variant="dark" disabled>
-              + مكتب جديد
-            </Button>
-          </div>
-          <Card className="shadow-sm border-0 rounded-4">
-            <Card.Body className="p-0">
-              <TableSkeleton rows={5} columns={5} />
-            </Card.Body>
-          </Card>
-        </Container>
-      </div>
+    const handleSearch = (query) => {
+        setSearchQuery(query);
+    };
+
+    const handleClearSearch = () => {
+        setSearchQuery("");
+        setFilteredOffices(offices);
+    };
+
+    const handleAddOffice = () => {
+        setEditingOffice(null);
+        setSubmitError(null);
+        setShowModal(true);
+    };
+
+    const handleEditOffice = (office) => {
+        setEditingOffice(office);
+        setSubmitError(null);
+        setShowModal(true);
+    };
+
+    const handleSubmit = async (formData) => {
+        setLoading(true);
+        setSubmitError(null);
+        try {
+            if (editingOffice) {
+                await updateExternalOffice(editingOffice.id, formData);
+                showSuccess("تم التحديث!", "تم تحديث بيانات المكتب بنجاح");
+            } else {
+                await createExternalOffice(formData);
+                showSuccess("تمت الإضافة!", "تم إضافة المكتب الخارجي بنجاح");
+            }
+            setShowModal(false);
+            setEditingOffice(null);
+            fetchOffices();
+        } catch (error) {
+            setSubmitError(error.response?.data);
+            showError(
+                "خطأ!",
+                error.response?.data?.message || "حدث خطأ أثناء العملية",
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteOffice = async (id) => {
+        const result = await showConfirm(
+            "هل أنت متأكد؟",
+            "سيتم حذف المكتب الخارجي نهائياً",
+        );
+        if (result.isConfirmed) {
+            setLoading(true);
+            try {
+                await deleteExternalOffice(id);
+                showSuccess("تم الحذف", "تم حذف المكتب الخارجي بنجاح");
+                fetchOffices();
+            } catch (error) {
+                showError("خطأ", "حدث خطأ أثناء الحذف");
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const handleExport = () => {
+        const columns = [
+            { header: "الدولة", key: "country" },
+            { header: "اسم المكتب", key: "name" },
+            {
+                header: "أسماء الموظفين",
+                format: (office) =>
+                    office.contacts?.map((c) => c.name).join("، ") || "-",
+            },
+            {
+                header: "أرقام التواصل",
+                format: (office) =>
+                    office.contacts?.map((c) => c.phone).join("، ") || "-",
+            },
+            { header: "ملاحظات", key: "notes" },
+        ];
+        exportToExcel(filteredOffices, columns, "المكاتب_الخارجية.xlsx");
+    };
+
+    const handleExportPDF = () => {
+        const columns = [
+            { header: "الدولة", key: "country" },
+            { header: "اسم المكتب", key: "name" },
+            {
+                header: "أسماء الموظفين",
+                format: (office) =>
+                    office.contacts?.map((c) => c.name).join("، ") || "-",
+            },
+            {
+                header: "أرقام التواصل",
+                format: (office) =>
+                    office.contacts?.map((c) => c.phone).join("، ") || "-",
+            },
+            { header: "ملاحظات", key: "notes" },
+        ];
+        exportToPDF(filteredOffices, columns, "المكاتب_الخارجية.pdf");
+    };
+
+    const totalPages = Math.ceil(filteredOffices.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const displayedOffices = filteredOffices.slice(
+        startIndex,
+        startIndex + itemsPerPage,
     );
-  }
 
-  return (
-    <div
-      style={{
-        backgroundColor: "#f5f7fa",
-        minHeight: "100vh",
-        padding: "24px",
-      }}
-    >
-      <Container fluid>
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-          <h1 className="h3 mb-0 fw-bold">المكاتب الخارجية</h1>
-          <div className="d-flex flex-wrap gap-2">
-            <RefreshButton
-              onClick={fetchOffices}
-              loading={loading}
-              className="border shadow-sm text-primary fw-semibold"
-            />
-            <Button
-              variant="light"
-              onClick={handleExport}
-              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
-              disabled={filteredOffices.length === 0}
+    if (initialLoading) {
+        return (
+            <div
+                style={{
+                    backgroundColor: "#f5f7fa",
+                    minHeight: "100vh",
+                    padding: "24px",
+                }}
             >
-              <i className="fa-solid fa-file-excel fs-5"></i>
-              <span>إكسيل</span>
-            </Button>
-            <Button
-              variant="light"
-              onClick={handleExportPDF}
-              className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
-              disabled={filteredOffices.length === 0}
-            >
-              <i className="fa-solid fa-file-pdf fs-5"></i>
-              <span>بي دي اف</span>
-            </Button>
-            {canCreate && (
-              <Button
-                variant="dark"
-                onClick={handleAddOffice}
-                className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
-              >
-                <i className="fa-solid fa-plus"></i>
-                <span>مكتب جديد</span>
-              </Button>
-            )}
-          </div>
-        </div>
+                <Container fluid>
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+                        <h1 className="h3 mb-0 fw-bold">المكاتب الخارجية</h1>
+                        <Button variant="dark" disabled>
+                            + مكتب جديد
+                        </Button>
+                    </div>
+                    <Card className="shadow-sm border-0 rounded-4">
+                        <Card.Body className="p-0">
+                            <TableSkeleton rows={5} columns={5} />
+                        </Card.Body>
+                    </Card>
+                </Container>
+            </div>
+        );
+    }
 
-        <DateFilterBar
-          onFilterChange={handleDateFilterChange}
-          initialFromDate={fromDate}
-          initialToDate={toDate}
-          initialPreset="all"
-          size="md"
-        />
+    return (
+        <div
+            style={{
+                backgroundColor: "#f5f7fa",
+                minHeight: "100vh",
+                padding: "24px",
+            }}
+        >
+            <Container fluid>
+                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                    <h1 className="h3 mb-0 fw-bold">المكاتب الخارجية</h1>
+                    <div className="d-flex flex-wrap gap-2">
+                        <RefreshButton
+                            onClick={fetchOffices}
+                            loading={loading}
+                            className="border shadow-sm text-primary fw-semibold"
+                        />
+                        <Button
+                            variant="light"
+                            onClick={handleExport}
+                            className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-success fw-semibold"
+                            disabled={filteredOffices.length === 0}
+                        >
+                            <i className="fa-solid fa-file-excel fs-5"></i>
+                            <span>إكسيل</span>
+                        </Button>
+                        <Button
+                            variant="light"
+                            onClick={handleExportPDF}
+                            className="d-flex align-items-center gap-2 rounded-3 border shadow-sm px-3 py-2 text-danger fw-semibold"
+                            disabled={filteredOffices.length === 0}
+                        >
+                            <i className="fa-solid fa-file-pdf fs-5"></i>
+                            <span>بي دي اف</span>
+                        </Button>
+                        {canCreate && (
+                            <Button
+                                variant="dark"
+                                onClick={handleAddOffice}
+                                className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+                            >
+                                <i className="fa-solid fa-plus"></i>
+                                <span>مكتب جديد</span>
+                            </Button>
+                        )}
+                    </div>
+                </div>
 
-        <ExternalOfficeSearchBar
-          searchQuery={searchQuery}
-          onSearch={handleSearch}
-          onClear={handleClearSearch}
-          loading={loading}
-        />
-
-        <Card className="shadow-sm border-0 rounded-4">
-          <Card.Body className="p-0">
-            {loading ? (
-              <div className="text-center py-5">
-                <TableSkeleton rows={3} columns={5} />
-              </div>
-            ) : (
-              <>
-                <ExternalOfficeTable
-                  offices={displayedOffices}
-                  onEdit={canEdit ? handleEditOffice : null}
-                  onDelete={canDelete ? handleDeleteOffice : null}
+                <DateFilterBar
+                    onFilterChange={handleDateFilterChange}
+                    initialFromDate={fromDate}
+                    initialToDate={toDate}
+                    initialPreset="all"
+                    size="md"
                 />
-                {totalPages > 1 && (
-                  <PaginationComponent
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                )}
-              </>
-            )}
-          </Card.Body>
-        </Card>
-      </Container>
 
-      <ExternalOfficeFormModal
-        show={showModal}
-        onHide={() => {
-          setShowModal(false);
-          setEditingOffice(null);
-          setSubmitError(null);
-        }}
-        onSubmit={handleSubmit}
-        initialData={editingOffice}
-        loading={loading}
-        isEdit={!!editingOffice}
-        error={submitError}
-      />
-    </div>
-  );
+                <ExternalOfficeSearchBar
+                    searchQuery={searchQuery}
+                    onSearch={handleSearch}
+                    onClear={handleClearSearch}
+                    loading={loading}
+                />
+
+                <Card className="shadow-sm border-0 rounded-4">
+                    <Card.Body className="p-0">
+                        {loading ? (
+                            <div className="text-center py-5">
+                                <TableSkeleton rows={3} columns={5} />
+                            </div>
+                        ) : (
+                            <>
+                                <ExternalOfficeTable
+                                    offices={displayedOffices}
+                                    onEdit={canEdit ? handleEditOffice : null}
+                                    onDelete={
+                                        canDelete ? handleDeleteOffice : null
+                                    }
+                                />
+                                {totalPages > 1 && (
+                                    <PaginationComponent
+                                        currentPage={currentPage}
+                                        totalPages={totalPages}
+                                        onPageChange={setCurrentPage}
+                                    />
+                                )}
+                            </>
+                        )}
+                    </Card.Body>
+                </Card>
+            </Container>
+
+            <ExternalOfficeFormModal
+                show={showModal}
+                onHide={() => {
+                    setShowModal(false);
+                    setEditingOffice(null);
+                    setSubmitError(null);
+                }}
+                onSubmit={handleSubmit}
+                initialData={editingOffice}
+                loading={loading}
+                isEdit={!!editingOffice}
+                error={submitError}
+            />
+        </div>
+    );
 };
 
 export default ExternalOfficesPage;
