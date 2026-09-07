@@ -75,6 +75,31 @@ class SettingController extends Controller
         return response()->json(['data' => $statuses]);
     }
 
+    public function getServiceTypes()
+    {
+        return $this->getSettingsByGroup('service_type');
+    }
+
+    public function getNationalities()
+    {
+        return $this->getSettingsByGroup('nationality');
+    }
+
+    public function getProfessions()
+    {
+        return $this->getSettingsByGroup('profession');
+    }
+
+    private function getSettingsByGroup(string $group)
+    {
+        $settings = Setting::where('group', $group)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'key', 'label', 'color', 'sort_order', 'is_active']);
+
+        return response()->json(['data' => $settings]);
+    }
+
     public function updatePriorityLevels(UpdatePriorityLevelsRequest $request)
     {
         $levels = $request->input('levels', []);

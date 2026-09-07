@@ -55,6 +55,8 @@ const OrderFormModal = ({
     const [showQuickEmployee, setShowQuickEmployee] = useState(false);
     const [newEmpName, setNewEmpName] = useState("");
     const [newEmpPhone, setNewEmpPhone] = useState("");
+    const [newEmpUsername, setNewEmpUsername] = useState("");
+    const [newEmpPassword, setNewEmpPassword] = useState("");
     const [newEmpPosition, setNewEmpPosition] = useState("");
     const [quickEmployeeLoading, setQuickEmployeeLoading] = useState(false);
 
@@ -108,10 +110,8 @@ const OrderFormModal = ({
                 );
 
             Promise.all([
-                getSettingsNationalities().catch(() => ({
-                    data: { data: [] },
-                })),
-                getSettingsProfessions().catch(() => ({ data: { data: [] } })),
+                getSettingsNationalities(),
+                getSettingsProfessions(),
             ]).then(([nationalitiesRes, professionsRes]) => {
                 const nationalities = nationalitiesRes.data?.data || [];
                 const professions = professionsRes.data?.data || [];
@@ -514,8 +514,16 @@ const OrderFormModal = ({
     };
 
     const handleQuickCreateEmployee = async () => {
-        if (!newEmpName.trim() || !newEmpPhone.trim()) {
-            showError("خطأ", "يرجى إدخال اسم ورقم هاتف المسوق / الموظف");
+        if (
+            !newEmpName.trim() ||
+            !newEmpPhone.trim() ||
+            !newEmpUsername.trim() ||
+            !newEmpPassword.trim()
+        ) {
+            showError(
+                "خطأ",
+                "يرجى إدخال الاسم والجوال واسم المستخدم وكلمة المرور",
+            );
             return;
         }
         setQuickEmployeeLoading(true);
@@ -523,6 +531,8 @@ const OrderFormModal = ({
             const res = await createEmployee({
                 name: newEmpName.trim(),
                 phone: newEmpPhone.trim(),
+                username: newEmpUsername.trim(),
+                password: newEmpPassword,
                 position: newEmpPosition.trim() || "مسوق",
             });
             const newEmp = res.data?.data || res.data;
@@ -544,6 +554,8 @@ const OrderFormModal = ({
             setShowQuickEmployee(false);
             setNewEmpName("");
             setNewEmpPhone("");
+            setNewEmpUsername("");
+            setNewEmpPassword("");
             setNewEmpPosition("");
         } catch (err) {
             const errorMsg =
@@ -2210,6 +2222,33 @@ const OrderFormModal = ({
                             value={newEmpPhone}
                             onChange={(e) => setNewEmpPhone(e.target.value)}
                             placeholder="أدخل رقم الجوال"
+                            className="rounded-3"
+                        />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                            اسم المستخدم <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Form.Control
+                            type="text"
+                            value={newEmpUsername}
+                            onChange={(e) => setNewEmpUsername(e.target.value)}
+                            placeholder="أدخل اسم المستخدم"
+                            required
+                            className="rounded-3"
+                        />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                            كلمة المرور <span className="text-danger">*</span>
+                        </Form.Label>
+                        <Form.Control
+                            type="password"
+                            value={newEmpPassword}
+                            onChange={(e) => setNewEmpPassword(e.target.value)}
+                            placeholder="6 أحرف على الأقل"
+                            minLength={6}
+                            required
                             className="rounded-3"
                         />
                     </Form.Group>

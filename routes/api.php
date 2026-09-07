@@ -20,6 +20,7 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/me', fn (\Illuminate\Http\Request $request) => $request->user());
 
     Route::get('/clients/search', [ClientController::class, 'search']);
     Route::post('/clients/quick', [ClientController::class, 'quickStore']);
@@ -39,6 +40,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/settings/payment-methods', [SettingController::class, 'getPaymentMethods']);
     Route::get('/settings/bank-names', [SettingController::class, 'getBankNames']);
     Route::get('/settings/order-statuses', [SettingController::class, 'getOrderStatuses']);
+    Route::get('/settings/service-types', [SettingController::class, 'getServiceTypes']);
+    Route::get('/settings/nationalities', [SettingController::class, 'getNationalities']);
+    Route::get('/settings/professions', [SettingController::class, 'getProfessions']);
 
     Route::post('/settings/priority-levels', [SettingController::class, 'updatePriorityLevels']);
     Route::post('/settings/passport-statuses', [SettingController::class, 'updatePassportStatuses']);
