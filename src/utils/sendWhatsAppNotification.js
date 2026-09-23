@@ -1,3 +1,20 @@
+const normalizeWhatsAppPhone = (phone) => {
+  let normalized = String(phone || "")
+    .trim()
+    .replace(/\D/g, "");
+  if (normalized.startsWith("00")) normalized = normalized.slice(2);
+  if (normalized.startsWith("0")) {
+    if (normalized.length === 11 && /^01[0125]/.test(normalized)) {
+      return `20${normalized.slice(1)}`;
+    }
+    if (normalized.length === 10 && /^05/.test(normalized)) {
+      return `966${normalized.slice(1)}`;
+    }
+    normalized = normalized.slice(1);
+  }
+  return normalized;
+};
+
 export const sendWhatsAppNotification = (
   transaction,
   oldStatus,
@@ -98,7 +115,7 @@ export const sendWhatsAppNotification = (
     }).then((result) => {
       if (result.isConfirmed) {
         window.open(
-          `https://wa.me/${clientPhone.replace(/\D/g, "")}?text=${encodedMessage}`,
+          `https://wa.me/${normalizeWhatsAppPhone(clientPhone)}?text=${encodedMessage}`,
           "_blank",
         );
         resolve(true);

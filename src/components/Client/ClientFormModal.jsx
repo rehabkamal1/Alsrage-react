@@ -149,16 +149,21 @@ const ClientFormModal = ({
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label className="fw-semibold small text-secondary">
-                  المندوب
+                  المندوب <span className="text-danger">*</span>
                 </Form.Label>
                 <Form.Control
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
+                  required
                   placeholder="اسم المندوب"
+                  isInvalid={!formData.name && validated}
                   className="rounded-3"
                 />
+                <Form.Control.Feedback type="invalid">
+                  يرجى إدخال اسم المندوب
+                </Form.Control.Feedback>
               </Form.Group>
             </Col>
             <Col md={6}>

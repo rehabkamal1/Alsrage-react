@@ -1,5 +1,34 @@
 @import url("https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap");
 
+/* Shared validation feedback for every form. */
+.swal-validation-popup {
+  text-align: right;
+  direction: rtl;
+}
+
+.validation-error-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: right;
+}
+
+.validation-error-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  color: #7f1d1d;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+}
+
+.validation-error-item strong {
+  color: #991b1b;
+}
+
 :root {
   --primary: #6366f1;
   --primary-dark: #4338ca;
@@ -410,14 +439,20 @@ tr:hover td {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 992px) {
   .sidebar {
     position: fixed;
-    right: -280px; /* Hide off-screen */
+    right: -280px;
+    /* Hide off-screen */
     transition: var(--transition);
     width: 280px;
     height: 100vh;
@@ -453,7 +488,7 @@ tr:hover td {
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .page-title h1 {
     font-size: 1.6rem;
   }
@@ -1154,16 +1189,41 @@ tr:hover td {
 }
 
 @keyframes pulseAnimation {
-  0% { transform: scale(0.8); opacity: 0.6; }
-  50% { transform: scale(1.6); opacity: 0; }
-  100% { transform: scale(0.8); opacity: 0; }
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
 }
 
-.pulse-dot.success { background-color: #10b981; }
-.pulse-dot.warning { background-color: #f59e0b; }
-.pulse-dot.info { background-color: #06b6d4; }
-.pulse-dot.danger { background-color: #ef4444; }
-.pulse-dot.primary { background-color: #6366f1; }
+.pulse-dot.success {
+  background-color: #10b981;
+}
+
+.pulse-dot.warning {
+  background-color: #f59e0b;
+}
+
+.pulse-dot.info {
+  background-color: #06b6d4;
+}
+
+.pulse-dot.danger {
+  background-color: #ef4444;
+}
+
+.pulse-dot.primary {
+  background-color: #6366f1;
+}
 
 /* Glowing Stat Card Ring */
 .glow-ring-box {
@@ -1208,6 +1268,7 @@ tr:hover td {
 
 /* Print Optimization Styles */
 @media print {
+
   /* Hide non-printable layout elements */
   .sidebar,
   .sidebar-overlay,
@@ -1222,7 +1283,10 @@ tr:hover td {
   }
 
   /* Force 100% full width content without sidebar offset */
-  html, body, #root, .dashboard-container {
+  html,
+  body,
+  #root,
+  .dashboard-container {
     background: #ffffff !important;
     color: #000000 !important;
     width: 100% !important;
@@ -1275,7 +1339,8 @@ tr:hover td {
     border-collapse: collapse !important;
   }
 
-  th, td {
+  th,
+  td {
     border-bottom: 1px solid #e2e8f0 !important;
     padding: 10px 14px !important;
   }

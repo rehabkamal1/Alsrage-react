@@ -1,18 +1,94 @@
 export const DEFAULT_WHATSAPP_TEMPLATE =
-  `تحديث بخصوص الطلب رقم: #{order_id}\n` +
-  `اسم صاحب التأشيرة: {visa_holder}\n` +
-  `المندوب / العميل: {delegate_name}\n` +
+  `*تحديث بخصوص الطلب*\n` +
+  `رقم الطلب: {order_id}\n` +
+  `------------------------------\n` +
+  `*بيانات صاحب التأشيرة*\n` +
+  `الاسم: {visa_holder}\n` +
+  `رقم الجواز: {passport_number}\n` +
+  `تاريخ الميلاد: {birth_date}\n` +
   `رقم التأشيرة: {visa_number}\n` +
+  `------------------------------\n` +
+  `*بيانات العميل والعقود*\n` +
+  `العميل / المندوب: {delegate_name}\n` +
   `رقم عقد مساند: {contract_number}\n` +
   `رقم عقد التوثيق: {authentication_contract_number}\n` +
+  `------------------------------\n` +
   `حالة الطلب: {status}`;
 
-export const getWhatsAppTemplate = () => {
-  return localStorage.getItem("whatsapp_template") || DEFAULT_WHATSAPP_TEMPLATE;
+export const DEFAULT_WHATSAPP_TEMPLATES = {
+  external: DEFAULT_WHATSAPP_TEMPLATE,
+  client: DEFAULT_WHATSAPP_TEMPLATE,
+  saudi: DEFAULT_WHATSAPP_TEMPLATE,
 };
 
-export const saveWhatsAppTemplate = (template) => {
-  localStorage.setItem("whatsapp_template", template);
+const API_URL =
+  import.meta.env.VITE_API_URL || "https://alserage.alfanar-rec.com";
+
+const normalizeWhatsAppPhone = (phone) => {
+  let normalized = String(phone || "")
+    .trim()
+    .replace(/\D/g, "");
+
+  if (normalized.startsWith("00")) {
+    normalized = normalized.slice(2);
+  }
+
+  if (normalized.startsWith("0")) {
+    if (normalized.length === 11 && /^01[0125]/.test(normalized)) {
+      return `20${normalized.slice(1)}`;
+    }
+    if (normalized.length === 10 && /^05/.test(normalized)) {
+      return `966${normalized.slice(1)}`;
+    }
+    normalized = normalized.slice(1);
+  }
+
+  return normalized;
+};
+
+export const getWhatsAppTemplate = (recipient = "saudi") => {
+  const stored = localStorage.getItem("whatsapp_templates");
+  if (stored) {
+    try {
+      const candidate = JSON.parse(stored)[recipient];
+      const placeholderCount = (candidate?.match(/\{[^}]+\}/g) || []).length;
+      if (candidate && candidate.includes("\n") && placeholderCount > 1) {
+        return candidate;
+      }
+      return DEFAULT_WHATSAPP_TEMPLATES[recipient];
+    } catch {
+      return DEFAULT_WHATSAPP_TEMPLATES[recipient];
+    }
+  }
+  const legacyTemplate = localStorage.getItem("whatsapp_template");
+  const legacyPlaceholderCount = (legacyTemplate?.match(/\{[^}]+\}/g) || [])
+    .length;
+  return legacyTemplate &&
+    legacyTemplate.includes("\n") &&
+    legacyPlaceholderCount > 1
+    ? legacyTemplate
+    : DEFAULT_WHATSAPP_TEMPLATES[recipient];
+};
+
+export const normalizeWhatsAppMessage = (message) =>
+  String(message || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+export const saveWhatsAppTemplate = (template, recipient = "saudi") => {
+  const templates = { ...DEFAULT_WHATSAPP_TEMPLATES };
+  try {
+    Object.assign(
+      templates,
+      JSON.parse(localStorage.getItem("whatsapp_templates") || "{}"),
+    );
+  } catch {
+    // Ignore invalid legacy local storage and overwrite it below.
+  }
+  templates[recipient] = template;
+  localStorage.setItem("whatsapp_templates", JSON.stringify(templates));
 };
 
 /**
@@ -79,32 +155,60 @@ export const showWhatsAppNotificationModal = ({
     order.visa_holder_name || client?.employee?.name || "غير محدد";
   const delegateName = client?.name || "غير محدد";
 
-  const template = getWhatsAppTemplate();
-  const message = template
-    .replace(/\{order_id\}/g, order.id || "")
-    .replace(/\{visa_holder\}/g, visaHolder)
-    .replace(/\{delegate_name\}/g, delegateName)
-    .replace(/\{visa_number\}/g, order.visa_number || "غير محدد")
-    .replace(
-      /\{contract_number\}/g,
-      order.musaned_contract_number || "غير محدد",
-    )
-    .replace(
-      /\{authentication_contract_number\}/g,
-      order.authentication_contract_number || "غير محدد",
-    )
-    .replace(
-      /\{auth_contract_number\}/g,
-      order.authentication_contract_number || "غير محدد",
-    )
-    .replace(/\{status\}/g, statusLabel);
+  const replaceTemplate = (template) =>
+    normalizeWhatsAppMessage(template)
+      .replace(/\{order_id\}/g, order.id || "")
+      .replace(/\{visa_holder\}/g, visaHolder)
+      .replace(/\{delegate_name\}/g, delegateName)
+      .replace(/\{visa_number\}/g, order.visa_number || "غير محدد")
+      .replace(
+        /\{contract_number\}/g,
+        order.musaned_contract_number || "غير محدد",
+      )
+      .replace(
+        /\{authentication_contract_number\}/g,
+        order.authentication_contract_number || "غير محدد",
+      )
+      .replace(
+        /\{auth_contract_number\}/g,
+        order.authentication_contract_number || "غير محدد",
+      )
+      .replace(/\{passport_number\}/g, order.passport_number || "غير محدد")
+      .replace(/\{birth_date\}/g, order.birth_date || "غير محدد")
+      .replace(
+        /\{image_url\}/g,
+        order.visa_image
+          ? order.visa_image.startsWith("http")
+            ? order.visa_image
+            : `${API_URL}/storage/${order.visa_image.replace(/^\/?storage\//, "")}`
+          : "",
+      )
+      .replace(/\{status\}/g, statusLabel);
 
-  const encodedMessage = encodeURIComponent(message);
+  const messages = {
+    external: replaceTemplate(getWhatsAppTemplate("external")),
+    client: replaceTemplate(getWhatsAppTemplate("client")),
+    saudi: replaceTemplate(getWhatsAppTemplate("saudi")),
+  };
 
-  const openWhatsApp = (phone) => {
+  const openWhatsApp = (phone, recipient) => {
     if (!phone) return;
-    const cleanPhone = phone.replace(/\D/g, "");
-    window.open(`https://wa.me/${cleanPhone}?text=${encodedMessage}`, "_blank");
+    const cleanPhone = normalizeWhatsAppPhone(phone);
+    if (!cleanPhone) {
+      Swal.fire({
+        icon: "warning",
+        title: "رقم الهاتف غير صالح",
+        text: "يرجى مراجعة رقم الهاتف قبل فتح واتساب.",
+        confirmButtonText: "حسنًا",
+      });
+      return;
+    }
+    const encodedMessage = encodeURIComponent(messages[recipient]);
+    window.open(
+      `https://wa.me/${cleanPhone}?text=${encodedMessage}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   };
 
   const openWhatsAppGroup = (link) => {
@@ -255,7 +359,7 @@ export const showWhatsAppNotificationModal = ({
         document
           .getElementById("wa-saudi-btn")
           ?.addEventListener("click", () => {
-            openWhatsApp(saudiPhone);
+            openWhatsApp(saudiPhone, "saudi");
             Swal.close();
           });
       }
@@ -271,7 +375,7 @@ export const showWhatsAppNotificationModal = ({
         document
           .getElementById("wa-external-btn")
           ?.addEventListener("click", () => {
-            openWhatsApp(externalPhone);
+            openWhatsApp(externalPhone, "external");
             Swal.close();
           });
       }
@@ -287,7 +391,7 @@ export const showWhatsAppNotificationModal = ({
         document
           .getElementById("wa-client-btn")
           ?.addEventListener("click", () => {
-            openWhatsApp(clientPhone);
+            openWhatsApp(clientPhone, "client");
             Swal.close();
           });
       }

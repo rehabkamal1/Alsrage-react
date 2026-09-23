@@ -14,6 +14,7 @@ const TrackingTable = ({
   authenticationStatuses = [],
   authorizationStatuses = [],
   externalOffices,
+  onWhatsAppUpdate,
 }) => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -71,6 +72,7 @@ const TrackingTable = ({
     try {
       await api.put(`/order-tracking/${trackingId}`, { [field]: value });
       showSuccess("تم", "تم التحديث بنجاح");
+      onWhatsAppUpdate?.(trackingId, field, value);
       onRefresh();
     } catch (error) {
       showError(

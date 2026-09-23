@@ -260,6 +260,7 @@ const MarketingPage = () => {
       { header: "المصدر", key: "source_name" },
       { header: "تاريخ التواصل", key: "contact_date" },
       { header: "تاريخ المتابعة", key: "next_followup_date" },
+      { header: "الملاحظات", key: "notes" },
     ];
     exportToPDF(exportData, columns, "التسويق.pdf");
   };

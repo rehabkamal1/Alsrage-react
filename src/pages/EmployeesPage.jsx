@@ -57,8 +57,11 @@ const EmployeesPage = () => {
       if (toDate) params.to_date = toDate;
 
       const response = await getEmployees(params);
-      setEmployees(response.data?.data || []);
-      setTotalPages(response.data?.last_page || 1);
+      const employeeList = response.data?.data ?? response.data ?? [];
+      setEmployees(Array.isArray(employeeList) ? employeeList : []);
+      setTotalPages(
+        response.data?.meta?.last_page ?? response.data?.last_page ?? 1,
+      );
     } catch (error) {
       console.error("Error fetching employees:", error);
     } finally {

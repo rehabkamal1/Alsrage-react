@@ -1,5 +1,6 @@
 import React from "react";
 import { Card, Button, Form, Row, Col, Badge } from "react-bootstrap";
+import Select from "react-select";
 import { showConfirm } from "../../utils/swalHelper";
 
 const SettingsCard = ({
@@ -12,6 +13,8 @@ const SettingsCard = ({
   saving,
   emptyMessage,
   showTargetDays = false,
+  showNationality = false,
+  nationalityOptions = [],
 }) => {
   const handleDelete = async (id, isNew, idx, label) => {
     const result = await showConfirm(
@@ -24,7 +27,7 @@ const SettingsCard = ({
   };
 
   return (
-    <Card className="shadow-sm border-0 rounded-4 h-100">
+    <Card className="shadow-sm border-0 rounded-4">
       <Card.Header className="bg-white border-0 pt-3 pb-2">
         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 className="mb-0 fw-bold">{title}</h6>
@@ -42,7 +45,7 @@ const SettingsCard = ({
       <Card.Body className="d-flex flex-column p-3">
         <div
           className="flex-grow-1"
-          style={{ maxHeight: "400px", overflowY: "auto" }}
+          style={{ maxHeight: "320px", overflowY: "auto" }}
         >
           {items.length === 0 ? (
             <div className="text-center py-3 text-muted small">
@@ -55,7 +58,11 @@ const SettingsCard = ({
                 className="mb-2 p-2 border rounded-3"
               >
                 <Row className="g-2 align-items-center">
-                  <Col xs={12} sm={showTargetDays ? 4 : 5} md={showTargetDays ? 4 : 5}>
+                  <Col
+                    xs={12}
+                    sm={showTargetDays ? 4 : 5}
+                    md={showTargetDays ? 4 : 5}
+                  >
                     <Form.Control
                       type="text"
                       placeholder="اسم المرحلة"
@@ -74,13 +81,39 @@ const SettingsCard = ({
                         title="الفترة الزمنية المسموحة بالأيام لهذه المرحلة"
                         size="sm"
                         value={item.target_days ?? 60}
-                        onChange={(e) => onUpdate(idx, "target_days", e.target.value)}
+                        onChange={(e) =>
+                          onUpdate(idx, "target_days", e.target.value)
+                        }
                         style={{ fontSize: "12px" }}
                       />
                     </Col>
                   )}
 
-                  <Col xs={showTargetDays ? 3 : 3} sm={showTargetDays ? 2 : 2} md={showTargetDays ? 2 : 2}>
+                  {showNationality && (
+                    <Col xs={12} sm={4} md={4}>
+                      <Select
+                        options={nationalityOptions}
+                        value={
+                          nationalityOptions.find(
+                            (option) => option.value === item.nationality_key,
+                          ) || null
+                        }
+                        onChange={(option) =>
+                          onUpdate(idx, "nationality_key", option?.value || "")
+                        }
+                        placeholder="اختر الجنسية"
+                        isClearable
+                        isRtl
+                        classNamePrefix="react-select"
+                      />
+                    </Col>
+                  )}
+
+                  <Col
+                    xs={showTargetDays ? 3 : 3}
+                    sm={showTargetDays ? 2 : 2}
+                    md={showTargetDays ? 2 : 2}
+                  >
                     <Form.Control
                       type="color"
                       size="sm"
@@ -89,7 +122,12 @@ const SettingsCard = ({
                       style={{ height: "31px", width: "100%" }}
                     />
                   </Col>
-                  <Col xs={3} sm={showTargetDays ? 3 : 5} md={showTargetDays ? 3 : 5} className="d-flex align-items-center justify-content-between gap-1">
+                  <Col
+                    xs={3}
+                    sm={showTargetDays ? 3 : 5}
+                    md={showTargetDays ? 3 : 5}
+                    className="d-flex align-items-center justify-content-between gap-1"
+                  >
                     {item.label && (
                       <Badge
                         style={{

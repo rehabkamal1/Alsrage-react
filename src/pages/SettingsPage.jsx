@@ -12,10 +12,55 @@ import api, {
   deleteAuthorizationStatus,
   deleteNationality,
   deleteProfession,
+  deleteArrivalDestination,
+  getSettingsArrivalDestinations,
 } from "../services/apiService";
-import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
+import { showSuccess, showError } from "../utils/swalHelper";
 import TableSkeleton from "../components/common/TableSkeleton";
 import SettingsCard from "../components/Settings/SettingsCard";
+
+const SectionTitle = ({ title, subtitle, icon }) => (
+  <div className="d-flex align-items-center gap-3 mb-4 mt-5">
+    {icon && (
+      <div
+        style={{
+          width: "48px",
+          height: "48px",
+          borderRadius: "14px",
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#fff",
+          fontSize: "22px",
+          boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+        }}
+      >
+        {icon}
+      </div>
+    )}
+    <div>
+      <h5
+        className="mb-0 fw-bold"
+        style={{ color: "#1a202c", fontSize: "1.1rem" }}
+      >
+        {title}
+      </h5>
+      {subtitle && (
+        <small style={{ color: "#718096", fontSize: "0.85rem" }}>
+          {subtitle}
+        </small>
+      )}
+    </div>
+    <div
+      style={{
+        flex: 1,
+        height: "1px",
+        background: "linear-gradient(to left, #e2e8f0, transparent)",
+      }}
+    />
+  </div>
+);
 
 const SettingsPage = () => {
   const [priorityLevels, setPriorityLevels] = useState([]);
@@ -29,6 +74,7 @@ const SettingsPage = () => {
   const [authorizationStatuses, setAuthorizationStatuses] = useState([]);
   const [nationalities, setNationalities] = useState([]);
   const [professions, setProfessions] = useState([]);
+  const [arrivalDestinations, setArrivalDestinations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -51,6 +97,7 @@ const SettingsPage = () => {
         authzRes,
         nationalitiesRes,
         professionsRes,
+        arrivalDestinationsRes,
       ] = await Promise.all([
         api.get("/settings/priority-levels"),
         api.get("/settings/passport-statuses"),
@@ -63,84 +110,28 @@ const SettingsPage = () => {
         api.get("/settings/authorization-statuses"),
         api.get("/settings/nationalities"),
         api.get("/settings/professions"),
+        getSettingsArrivalDestinations(),
       ]);
-      setPriorityLevels(
-        priorityRes.data.data.map((item) => ({
+
+      const withMeta = (arr) =>
+        (arr || []).map((item) => ({
           ...item,
           isNew: false,
           uniqueId: Date.now() + Math.random(),
-        })),
-      );
-      setPassportStatuses(
-        passportRes.data.data.map((item) => ({
-          ...item,
-          isNew: false,
-          uniqueId: Date.now() + Math.random(),
-        })),
-      );
-      setTransferStatuses(
-        transferRes.data.data.map((item) => ({
-          ...item,
-          isNew: false,
-          uniqueId: Date.now() + Math.random(),
-        })),
-      );
-      setPaymentMethods(
-        paymentRes.data.data.map((item) => ({
-          ...item,
-          isNew: false,
-          uniqueId: Date.now() + Math.random(),
-        })),
-      );
-      setBankNames(
-        bankRes.data.data.map((item) => ({
-          ...item,
-          isNew: false,
-          uniqueId: Date.now() + Math.random(),
-        })),
-      );
-      setOrderStatuses(
-        orderRes.data.data.map((item) => ({
-          ...item,
-          isNew: false,
-          uniqueId: Date.now() + Math.random(),
-        })),
-      );
-      setServiceTypes(
-        (serviceTypesRes.data.data || []).map((item) => ({
-          ...item,
-          isNew: false,
-          uniqueId: Date.now() + Math.random(),
-        })),
-      );
-      setAuthenticationStatuses(
-        (authRes.data?.data || []).map((item) => ({
-          ...item,
-          isNew: false,
-          uniqueId: Date.now() + Math.random(),
-        })),
-      );
-      setAuthorizationStatuses(
-        (authzRes.data?.data || []).map((item) => ({
-          ...item,
-          isNew: false,
-          uniqueId: Date.now() + Math.random(),
-        })),
-      );
-      setNationalities(
-        (nationalitiesRes.data?.data || []).map((item) => ({
-          ...item,
-          isNew: false,
-          uniqueId: Date.now() + Math.random(),
-        })),
-      );
-      setProfessions(
-        (professionsRes.data?.data || []).map((item) => ({
-          ...item,
-          isNew: false,
-          uniqueId: Date.now() + Math.random(),
-        })),
-      );
+        }));
+
+      setPriorityLevels(withMeta(priorityRes.data.data));
+      setPassportStatuses(withMeta(passportRes.data.data));
+      setTransferStatuses(withMeta(transferRes.data.data));
+      setPaymentMethods(withMeta(paymentRes.data.data));
+      setBankNames(withMeta(bankRes.data.data));
+      setOrderStatuses(withMeta(orderRes.data.data));
+      setServiceTypes(withMeta(serviceTypesRes.data.data));
+      setAuthenticationStatuses(withMeta(authRes.data?.data));
+      setAuthorizationStatuses(withMeta(authzRes.data?.data));
+      setNationalities(withMeta(nationalitiesRes.data?.data));
+      setProfessions(withMeta(professionsRes.data?.data));
+      setArrivalDestinations(withMeta(arrivalDestinationsRes.data?.data));
     } catch (error) {
       console.error("Error fetching settings:", error);
     } finally {
@@ -148,7 +139,7 @@ const SettingsPage = () => {
     }
   };
 
-  const addItem = (setter) => {
+  const addItem = (setter, extras = {}) => {
     setter((prev) => [
       ...prev,
       {
@@ -160,6 +151,7 @@ const SettingsPage = () => {
         is_active: true,
         isNew: true,
         uniqueId: Date.now() + Math.random(),
+        ...extras,
       },
     ]);
   };
@@ -171,11 +163,9 @@ const SettingsPage = () => {
     items,
     setter,
     deleteApiFunction,
-    groupName,
   ) => {
     if (isNew || !id) {
-      const updated = items.filter((_, i) => i !== index);
-      setter(updated);
+      setter(items.filter((_, i) => i !== index));
       showSuccess("تم", "تم الحذف بنجاح");
     } else if (id) {
       try {
@@ -218,6 +208,9 @@ const SettingsPage = () => {
           sort_order: item.sort_order || 0,
           target_days: item.target_days ? parseInt(item.target_days, 10) : 60,
           is_active: item.is_active !== undefined ? item.is_active : true,
+          ...(item.nationality_key !== undefined
+            ? { nationality_key: item.nationality_key }
+            : {}),
         }));
 
       await api.post(apiUrl, { [dataKey]: dataToSend });
@@ -237,13 +230,20 @@ const SettingsPage = () => {
     return (
       <div
         style={{
-          backgroundColor: "#f5f7fa",
+          backgroundColor: "#f7f9fc",
           minHeight: "100vh",
-          padding: "24px",
+          padding: "32px 16px",
         }}
       >
         <Container fluid>
-          <h1 className="h3 mb-4 fw-bold">الإعدادات</h1>
+          <div className="mb-4">
+            <h1 className="h3 fw-bold mb-1" style={{ color: "#1a202c" }}>
+              الإعدادات
+            </h1>
+            <p className="text-muted mb-0">
+              إدارة جميع إعدادات النظام من مكان واحد
+            </p>
+          </div>
           <div className="table-responsive">
             <TableSkeleton rows={3} columns={3} />
           </div>
@@ -255,180 +255,133 @@ const SettingsPage = () => {
   return (
     <div
       style={{
-        backgroundColor: "#f5f7fa",
+        backgroundColor: "#f7f9fc",
         minHeight: "100vh",
-        padding: "24px",
+        padding: "32px 16px",
       }}
     >
       <Container fluid>
-        <h1 className="h3 mb-4 fw-bold">الإعدادات</h1>
+        <div className="mb-4">
+          <h1 className="h3 fw-bold mb-1" style={{ color: "#1a202c" }}>
+            الإعدادات
+          </h1>
+          <p className="text-muted mb-0">
+            إدارة جميع إعدادات النظام من مكان واحد
+          </p>
+        </div>
 
+        <SectionTitle
+          title="البيانات الأساسية"
+          subtitle="الجنسيات والمهن وجهات القدوم"
+          icon="📋"
+        />
         <Row className="g-4">
-          <Col xs={12} md={6}>
+          <Col xs={12} lg={6}>
             <SettingsCard
-              title="درجات الأهمية"
-              items={priorityLevels}
-              onAdd={() => addItem(setPriorityLevels)}
+              title="الجنسيات"
+              items={nationalities}
+              onAdd={() => addItem(setNationalities)}
               onUpdate={(idx, field, val) =>
-                updateItem(setPriorityLevels, idx, field, val)
+                updateItem(setNationalities, idx, field, val)
               }
               onDelete={(id, isNew, idx) =>
                 deleteItem(
                   id,
                   isNew,
                   idx,
-                  priorityLevels,
-                  setPriorityLevels,
-                  deletePriorityLevel,
-                  "درجات الأهمية",
+                  nationalities,
+                  setNationalities,
+                  deleteNationality,
                 )
               }
               onSave={() =>
                 saveItems(
-                  priorityLevels,
-                  "/settings/priority-levels",
-                  "levels",
-                  "تم حفظ درجات الأهمية بنجاح",
+                  nationalities,
+                  "/settings/nationalities",
+                  "nationalities",
+                  "تم حفظ الجنسيات بنجاح",
                 )
               }
               saving={saving}
-              emptyMessage="لا توجد درجات أهمية"
+              emptyMessage="لا توجد جنسيات"
             />
           </Col>
-
-          <Col xs={12} md={6}>
+          <Col xs={12} lg={6}>
             <SettingsCard
-              title="حالات ترشيح الجواز"
-              items={passportStatuses}
-              onAdd={() => addItem(setPassportStatuses)}
+              title="المهن"
+              items={professions}
+              onAdd={() => addItem(setProfessions)}
               onUpdate={(idx, field, val) =>
-                updateItem(setPassportStatuses, idx, field, val)
+                updateItem(setProfessions, idx, field, val)
               }
               onDelete={(id, isNew, idx) =>
                 deleteItem(
                   id,
                   isNew,
                   idx,
-                  passportStatuses,
-                  setPassportStatuses,
-                  deletePassportStatus,
-                  "حالات ترشيح الجواز",
+                  professions,
+                  setProfessions,
+                  deleteProfession,
                 )
               }
               onSave={() =>
                 saveItems(
-                  passportStatuses,
-                  "/settings/passport-statuses",
-                  "statuses",
-                  "تم حفظ حالات ترشيح الجواز بنجاح",
+                  professions,
+                  "/settings/professions",
+                  "professions",
+                  "تم حفظ المهن بنجاح",
                 )
               }
               saving={saving}
-              emptyMessage="لا توجد حالات ترشيح جواز"
+              emptyMessage="لا توجد مهن"
             />
           </Col>
-        </Row>
-
-        <Row className="mt-4">
-          <Col xs={12} md={6}>
+          <Col xs={12}>
             <SettingsCard
-              title="حالات التحويل"
-              items={transferStatuses}
-              onAdd={() => addItem(setTransferStatuses)}
+              title="جهات القدوم حسب الجنسية"
+              items={arrivalDestinations}
+              onAdd={() =>
+                addItem(setArrivalDestinations, { nationality_key: "" })
+              }
               onUpdate={(idx, field, val) =>
-                updateItem(setTransferStatuses, idx, field, val)
+                updateItem(setArrivalDestinations, idx, field, val)
               }
               onDelete={(id, isNew, idx) =>
                 deleteItem(
                   id,
                   isNew,
                   idx,
-                  transferStatuses,
-                  setTransferStatuses,
-                  deleteTransferStatus,
-                  "حالات التحويل",
+                  arrivalDestinations,
+                  setArrivalDestinations,
+                  deleteArrivalDestination,
                 )
               }
               onSave={() =>
                 saveItems(
-                  transferStatuses,
-                  "/settings/transfer-statuses",
-                  "statuses",
-                  "تم حفظ حالات التحويل بنجاح",
+                  arrivalDestinations,
+                  "/settings/arrival-destinations",
+                  "destinations",
+                  "تم حفظ جهات القدوم بنجاح",
                 )
               }
+              nationalityOptions={nationalities.map((item) => ({
+                value: item.key,
+                label: item.label,
+              }))}
+              showNationality
               saving={saving}
-              emptyMessage="لا توجد حالات تحويل"
-            />
-          </Col>
-
-          <Col xs={12} md={6}>
-            <SettingsCard
-              title="طرق الدفع"
-              items={paymentMethods}
-              onAdd={() => addItem(setPaymentMethods)}
-              onUpdate={(idx, field, val) =>
-                updateItem(setPaymentMethods, idx, field, val)
-              }
-              onDelete={(id, isNew, idx) =>
-                deleteItem(
-                  id,
-                  isNew,
-                  idx,
-                  paymentMethods,
-                  setPaymentMethods,
-                  deletePaymentMethod,
-                  "طرق الدفع",
-                )
-              }
-              onSave={() =>
-                saveItems(
-                  paymentMethods,
-                  "/settings/payment-methods",
-                  "methods",
-                  "تم حفظ طرق الدفع بنجاح",
-                )
-              }
-              saving={saving}
-              emptyMessage="لا توجد طرق دفع"
+              emptyMessage="لا توجد جهات قدوم"
             />
           </Col>
         </Row>
 
-        <Row className="mt-4">
-          <Col xs={12} md={6}>
-            <SettingsCard
-              title="أسماء البنوك"
-              items={bankNames}
-              onAdd={() => addItem(setBankNames)}
-              onUpdate={(idx, field, val) =>
-                updateItem(setBankNames, idx, field, val)
-              }
-              onDelete={(id, isNew, idx) =>
-                deleteItem(
-                  id,
-                  isNew,
-                  idx,
-                  bankNames,
-                  setBankNames,
-                  deleteBankName,
-                  "أسماء البنوك",
-                )
-              }
-              onSave={() =>
-                saveItems(
-                  bankNames,
-                  "/settings/bank-names",
-                  "banks",
-                  "تم حفظ أسماء البنوك بنجاح",
-                )
-              }
-              saving={saving}
-              emptyMessage="لا توجد أسماء بنوك"
-            />
-          </Col>
-
-          <Col xs={12} md={6}>
+        <SectionTitle
+          title="حالات الطلبات والمراحل"
+          subtitle="تتبع دورة حياة الطلب"
+          icon="🔄"
+        />
+        <Row className="g-4">
+          <Col xs={12} lg={6}>
             <SettingsCard
               title="حالات الطلبات (والمراحل المستهدفة بالأيام)"
               items={orderStatuses}
@@ -445,7 +398,6 @@ const SettingsPage = () => {
                   orderStatuses,
                   setOrderStatuses,
                   deleteOrderStatus,
-                  "حالات الطلبات",
                 )
               }
               onSave={() =>
@@ -460,10 +412,173 @@ const SettingsPage = () => {
               emptyMessage="لا توجد حالات طلبات"
             />
           </Col>
+          <Col xs={12} lg={6}>
+            <SettingsCard
+              title="درجات الأهمية"
+              items={priorityLevels}
+              onAdd={() => addItem(setPriorityLevels)}
+              onUpdate={(idx, field, val) =>
+                updateItem(setPriorityLevels, idx, field, val)
+              }
+              onDelete={(id, isNew, idx) =>
+                deleteItem(
+                  id,
+                  isNew,
+                  idx,
+                  priorityLevels,
+                  setPriorityLevels,
+                  deletePriorityLevel,
+                )
+              }
+              onSave={() =>
+                saveItems(
+                  priorityLevels,
+                  "/settings/priority-levels",
+                  "levels",
+                  "تم حفظ درجات الأهمية بنجاح",
+                )
+              }
+              saving={saving}
+              emptyMessage="لا توجد درجات أهمية"
+            />
+          </Col>
+          <Col xs={12} lg={6}>
+            <SettingsCard
+              title="حالات ترشيح الجواز"
+              items={passportStatuses}
+              onAdd={() => addItem(setPassportStatuses)}
+              onUpdate={(idx, field, val) =>
+                updateItem(setPassportStatuses, idx, field, val)
+              }
+              onDelete={(id, isNew, idx) =>
+                deleteItem(
+                  id,
+                  isNew,
+                  idx,
+                  passportStatuses,
+                  setPassportStatuses,
+                  deletePassportStatus,
+                )
+              }
+              onSave={() =>
+                saveItems(
+                  passportStatuses,
+                  "/settings/passport-statuses",
+                  "statuses",
+                  "تم حفظ حالات ترشيح الجواز بنجاح",
+                )
+              }
+              saving={saving}
+              emptyMessage="لا توجد حالات ترشيح جواز"
+            />
+          </Col>
+          <Col xs={12} lg={6}>
+            <SettingsCard
+              title="حالات التحويل"
+              items={transferStatuses}
+              onAdd={() => addItem(setTransferStatuses)}
+              onUpdate={(idx, field, val) =>
+                updateItem(setTransferStatuses, idx, field, val)
+              }
+              onDelete={(id, isNew, idx) =>
+                deleteItem(
+                  id,
+                  isNew,
+                  idx,
+                  transferStatuses,
+                  setTransferStatuses,
+                  deleteTransferStatus,
+                )
+              }
+              onSave={() =>
+                saveItems(
+                  transferStatuses,
+                  "/settings/transfer-statuses",
+                  "statuses",
+                  "تم حفظ حالات التحويل بنجاح",
+                )
+              }
+              saving={saving}
+              emptyMessage="لا توجد حالات تحويل"
+            />
+          </Col>
         </Row>
 
-        <Row className="mt-4 g-4">
-          <Col xs={12} md={6}>
+        <SectionTitle
+          title="البيانات المالية"
+          subtitle="البنوك وطرق الدفع"
+          icon="💰"
+        />
+        <Row className="g-4">
+          <Col xs={12} lg={6}>
+            <SettingsCard
+              title="أسماء البنوك"
+              items={bankNames}
+              onAdd={() => addItem(setBankNames)}
+              onUpdate={(idx, field, val) =>
+                updateItem(setBankNames, idx, field, val)
+              }
+              onDelete={(id, isNew, idx) =>
+                deleteItem(
+                  id,
+                  isNew,
+                  idx,
+                  bankNames,
+                  setBankNames,
+                  deleteBankName,
+                )
+              }
+              onSave={() =>
+                saveItems(
+                  bankNames,
+                  "/settings/bank-names",
+                  "banks",
+                  "تم حفظ أسماء البنوك بنجاح",
+                )
+              }
+              saving={saving}
+              emptyMessage="لا توجد أسماء بنوك"
+            />
+          </Col>
+          <Col xs={12} lg={6}>
+            <SettingsCard
+              title="طرق الدفع"
+              items={paymentMethods}
+              onAdd={() => addItem(setPaymentMethods)}
+              onUpdate={(idx, field, val) =>
+                updateItem(setPaymentMethods, idx, field, val)
+              }
+              onDelete={(id, isNew, idx) =>
+                deleteItem(
+                  id,
+                  isNew,
+                  idx,
+                  paymentMethods,
+                  setPaymentMethods,
+                  deletePaymentMethod,
+                )
+              }
+              onSave={() =>
+                saveItems(
+                  paymentMethods,
+                  "/settings/payment-methods",
+                  "methods",
+                  "تم حفظ طرق الدفع بنجاح",
+                )
+              }
+              saving={saving}
+              emptyMessage="لا توجد طرق دفع"
+            />
+          </Col>
+        </Row>
+
+        <SectionTitle
+          title="الخدمات والتوثيق"
+          subtitle="أنواع الخدمات وحالات التوثيق والتفويض"
+          icon="📑"
+        />
+        <Row className="g-4">
+          <Col xs={12} lg={4}>
             <SettingsCard
               title="أنواع الخدمات"
               items={serviceTypes}
@@ -479,7 +594,6 @@ const SettingsPage = () => {
                   serviceTypes,
                   setServiceTypes,
                   deleteServiceType,
-                  "أنواع الخدمات",
                 )
               }
               onSave={() =>
@@ -494,8 +608,7 @@ const SettingsPage = () => {
               emptyMessage="لا توجد أنواع خدمات"
             />
           </Col>
-
-          <Col xs={12} md={6}>
+          <Col xs={12} lg={4}>
             <SettingsCard
               title="حالات التوثيق"
               items={authenticationStatuses}
@@ -511,7 +624,6 @@ const SettingsPage = () => {
                   authenticationStatuses,
                   setAuthenticationStatuses,
                   deleteAuthenticationStatus,
-                  "حالات التوثيق",
                 )
               }
               onSave={() =>
@@ -526,10 +638,7 @@ const SettingsPage = () => {
               emptyMessage="لا توجد حالات توثيق"
             />
           </Col>
-        </Row>
-
-        <Row className="mt-4 g-4">
-          <Col xs={12} md={6}>
+          <Col xs={12} lg={4}>
             <SettingsCard
               title="حالات التفويض"
               items={authorizationStatuses}
@@ -545,7 +654,6 @@ const SettingsPage = () => {
                   authorizationStatuses,
                   setAuthorizationStatuses,
                   deleteAuthorizationStatus,
-                  "حالات التفويض",
                 )
               }
               onSave={() =>
@@ -558,72 +666,6 @@ const SettingsPage = () => {
               }
               saving={saving}
               emptyMessage="لا توجد حالات تفويض"
-            />
-          </Col>
-
-          <Col xs={12} md={6}>
-            <SettingsCard
-              title="الجنسيات"
-              items={nationalities}
-              onAdd={() => addItem(setNationalities)}
-              onUpdate={(idx, field, val) =>
-                updateItem(setNationalities, idx, field, val)
-              }
-              onDelete={(id, isNew, idx) =>
-                deleteItem(
-                  id,
-                  isNew,
-                  idx,
-                  nationalities,
-                  setNationalities,
-                  deleteNationality,
-                  "الجنسيات",
-                )
-              }
-              onSave={() =>
-                saveItems(
-                  nationalities,
-                  "/settings/nationalities",
-                  "nationalities",
-                  "تم حفظ الجنسيات بنجاح",
-                )
-              }
-              saving={saving}
-              emptyMessage="لا توجد جنسيات"
-            />
-          </Col>
-        </Row>
-
-        <Row className="mt-4">
-          <Col xs={12} md={6}>
-            <SettingsCard
-              title="المهن"
-              items={professions}
-              onAdd={() => addItem(setProfessions)}
-              onUpdate={(idx, field, val) =>
-                updateItem(setProfessions, idx, field, val)
-              }
-              onDelete={(id, isNew, idx) =>
-                deleteItem(
-                  id,
-                  isNew,
-                  idx,
-                  professions,
-                  setProfessions,
-                  deleteProfession,
-                  "المهن",
-                )
-              }
-              onSave={() =>
-                saveItems(
-                  professions,
-                  "/settings/professions",
-                  "professions",
-                  "تم حفظ المهن بنجاح",
-                )
-              }
-              saving={saving}
-              emptyMessage="لا توجد مهن"
             />
           </Col>
         </Row>
