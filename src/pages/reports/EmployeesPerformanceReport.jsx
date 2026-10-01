@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Container, Card, Row, Col, Table, Badge, Button, ProgressBar, Form, Modal } from "react-bootstrap";
 import { getEmployeesPerformanceReport, getSaudiOffices } from "../../services/apiService";
 import RefreshButton from "../../components/common/RefreshButton";
@@ -7,6 +7,8 @@ import SortableHeader from "../../components/common/SortableHeader";
 import { useSortableData } from "../../hooks/useSortableData";
 import { exportToExcel } from "../../utils/excelHelper";
 import { exportToPDF } from "../../utils/pdfHelper";
+import PaginationComponent from "../../components/common/Pagination";
+import OrderDetailsModal from "../../components/Order/OrderDetailsModal";
 
 const EmployeesPerformanceReport = () => {
   const [loading, setLoading] = useState(true);
@@ -20,18 +22,41 @@ const EmployeesPerformanceReport = () => {
   const [employees, setEmployees] = useState([]);
   const [saudiOffices, setSaudiOffices] = useState([]);
 
-  // Modal State
-  const [selectedEmployeeForModal, setSelectedEmployeeForModal] = useState(null);
-  const [showOrdersModal, setShowOrdersModal] = useState(false);
-
-  const { items: sortedEmployees, requestSort, sortConfig } = useSortableData(employees);
-  const { items: sortedModalOrders, requestSort: requestModalSort, sortConfig: modalSortConfig } = useSortableData(selectedEmployeeForModal?.orders || []);
-
   // Filters state
   const [periodPreset, setPeriodPreset] = useState("all"); // 'all', 'today', 'this_week', 'this_month', 'this_year', 'custom'
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [saudiOfficeId, setSaudiOfficeId] = useState("");
+
+  // Modal State for Employee
+  const [selectedEmployeeForModal, setSelectedEmployeeForModal] = useState(null);
+  const [showOrdersModal, setShowOrdersModal] = useState(false);
+
+  // Modal State for Specific Order Details
+  const [selectedSpecificOrder, setSelectedSpecificOrder] = useState(null);
+  const [showSpecificOrderModal, setShowSpecificOrderModal] = useState(false);
+
+  const handleViewSpecificOrder = (order) => {
+    setSelectedSpecificOrder(order);
+    setShowSpecificOrderModal(true);
+  };
+
+  const { items: sortedEmployees, requestSort, sortConfig } = useSortableData(employees);
+  const { items: sortedModalOrders, requestSort: requestModalSort, sortConfig: modalSortConfig } = useSortableData(selectedEmployeeForModal?.orders || []);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateFrom, dateTo, saudiOfficeId, periodPreset]);
+
+  const totalPages = Math.ceil(sortedEmployees.length / itemsPerPage);
+  const paginatedEmployees = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedEmployees.slice(start, start + itemsPerPage);
+  }, [sortedEmployees, currentPage, itemsPerPage]);
 
   useEffect(() => {
     fetchSaudiOffices();
@@ -360,14 +385,14 @@ const EmployeesPerformanceReport = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedEmployees.length === 0 ? (
+                    {paginatedEmployees.length === 0 ? (
                       <tr>
                         <td colSpan={9} className="py-5 text-muted">
                           لا توجد بيانات موظفين مطابقة للفلاتر المحددة
                         </td>
                       </tr>
                     ) : (
-                      sortedEmployees.map((emp, idx) => (
+                      paginatedEmployees.map((emp, idx) => (
                         <tr key={emp.id || idx}>
                           <td className="fw-bold text-dark text-end ps-3">
                             <div className="d-flex align-items-center gap-2">
@@ -413,6 +438,11 @@ const EmployeesPerformanceReport = () => {
                 </Table>
               </div>
             )}
+            <PaginationComponent
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </Card.Body>
         </Card>
 
@@ -467,6 +497,7 @@ const EmployeesPerformanceReport = () => {
                           <SortableHeader title="نوع الخدمة" sortKey="service_type" sortConfig={modalSortConfig} onRequestSort={requestModalSort} />
                           <SortableHeader title="الحالة" sortKey="status" sortConfig={modalSortConfig} onRequestSort={requestModalSort} />
                           <SortableHeader title="القيمة (ر.س)" sortKey="total_price" sortConfig={modalSortConfig} onRequestSort={requestModalSort} />
+                          <th className="text-center">التفاصيل</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -485,6 +516,17 @@ const EmployeesPerformanceReport = () => {
                               </Badge>
                             </td>
                             <td className="fw-bold text-success">{(order.total_price || 0).toLocaleString()}</td>
+                            <td className="text-center">
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                className="rounded-circle p-1 px-2"
+                                title="عرض تفاصيل الطلب"
+                                onClick={() => handleViewSpecificOrder(order)}
+                              >
+                                <i className="fa-solid fa-eye"></i>
+                              </Button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -500,6 +542,13 @@ const EmployeesPerformanceReport = () => {
             </Button>
           </Modal.Footer>
         </Modal>
+
+        {/* Order Details Modal */}
+        <OrderDetailsModal
+          show={showSpecificOrderModal}
+          onHide={() => setShowSpecificOrderModal(false)}
+          order={selectedSpecificOrder}
+        />
       </Container>
     </div>
   );

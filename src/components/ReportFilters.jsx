@@ -1,31 +1,55 @@
 import React, { useState, useEffect } from "react";
 import { Form, Row, Col, Button, Card } from "react-bootstrap";
-import { getEmployees, getSaudiOffices, getExternalOffices } from "../services/apiService";
+import { getEmployees, getSaudiOffices, getExternalOffices, getSettingsOrderStatuses, getClients } from "../services/apiService";
 
 const ReportFilters = ({ 
   config = {}, 
   filters = {}, 
   onChange, 
-  onApply 
+  onApply,
+  onFilter,
+  statuses: propStatuses,
+  employees: propEmployees,
+  clients: propClients,
+  saudiOffices: propSaudiOffices,
+  externalOffices: propExternalOffices,
 }) => {
-  const [employees, setEmployees] = useState([]);
-  const [saudiOffices, setSaudiOffices] = useState([]);
-  const [externalOffices, setExternalOffices] = useState([]);
+  const [employees, setEmployees] = useState(propEmployees || []);
+  const [clients, setClients] = useState(propClients || []);
+  const [saudiOffices, setSaudiOffices] = useState(propSaudiOffices || []);
+  const [externalOffices, setExternalOffices] = useState(propExternalOffices || []);
+  const [statuses, setStatuses] = useState(propStatuses || []);
+
+  useEffect(() => {
+    if (propEmployees) setEmployees(propEmployees);
+    if (propClients) setClients(propClients);
+    if (propSaudiOffices) setSaudiOffices(propSaudiOffices);
+    if (propExternalOffices) setExternalOffices(propExternalOffices);
+    if (propStatuses) setStatuses(propStatuses);
+  }, [propEmployees, propClients, propSaudiOffices, propExternalOffices, propStatuses]);
 
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        if (config.showMarketer || config.showEmployee) {
+        if ((config.showMarketer || config.showEmployee) && (!propEmployees || propEmployees.length === 0)) {
           const empRes = await getEmployees();
-          setEmployees(empRes.data?.data || []);
+          setEmployees(empRes.data?.data || empRes.data || []);
         }
-        if (config.showSaudiOffice) {
+        if ((config.showClient || config.showDelegate) && (!propClients || propClients.length === 0)) {
+          const clientRes = await getClients({ per_page: 500 });
+          setClients(clientRes.data?.data || clientRes.data || []);
+        }
+        if (config.showSaudiOffice && (!propSaudiOffices || propSaudiOffices.length === 0)) {
           const saudiRes = await getSaudiOffices();
-          setSaudiOffices(saudiRes.data?.data || []);
+          setSaudiOffices(saudiRes.data?.data || saudiRes.data || []);
         }
-        if (config.showExternalOffice) {
+        if (config.showExternalOffice && (!propExternalOffices || propExternalOffices.length === 0)) {
           const extRes = await getExternalOffices();
-          setExternalOffices(extRes.data?.data || []);
+          setExternalOffices(extRes.data?.data || extRes.data || []);
+        }
+        if (config.showStatus && (!propStatuses || propStatuses.length === 0)) {
+          const statusRes = await getSettingsOrderStatuses();
+          setStatuses(statusRes.data?.data || statusRes.data || []);
         }
       } catch (error) {
         console.error("Error fetching filter options:", error);
@@ -35,7 +59,9 @@ const ReportFilters = ({
   }, [config]);
 
   const handleChange = (field, value) => {
-    onChange({ ...filters, [field]: value });
+    const updated = { ...filters, [field]: value };
+    if (onChange) onChange(updated);
+    if (onFilter) onFilter(updated);
   };
 
   const clearFilters = () => {
@@ -43,7 +69,8 @@ const ReportFilters = ({
       acc[key] = "";
       return acc;
     }, {});
-    onChange(cleared);
+    if (onChange) onChange(cleared);
+    if (onFilter) onFilter(cleared);
     if (onApply) onApply(cleared);
   };
 
@@ -80,7 +107,7 @@ const ReportFilters = ({
             {config.showMarketer && (
               <Col md={3}>
                 <Form.Group>
-                  <Form.Label>المسوق</Form.Label>
+                  <Form.Label>{config.marketerLabel || "المسوق"}</Form.Label>
                   <Form.Select
                     value={filters.marketer_id || ""}
                     onChange={(e) => handleChange("marketer_id", e.target.value)}
@@ -99,7 +126,7 @@ const ReportFilters = ({
             {config.showEmployee && (
               <Col md={3}>
                 <Form.Group>
-                  <Form.Label>المندوب</Form.Label>
+                  <Form.Label>{config.employeeLabel || "المسوق / الموظف"}</Form.Label>
                   <Form.Select
                     value={filters.employee_id || ""}
                     onChange={(e) => handleChange("employee_id", e.target.value)}
@@ -108,6 +135,44 @@ const ReportFilters = ({
                     {employees.map((emp) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.name}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            )}
+
+            {(config.showClient || config.showDelegate) && (
+              <Col md={3}>
+                <Form.Group>
+                  <Form.Label>{config.clientLabel || config.delegateLabel || "المندوب / العميل"}</Form.Label>
+                  <Form.Select
+                    value={filters.client_id || ""}
+                    onChange={(e) => handleChange("client_id", e.target.value)}
+                  >
+                    <option value="">الكل</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            )}
+
+            {config.showStatus && (
+              <Col md={3}>
+                <Form.Group>
+                  <Form.Label>{config.statusLabel || "حالة الطلب"}</Form.Label>
+                  <Form.Select
+                    value={filters.status || ""}
+                    onChange={(e) => handleChange("status", e.target.value)}
+                  >
+                    <option value="">الكل</option>
+                    {statuses.map((st) => (
+                      <option key={st.key || st.id} value={st.key || st.id}>
+                        {st.label || st.name}
                       </option>
                     ))}
                   </Form.Select>

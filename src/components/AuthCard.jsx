@@ -4,7 +4,7 @@ const AuthCard = ({ title, subtitle, children, footer }) => {
       {/* ── Left: Form Panel ── */}
       <div className="auth-form-panel">
         <div className="auth-logo">
-          <img src="/logo4.png" alt="AlSrage Logo" style={{ maxHeight: '100px', width: 'auto' }} />
+          <img src="/logo3.png?v=2" alt="AlSrage Logo" style={{ maxHeight: '100px', width: 'auto' }} />
         </div>
         <h1 className="auth-title">{title}</h1>
         <p className="auth-subtitle">{subtitle}</p>

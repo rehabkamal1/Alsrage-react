@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Container, Card, Row, Col, Table, Badge, Button } from "react-bootstrap";
 import { getFinancialCollectionsReport } from "../../services/apiService";
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
 import { exportToExcel } from "../../utils/excelHelper";
 import { exportToPDF } from "../../utils/pdfHelper";
+import PaginationComponent from "../../components/common/Pagination";
+import OrderDetailsModal from "../../components/Order/OrderDetailsModal";
 
 const FinancialCollectionsReport = () => {
   const [loading, setLoading] = useState(true);
@@ -15,6 +17,24 @@ const FinancialCollectionsReport = () => {
     collection_rate: 0,
   });
   const [orders, setOrders] = useState([]);
+
+  // Modal State for Order Details
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  const handleViewOrderDetails = (order) => {
+    setSelectedOrder(order);
+    setShowDetailsModal(true);
+  };
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(orders.length / itemsPerPage);
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return orders.slice(start, start + itemsPerPage);
+  }, [orders, currentPage, itemsPerPage]);
 
   useEffect(() => {
     fetchData();
@@ -163,10 +183,11 @@ const FinancialCollectionsReport = () => {
                       <th className="py-3">المتبقي</th>
                       <th className="py-3">حالة التحصيل</th>
                       <th className="py-3">التاريخ</th>
+                      <th className="py-3 text-center">التفاصيل</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order, idx) => (
+                    {paginatedOrders.map((order, idx) => (
                       <tr key={order.id || idx}>
                         <td className="fw-bold">{order.id}</td>
                         <td><Badge bg="secondary" className="px-2 py-1">{order.visa_number}</Badge></td>
@@ -184,14 +205,38 @@ const FinancialCollectionsReport = () => {
                           )}
                         </td>
                         <td className="text-muted">{order.created_at}</td>
+                        <td className="text-center">
+                          <Button
+                            variant="light"
+                            size="sm"
+                            className="rounded-circle shadow-sm border text-primary d-inline-flex align-items-center justify-content-center"
+                            style={{ width: "36px", height: "36px" }}
+                            onClick={() => handleViewOrderDetails(order)}
+                            title="عرض تفاصيل الطلب والحساب"
+                          >
+                            <i className="fa-solid fa-eye fs-6"></i>
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </Table>
               </div>
             )}
+            <PaginationComponent
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </Card.Body>
         </Card>
+
+        {/* Order Details Modal */}
+        <OrderDetailsModal
+          show={showDetailsModal}
+          onHide={() => setShowDetailsModal(false)}
+          order={selectedOrder}
+        />
       </Container>
     </div>
   );
