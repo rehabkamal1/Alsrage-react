@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Row, Col, Badge, Card, Spinner, Table } from "react-bootstrap";
 import { getOrder } from "../../services/apiService";
+import { OrderStatusBadge } from "../../utils/statusHelper";
 
 const OrderDetailsModal = ({ show, onHide, order }) => {
   const [loading, setLoading] = useState(false);
@@ -30,16 +31,6 @@ const OrderDetailsModal = ({ show, onHide, order }) => {
 
   const current = details || order || {};
 
-  // Status badge styling helper
-  const getStatusBadge = (status) => {
-    const s = String(status || "").toLowerCase();
-    if (s.includes("مكتمل") || s === "completed") return <Badge bg="success" className="px-3 py-2 fs-7">مكتمل ✓</Badge>;
-    if (s.includes("ملغي") || s === "cancelled") return <Badge bg="danger" className="px-3 py-2 fs-7">ملغي ✕</Badge>;
-    if (s.includes("مرفوض") || s === "rejected") return <Badge bg="danger" className="px-3 py-2 fs-7">مرفوض</Badge>;
-    if (s.includes("جديد") || s === "new") return <Badge bg="primary" className="px-3 py-2 fs-7">طلب جديد</Badge>;
-    return <Badge bg="warning" text="dark" className="px-3 py-2 fs-7">{status || "قيد التنفيذ"}</Badge>;
-  };
-
   const getSlaBadge = () => {
     if (current.exceeded_sla || current.within_sla === false || (current.delay_days && current.delay_days > 0)) {
       return (
@@ -61,7 +52,9 @@ const OrderDetailsModal = ({ show, onHide, order }) => {
         <Modal.Title className="fw-bold fs-5 text-dark d-flex align-items-center gap-2">
           <span className="p-2 bg-white rounded-3 border shadow-sm text-primary">📄</span>
           <span>تفاصيل الطلب: #{current.id || order?.id}</span>
-          <span className="ms-2">{getStatusBadge(current.status_name || current.status)}</span>
+          <span className="ms-2">
+            <OrderStatusBadge status={current.status_name || current.status} size="lg" />
+          </span>
         </Modal.Title>
       </Modal.Header>
 

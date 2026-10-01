@@ -1,23 +1,9 @@
 import React from "react";
 import { Modal, Table, Badge } from "react-bootstrap";
+import { OrderStatusBadge } from "../../utils/statusHelper";
 
 const ClientOrdersModal = ({ show, onHide, client }) => {
   const orders = client?.orders || [];
-
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      pending: { label: "قيد الانتظار", bg: "warning" },
-      processing: { label: "تحت المعالجة", bg: "info" },
-      completed: { label: "مكتمل", bg: "success" },
-      cancelled: { label: "ملغي", bg: "danger" },
-      musaned_paid: { label: "تم سداد مساند", bg: "primary" },
-    };
-    const config = statusMap[status] || {
-      label: status || "-",
-      bg: "secondary",
-    };
-    return <Badge bg={config.bg}>{config.label}</Badge>;
-  };
 
   return (
     <Modal show={show} onHide={onHide} size="xl" dir="rtl" scrollable>
@@ -79,7 +65,7 @@ const ClientOrdersModal = ({ show, onHide, client }) => {
                         ? `${Number(order.price_difference).toFixed(2)} ر.س`
                         : "0.00 ر.س"}
                     </td>
-                    <td>{getStatusBadge(order.status)}</td>
+                    <td><OrderStatusBadge status={order.status} size="sm" /></td>
                   </tr>
                 ))}
               </tbody>

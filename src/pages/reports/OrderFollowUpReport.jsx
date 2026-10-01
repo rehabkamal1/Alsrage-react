@@ -9,6 +9,7 @@ import { getOrderFollowUpReport, getOrder } from "../../services/apiService";
 import { exportToExcel } from "../../utils/excelHelper";
 import { exportToPDF } from "../../utils/pdfHelper";
 import PaginationComponent from "../../components/common/Pagination";
+import { OrderStatusBadge } from "../../utils/statusHelper";
 
 const OrderFollowUpReport = () => {
   const [filters, setFilters] = useState({});
@@ -566,9 +567,10 @@ const OrderFollowUpReport = () => {
                             </Badge>
                           </td>
                           <td>
-                            <Badge bg="secondary" className="px-2 py-1">
-                              {order.status?.name || order.status_name || order.status || "غير محدد"}
-                            </Badge>
+                            <OrderStatusBadge
+                              status={order.status?.name || order.status_name || order.status}
+                              size="sm"
+                            />
                           </td>
                           <td className="fw-semibold">
                             {order.employee?.name || order.employee_name || "-"}
