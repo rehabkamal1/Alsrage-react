@@ -1,19 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Container, Card, Row, Col, Table, Badge, Button, ProgressBar, Tabs, Tab, Form, Modal, Dropdown } from "react-bootstrap";
 import { getOfficesPerformanceReport } from "../../services/apiService";
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
 import SortableHeader from "../../components/common/SortableHeader";
 import { useSortableData } from "../../hooks/useSortableData";
-import useAutoRefresh from "../../hooks/useAutoRefresh";
 import { exportToExcel } from "../../utils/excelHelper";
 import { exportToPDF } from "../../utils/pdfHelper";
+import PaginationComponent from "../../components/common/Pagination";
+import OrderDetailsModal from "../../components/Order/OrderDetailsModal";
 
 const OfficesPerformanceReport = () => {
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState({});
   const [saudiOffices, setSaudiOffices] = useState([]);
   const [externalOffices, setExternalOffices] = useState([]);
+  const [allSaudiOffices, setAllSaudiOffices] = useState([]);
+  const [allExternalOffices, setAllExternalOffices] = useState([]);
   const [countries, setCountries] = useState([]);
   const [cities, setCities] = useState([]);
   const [statuses, setStatuses] = useState([]);
@@ -30,13 +33,54 @@ const OfficesPerformanceReport = () => {
     statuses: [], // Array of selected status keys
   });
 
+  // Active KPI Card Filter ('all', 'with_orders', 'with_revenue', 'zero_orders')
+  const [activeCardFilter, setActiveCardFilter] = useState("all");
+
   // Modal State for Contract Details
   const [selectedOffice, setSelectedOffice] = useState(null);
   const [modalSelectedStatuses, setModalSelectedStatuses] = useState([]);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
+  // Modal State for Specific Order Details
+  const [selectedSpecificOrder, setSelectedSpecificOrder] = useState(null);
+  const [showSpecificOrderModal, setShowSpecificOrderModal] = useState(false);
+
+  const handleViewSpecificOrder = (order) => {
+    setSelectedSpecificOrder(order);
+    setShowSpecificOrderModal(true);
+  };
+
   const rawOfficesList = key === "saudi" ? saudiOffices : externalOffices;
-  const { items: currentOfficesList, requestSort, sortConfig } = useSortableData(rawOfficesList);
+
+  // Filter raw offices list based on active KPI card
+  const cardFilteredOffices = useMemo(() => {
+    if (activeCardFilter === "with_orders") {
+      return rawOfficesList.filter((o) => (o.total_orders || 0) > 0);
+    }
+    if (activeCardFilter === "with_revenue") {
+      return rawOfficesList.filter((o) => (o.total_revenue || 0) > 0);
+    }
+    if (activeCardFilter === "zero_orders") {
+      return rawOfficesList.filter((o) => (o.total_orders || 0) === 0);
+    }
+    return rawOfficesList;
+  }, [rawOfficesList, activeCardFilter]);
+
+  const { items: currentOfficesList, requestSort, sortConfig } = useSortableData(cardFilteredOffices);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [key, filters, activeCardFilter]);
+
+  const totalPages = Math.ceil(currentOfficesList.length / itemsPerPage);
+  const paginatedOffices = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return currentOfficesList.slice(start, start + itemsPerPage);
+  }, [currentOfficesList, currentPage, itemsPerPage]);
 
   const filteredModalOrders = (selectedOffice?.orders_details || []).filter((ord) => {
     if (!modalSelectedStatuses || modalSelectedStatuses.length === 0) return true;
@@ -49,18 +93,19 @@ const OfficesPerformanceReport = () => {
     fetchData();
   }, []);
 
-  const fetchData = async (currentFilters = filters, isSilent = false) => {
-    if (!isSilent) setLoading(true);
+  const fetchData = async (customFilters = null) => {
+    const activeFilters = (customFilters && typeof customFilters === "object") ? customFilters : filters;
+    setLoading(true);
     try {
       const params = {};
-      if (currentFilters.date_from) params.date_from = currentFilters.date_from;
-      if (currentFilters.date_to) params.date_to = currentFilters.date_to;
-      if (currentFilters.country) params.country = currentFilters.country;
-      if (currentFilters.city) params.city = currentFilters.city;
-      if (currentFilters.saudi_office_id) params.saudi_office_id = currentFilters.saudi_office_id;
-      if (currentFilters.external_office_id) params.external_office_id = currentFilters.external_office_id;
-      if (currentFilters.statuses && currentFilters.statuses.length > 0) {
-        params.statuses = currentFilters.statuses.join(",");
+      if (activeFilters.date_from) params.date_from = activeFilters.date_from;
+      if (activeFilters.date_to) params.date_to = activeFilters.date_to;
+      if (activeFilters.country) params.country = activeFilters.country;
+      if (activeFilters.city) params.city = activeFilters.city;
+      if (activeFilters.saudi_office_id) params.saudi_office_id = activeFilters.saudi_office_id;
+      if (activeFilters.external_office_id) params.external_office_id = activeFilters.external_office_id;
+      if (activeFilters.statuses && activeFilters.statuses.length > 0) {
+        params.statuses = activeFilters.statuses.join(",");
       }
 
       const res = await getOfficesPerformanceReport(params);
@@ -68,19 +113,20 @@ const OfficesPerformanceReport = () => {
         setKpis(res.data.kpis || {});
         setSaudiOffices(res.data.saudi_offices || []);
         setExternalOffices(res.data.external_offices || []);
-        setCountries(res.data.countries || []);
-        setCities(res.data.cities || []);
-        setStatuses(res.data.statuses || []);
+        setAllSaudiOffices((prev) => (prev.length === 0 && res.data.saudi_offices?.length ? res.data.saudi_offices : prev));
+        setAllExternalOffices((prev) => (prev.length === 0 && res.data.external_offices?.length ? res.data.external_offices : prev));
+        if (res.data.countries && res.data.countries.length > 0) setCountries(res.data.countries);
+        if (res.data.cities && res.data.cities.length > 0) setCities(res.data.cities);
+        if (!activeFilters.statuses || activeFilters.statuses.length === 0) {
+          setStatuses(res.data.statuses || []);
+        }
       }
     } catch (err) {
       console.error("Error fetching offices performance report:", err);
     } finally {
-      if (!isSilent) setLoading(false);
+      setLoading(false);
     }
   };
-
-  // Silent auto refresh every 12 seconds and on window focus
-  useAutoRefresh(fetchData, 12000);
 
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
@@ -187,6 +233,24 @@ const OfficesPerformanceReport = () => {
   };
 
   const selectedCount = (filters.statuses || []).length;
+
+  const getFilterTitle = () => {
+    switch (activeCardFilter) {
+      case "with_orders":
+        return "المكاتب التي لديها عقود مسجلة";
+      case "with_revenue":
+        return "المكاتب المحققة لإيرادات مالية";
+      case "zero_orders":
+        return "المكاتب التي لم تسجل أي عقود";
+      default:
+        return "جميع المكاتب";
+    }
+  };
+
+  const totalOfficesCount = rawOfficesList.length;
+  const withOrdersCount = rawOfficesList.filter((o) => (o.total_orders || 0) > 0).length;
+  const withRevenueCount = rawOfficesList.filter((o) => (o.total_revenue || 0) > 0).length;
+  const zeroOrdersCount = rawOfficesList.filter((o) => (o.total_orders || 0) === 0).length;
 
   return (
     <div style={{ backgroundColor: "#f1f5f9", minHeight: "100vh", padding: "28px 24px" }} dir="rtl">
@@ -337,81 +401,41 @@ const OfficesPerformanceReport = () => {
                   </Form.Group>
                 </Col>
 
-                {key === "external" ? (
-                  <>
-                    <Col xs={12} sm={6} md={3}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold small text-secondary">فلترة حسب الدولة 🌍</Form.Label>
-                        <Form.Select
-                          value={filters.country}
-                          onChange={(e) => handleFilterChange("country", e.target.value)}
-                          className="rounded-3"
-                        >
-                          <option value="">جميع الدول</option>
-                          {countries.map((c, idx) => (
-                            <option key={idx} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                    <Col xs={12} sm={6} md={3}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold small text-secondary">اسم المكتب الخارجي 🏢</Form.Label>
-                        <Form.Select
-                          value={filters.external_office_id}
-                          onChange={(e) => handleFilterChange("external_office_id", e.target.value)}
-                          className="rounded-3"
-                        >
-                          <option value="">جميع المكاتب الخارجية</option>
-                          {externalOffices.map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.name} ({o.country})
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                  </>
-                ) : (
-                  <>
-                    <Col xs={12} sm={6} md={3}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold small text-secondary">فلترة حسب المدينة 🏙️</Form.Label>
-                        <Form.Select
-                          value={filters.city}
-                          onChange={(e) => handleFilterChange("city", e.target.value)}
-                          className="rounded-3"
-                        >
-                          <option value="">جميع المدن</option>
-                          {cities.map((c, idx) => (
-                            <option key={idx} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                    <Col xs={12} sm={6} md={3}>
-                      <Form.Group>
-                        <Form.Label className="fw-semibold small text-secondary">اسم المكتب السعودي 🇸🇦</Form.Label>
-                        <Form.Select
-                          value={filters.saudi_office_id}
-                          onChange={(e) => handleFilterChange("saudi_office_id", e.target.value)}
-                          className="rounded-3"
-                        >
-                          <option value="">جميع المكاتب السعودية</option>
-                          {saudiOffices.map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.name} ({o.city})
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                  </>
-                )}
+                <Col xs={12} sm={6} md={3}>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold small text-secondary">المكتب الداخلي (السعودي) 🇸🇦</Form.Label>
+                    <Form.Select
+                      value={filters.saudi_office_id}
+                      onChange={(e) => handleFilterChange("saudi_office_id", e.target.value)}
+                      className="rounded-3"
+                    >
+                      <option value="">جميع المكاتب السعودية</option>
+                      {(allSaudiOffices.length > 0 ? allSaudiOffices : saudiOffices).map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name} {o.city ? `(${o.city})` : ""}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+
+                <Col xs={12} sm={6} md={3}>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold small text-secondary">المكتب الخارجي 🏢</Form.Label>
+                    <Form.Select
+                      value={filters.external_office_id}
+                      onChange={(e) => handleFilterChange("external_office_id", e.target.value)}
+                      className="rounded-3"
+                    >
+                      <option value="">جميع المكاتب الخارجية</option>
+                      {(allExternalOffices.length > 0 ? allExternalOffices : externalOffices).map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name} {o.country ? `(${o.country})` : ""}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
 
                 <Col xs={12} className="d-flex justify-content-end gap-2 mt-3">
                   <Button variant="light" onClick={handleResetFilters} className="px-3 rounded-3 border text-secondary fw-semibold">
@@ -426,18 +450,36 @@ const OfficesPerformanceReport = () => {
           </Card.Body>
         </Card>
 
-        {/* Dynamic Glassmorphic KPI Summary Cards */}
+        {/* Dynamic Glassmorphic KPI Summary Cards (Interactive / Clickable) */}
         <Row className="g-3 mb-4">
+          {/* Card 1: All Offices */}
           <Col xs={12} sm={6} lg={3}>
-            <Card className="border-0 shadow-sm rounded-4 text-white overflow-hidden" style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)" }}>
+            <Card
+              onClick={() => setActiveCardFilter("all")}
+              className="border-0 shadow-sm rounded-4 text-white overflow-hidden transition-all"
+              style={{
+                background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)",
+                cursor: "pointer",
+                border: activeCardFilter === "all" ? "3px solid #60a5fa" : "3px solid transparent",
+                transform: activeCardFilter === "all" ? "translateY(-3px)" : "none",
+                boxShadow: activeCardFilter === "all" ? "0 10px 20px rgba(67, 56, 202, 0.4)" : "none",
+                transition: "all 0.2s ease-in-out",
+              }}
+            >
               <Card.Body className="p-3.5 d-flex justify-content-between align-items-center">
                 <div>
-                  <div className="text-white-50 fs-7 fw-semibold mb-1">
-                    {key === "saudi" ? "عدد المكاتب السعودية" : "مكاتب التمثيل الخارجي"}
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <span className="text-white-50 fs-7 fw-semibold">
+                      {key === "saudi" ? "عدد المكاتب السعودية" : "مكاتب التمثيل الخارجي"}
+                    </span>
+                    {activeCardFilter === "all" && (
+                      <Badge bg="light" text="dark" className="rounded-pill fs-8">مُحدد ✓</Badge>
+                    )}
                   </div>
                   <h2 className="mb-0 fw-bold tracking-tight">
-                    {key === "saudi" ? kpis.total_saudi_offices || 0 : kpis.total_external_offices || 0}
+                    {totalOfficesCount} <small className="fs-6 fw-normal text-white-50">مكتب</small>
                   </h2>
+                  <div className="text-white-50 small mt-1 fs-8">اضغط لعرض كافة المكاتب</div>
                 </div>
                 <div className="bg-white bg-opacity-20 rounded-4 p-3 d-flex align-items-center justify-content-center" style={{ width: "52px", height: "52px", backdropFilter: "blur(8px)" }}>
                   <i className={`fa-solid ${key === "saudi" ? "fa-building-flag" : "fa-globe"} fs-3 text-white`}></i>
@@ -446,14 +488,32 @@ const OfficesPerformanceReport = () => {
             </Card>
           </Col>
 
+          {/* Card 2: With Orders */}
           <Col xs={12} sm={6} lg={3}>
-            <Card className="border-0 shadow-sm rounded-4 text-white overflow-hidden" style={{ background: "linear-gradient(135deg, #064e3b 0%, #047857 50%, #10b981 100%)" }}>
+            <Card
+              onClick={() => setActiveCardFilter("with_orders")}
+              className="border-0 shadow-sm rounded-4 text-white overflow-hidden transition-all"
+              style={{
+                background: "linear-gradient(135deg, #064e3b 0%, #047857 50%, #10b981 100%)",
+                cursor: "pointer",
+                border: activeCardFilter === "with_orders" ? "3px solid #34d399" : "3px solid transparent",
+                transform: activeCardFilter === "with_orders" ? "translateY(-3px)" : "none",
+                boxShadow: activeCardFilter === "with_orders" ? "0 10px 20px rgba(16, 185, 129, 0.4)" : "none",
+                transition: "all 0.2s ease-in-out",
+              }}
+            >
               <Card.Body className="p-3.5 d-flex justify-content-between align-items-center">
                 <div>
-                  <div className="text-white-50 fs-7 fw-semibold mb-1">إجمالي عقود المكاتب</div>
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <span className="text-white-50 fs-7 fw-semibold">مكاتب لديها عقود نشطة</span>
+                    {activeCardFilter === "with_orders" && (
+                      <Badge bg="light" text="dark" className="rounded-pill fs-8">مُحدد ✓</Badge>
+                    )}
+                  </div>
                   <h2 className="mb-0 fw-bold tracking-tight">
-                    {key === "saudi" ? kpis.total_saudi_orders || 0 : kpis.total_external_orders || 0}
+                    {withOrdersCount} <small className="fs-6 fw-normal text-white-50">مكتب ({key === "saudi" ? kpis.total_saudi_orders || 0 : kpis.total_external_orders || 0} عقد)</small>
                   </h2>
+                  <div className="text-white-50 small mt-1 fs-8">اضغط لعرض المكاتب التي لديها عقود</div>
                 </div>
                 <div className="bg-white bg-opacity-20 rounded-4 p-3 d-flex align-items-center justify-content-center" style={{ width: "52px", height: "52px", backdropFilter: "blur(8px)" }}>
                   <i className="fa-solid fa-file-contract fs-3 text-white"></i>
@@ -462,14 +522,32 @@ const OfficesPerformanceReport = () => {
             </Card>
           </Col>
 
+          {/* Card 3: With Revenue */}
           <Col xs={12} sm={6} lg={3}>
-            <Card className="border-0 shadow-sm rounded-4 text-white overflow-hidden" style={{ background: "linear-gradient(135deg, #581c87 0%, #7e22ce 50%, #a855f7 100%)" }}>
+            <Card
+              onClick={() => setActiveCardFilter("with_revenue")}
+              className="border-0 shadow-sm rounded-4 text-white overflow-hidden transition-all"
+              style={{
+                background: "linear-gradient(135deg, #581c87 0%, #7e22ce 50%, #a855f7 100%)",
+                cursor: "pointer",
+                border: activeCardFilter === "with_revenue" ? "3px solid #c084fc" : "3px solid transparent",
+                transform: activeCardFilter === "with_revenue" ? "translateY(-3px)" : "none",
+                boxShadow: activeCardFilter === "with_revenue" ? "0 10px 20px rgba(168, 85, 247, 0.4)" : "none",
+                transition: "all 0.2s ease-in-out",
+              }}
+            >
               <Card.Body className="p-3.5 d-flex justify-content-between align-items-center">
                 <div>
-                  <div className="text-white-50 fs-7 fw-semibold mb-1">إجمالي المبالغ المالية</div>
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <span className="text-white-50 fs-7 fw-semibold">مكاتب محققة لإيرادات</span>
+                    {activeCardFilter === "with_revenue" && (
+                      <Badge bg="light" text="dark" className="rounded-pill fs-8">مُحدد ✓</Badge>
+                    )}
+                  </div>
                   <h2 className="mb-0 fw-bold tracking-tight">
-                    {((key === "saudi" ? kpis.total_saudi_revenue : kpis.total_external_revenue) || 0).toLocaleString()} <small className="fs-6">ر.س</small>
+                    {withRevenueCount} <small className="fs-6 fw-normal text-white-50">مكتب ({((key === "saudi" ? kpis.total_saudi_revenue : kpis.total_external_revenue) || 0).toLocaleString()} ر.س)</small>
                   </h2>
+                  <div className="text-white-50 small mt-1 fs-8">اضغط لعرض المكاتب المحققة للمبيعات</div>
                 </div>
                 <div className="bg-white bg-opacity-20 rounded-4 p-3 d-flex align-items-center justify-content-center" style={{ width: "52px", height: "52px", backdropFilter: "blur(8px)" }}>
                   <i className="fa-solid fa-money-bill-wave fs-3 text-white"></i>
@@ -478,20 +556,61 @@ const OfficesPerformanceReport = () => {
             </Card>
           </Col>
 
+          {/* Card 4: Zero Orders / Need Attention */}
           <Col xs={12} sm={6} lg={3}>
-            <Card className="border-0 shadow-sm rounded-4 text-white overflow-hidden" style={{ background: "linear-gradient(135deg, #78350f 0%, #b45309 50%, #f59e0b 100%)" }}>
+            <Card
+              onClick={() => setActiveCardFilter("zero_orders")}
+              className="border-0 shadow-sm rounded-4 text-white overflow-hidden transition-all"
+              style={{
+                background: "linear-gradient(135deg, #78350f 0%, #b45309 50%, #f59e0b 100%)",
+                cursor: "pointer",
+                border: activeCardFilter === "zero_orders" ? "3px solid #fde047" : "3px solid transparent",
+                transform: activeCardFilter === "zero_orders" ? "translateY(-3px)" : "none",
+                boxShadow: activeCardFilter === "zero_orders" ? "0 10px 20px rgba(245, 158, 11, 0.4)" : "none",
+                transition: "all 0.2s ease-in-out",
+              }}
+            >
               <Card.Body className="p-3.5 d-flex justify-content-between align-items-center">
                 <div>
-                  <div className="text-white-50 fs-7 fw-semibold mb-1">إجمالي العقود الكلي بالمصنع</div>
-                  <h2 className="mb-0 fw-bold tracking-tight">{kpis.grand_total_orders || 0}</h2>
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <span className="text-white-50 fs-7 fw-semibold">مكاتب بدون عقود (بحاجة لمتابعة)</span>
+                    {activeCardFilter === "zero_orders" && (
+                      <Badge bg="light" text="dark" className="rounded-pill fs-8">مُحدد ✓</Badge>
+                    )}
+                  </div>
+                  <h2 className="mb-0 fw-bold tracking-tight">
+                    {zeroOrdersCount} <small className="fs-6 fw-normal text-white-50">مكتب</small>
+                  </h2>
+                  <div className="text-white-50 small mt-1 fs-8">اضغط لعرض المكاتب التي لم تسجل أي عقود</div>
                 </div>
                 <div className="bg-white bg-opacity-20 rounded-4 p-3 d-flex align-items-center justify-content-center" style={{ width: "52px", height: "52px", backdropFilter: "blur(8px)" }}>
-                  <i className="fa-solid fa-chart-line fs-3 text-white"></i>
+                  <i className="fa-solid fa-triangle-exclamation fs-3 text-white"></i>
                 </div>
               </Card.Body>
             </Card>
           </Col>
         </Row>
+
+        {/* Active Card Filter Banner */}
+        {activeCardFilter !== "all" && (
+          <div className="d-flex justify-content-between align-items-center bg-white border border-primary border-opacity-25 rounded-3 p-3 mb-4 shadow-sm">
+            <div className="d-flex align-items-center gap-2">
+              <i className="fa-solid fa-filter text-primary"></i>
+              <span>
+                يتم الآن عرض: <strong className="text-primary">{getFilterTitle()}</strong> (
+                <span className="fw-bold">{currentOfficesList.length}</span> مكتب من إجمالي {rawOfficesList.length})
+              </span>
+            </div>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => setActiveCardFilter("all")}
+              className="rounded-pill px-3"
+            >
+              إلغاء التصفية (عرض الكل)
+            </Button>
+          </div>
+        )}
 
         {/* Main Office Table */}
         <Card className="border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-4">
@@ -519,14 +638,14 @@ const OfficesPerformanceReport = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentOfficesList.length === 0 ? (
+                    {paginatedOffices.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="py-5 text-center text-muted">
                           لا توجد مكاتب تطابق الفلاتر المحددة
                         </td>
                       </tr>
                     ) : (
-                      currentOfficesList.map((office, idx) => (
+                      paginatedOffices.map((office, idx) => (
                         <tr key={office.id || idx} className="hover-row">
                           <td className="fw-bold text-dark fs-6">{office.name}</td>
                           <td>
@@ -582,10 +701,11 @@ const OfficesPerformanceReport = () => {
                             <Button
                               variant="light"
                               size="sm"
-                              className="rounded-3 border text-primary fw-semibold hover-lift"
+                              className="rounded-3 border text-primary fw-semibold hover-lift d-inline-flex align-items-center gap-1"
                               onClick={() => handleOpenDetails(office)}
                             >
-                              عرض التفاصيل
+                              <i className="fa-solid fa-eye"></i>
+                              <span>عرض العقود</span>
                             </Button>
                           </td>
                         </tr>
@@ -595,6 +715,11 @@ const OfficesPerformanceReport = () => {
                 </Table>
               </div>
             )}
+            <PaginationComponent
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </Card.Body>
         </Card>
 
@@ -676,6 +801,7 @@ const OfficesPerformanceReport = () => {
                       <SortableHeader title="تاريخ العقد" sortKey="contract_date" sortConfig={modalSortConfig} onRequestSort={requestModalSort} />
                       <SortableHeader title="المبلغ" sortKey="total_price" sortConfig={modalSortConfig} onRequestSort={requestModalSort} />
                       <SortableHeader title="الحالة" sortKey="status" sortConfig={modalSortConfig} onRequestSort={requestModalSort} />
+                      <th className="text-center">التفاصيل</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -696,6 +822,17 @@ const OfficesPerformanceReport = () => {
                             {order.status}
                           </span>
                         </td>
+                        <td className="text-center">
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            className="rounded-circle p-1 px-2"
+                            title="عرض تفاصيل الطلب"
+                            onClick={() => handleViewSpecificOrder(order)}
+                          >
+                            <i className="fa-solid fa-eye"></i>
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -709,6 +846,13 @@ const OfficesPerformanceReport = () => {
             </Button>
           </Modal.Footer>
         </Modal>
+
+        {/* Order Details Modal */}
+        <OrderDetailsModal
+          show={showSpecificOrderModal}
+          onHide={() => setShowSpecificOrderModal(false)}
+          order={selectedSpecificOrder}
+        />
 
       </Container>
     </div>

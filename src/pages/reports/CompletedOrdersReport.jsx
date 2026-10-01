@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Container, Card, Row, Col, Table, Badge, Button, Spinner } from "react-bootstrap";
-import { getCompletedOrdersReport, getEmployees, getSaudiOffices, getExternalOffices } from "../../services/apiService";
+import { getCompletedOrdersReport, getEmployees, getSaudiOffices, getExternalOffices, getClients } from "../../services/apiService";
 import ReportFilters from "../../components/ReportFilters";
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
@@ -8,6 +8,8 @@ import SortableHeader from "../../components/common/SortableHeader";
 import { useSortableData } from "../../hooks/useSortableData";
 import { exportToExcel } from "../../utils/excelHelper";
 import { exportToPDF } from "../../utils/pdfHelper";
+import PaginationComponent from "../../components/common/Pagination";
+import OrderDetailsModal from "../../components/Order/OrderDetailsModal";
 
 const CompletedOrdersReport = () => {
   const [loading, setLoading] = useState(true);
@@ -21,10 +23,34 @@ const CompletedOrdersReport = () => {
   const [filters, setFilters] = useState({});
 
   const [employees, setEmployees] = useState([]);
+  const [clients, setClients] = useState([]);
   const [saudiOffices, setSaudiOffices] = useState([]);
   const [externalOffices, setExternalOffices] = useState([]);
 
+  // Modal State for Order Details
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  const handleViewOrderDetails = (order) => {
+    setSelectedOrder(order);
+    setShowDetailsModal(true);
+  };
+
   const { items: sortedOrders, requestSort, sortConfig } = useSortableData(orders);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  const totalPages = Math.ceil(sortedOrders.length / itemsPerPage);
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedOrders.slice(start, start + itemsPerPage);
+  }, [sortedOrders, currentPage, itemsPerPage]);
 
   useEffect(() => {
     fetchFilterOptions();
@@ -36,12 +62,14 @@ const CompletedOrdersReport = () => {
 
   const fetchFilterOptions = async () => {
     try {
-      const [empRes, saudiRes, extRes] = await Promise.all([
+      const [empRes, clientRes, saudiRes, extRes] = await Promise.all([
         getEmployees({ per_page: 200 }),
+        getClients({ per_page: 500 }),
         getSaudiOffices({ all: 1, per_page: 500 }),
         getExternalOffices({ all: 1, per_page: 500 }),
       ]);
       setEmployees(empRes.data?.data || empRes.data || []);
+      setClients(clientRes.data?.data || clientRes.data || []);
       setSaudiOffices(Array.isArray(saudiRes.data?.data) ? saudiRes.data.data : Array.isArray(saudiRes.data) ? saudiRes.data : []);
       setExternalOffices(Array.isArray(extRes.data?.data) ? extRes.data.data : Array.isArray(extRes.data) ? extRes.data : []);
     } catch (err) {
@@ -68,7 +96,8 @@ const CompletedOrdersReport = () => {
     const columns = [
       { header: "رقم الطلب", key: "id" },
       { header: "رقم التأشيرة", key: "visa_number" },
-      { header: "العميل", key: "client_name" },
+      { header: "المندوب / العميل", key: "client_name" },
+      { header: "المسوق / الموظف", key: "employee_name" },
       { header: "المكتب السعودي", key: "saudi_office" },
       { header: "المكتب الخارجي", key: "external_office" },
       { header: "نوع الخدمة", key: "service_type" },
@@ -83,7 +112,8 @@ const CompletedOrdersReport = () => {
     const columns = [
       { header: "رقم الطلب", key: "id" },
       { header: "رقم التأشيرة", key: "visa_number" },
-      { header: "العميل", key: "client_name" },
+      { header: "المندوب / العميل", key: "client_name" },
+      { header: "المسوق / الموظف", key: "employee_name" },
       { header: "المكتب السعودي", key: "saudi_office" },
       { header: "المكتب الخارجي", key: "external_office" },
       { header: "نوع الخدمة", key: "service_type" },
@@ -199,7 +229,20 @@ const CompletedOrdersReport = () => {
 
         {/* Filters Component */}
         <ReportFilters
+          config={{
+            showDateRange: true,
+            showSaudiOffice: true,
+            showExternalOffice: true,
+            showClient: true,
+            clientLabel: "المندوب / العميل",
+            showEmployee: true,
+            employeeLabel: "المسوق / الموظف",
+          }}
+          filters={filters}
+          onChange={setFilters}
+          onApply={setFilters}
           onFilter={setFilters}
+          clients={clients}
           employees={employees}
           saudiOffices={saudiOffices}
           externalOffices={externalOffices}
@@ -210,7 +253,7 @@ const CompletedOrdersReport = () => {
           <Card.Body className="p-0">
             {loading ? (
               <div className="p-4">
-                <TableSkeleton rows={5} columns={8} />
+                <TableSkeleton rows={5} columns={9} />
               </div>
             ) : sortedOrders.length === 0 ? (
               <div className="text-center py-5">
@@ -224,7 +267,8 @@ const CompletedOrdersReport = () => {
                     <tr>
                       <SortableHeader title="#" sortKey="id" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
                       <SortableHeader title="رقم التأشيرة" sortKey="visa_number" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
-                      <SortableHeader title="العميل" sortKey="client_name" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
+                      <SortableHeader title="المندوب / العميل" sortKey="client_name" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
+                      <SortableHeader title="المسوق / الموظف" sortKey="employee_name" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
                       <SortableHeader title="المكتب السعودي" sortKey="saudi_office" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
                       <SortableHeader title="المكتب الخارجي" sortKey="external_office" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
                       <SortableHeader title="نوع الخدمة" sortKey="service_type" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
@@ -232,10 +276,11 @@ const CompletedOrdersReport = () => {
                       <SortableHeader title="مدة الإنجاز" sortKey="completion_days" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
                       <SortableHeader title="تاريخ الإكتمال" sortKey="completed_at" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
                       <SortableHeader title="حالة SLA" sortKey="within_sla" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
+                      <th className="py-3 text-center">الإجراءات</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedOrders.map((order, idx) => (
+                    {paginatedOrders.map((order, idx) => (
                       <tr key={order.id || idx}>
                         <td className="fw-bold">{order.id}</td>
                         <td>
@@ -244,6 +289,7 @@ const CompletedOrdersReport = () => {
                           </Badge>
                         </td>
                         <td className="fw-semibold text-dark">{order.client_name}</td>
+                        <td className="text-secondary small">{order.employee_name}</td>
                         <td className="text-muted">{order.saudi_office}</td>
                         <td className="text-muted">{order.external_office}</td>
                         <td>
@@ -269,14 +315,38 @@ const CompletedOrdersReport = () => {
                             </Badge>
                           )}
                         </td>
+                        <td className="text-center">
+                          <Button
+                            variant="light"
+                            size="sm"
+                            className="rounded-circle shadow-sm border text-primary d-inline-flex align-items-center justify-content-center"
+                            style={{ width: "36px", height: "36px" }}
+                            onClick={() => handleViewOrderDetails(order)}
+                            title="عرض تفاصيل الطلب"
+                          >
+                            <i className="fa-solid fa-eye fs-6"></i>
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </Table>
               </div>
             )}
+            <PaginationComponent
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </Card.Body>
         </Card>
+
+        {/* Order Details Modal */}
+        <OrderDetailsModal
+          show={showDetailsModal}
+          onHide={() => setShowDetailsModal(false)}
+          order={selectedOrder}
+        />
       </Container>
     </div>
   );

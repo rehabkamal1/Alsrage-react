@@ -428,7 +428,6 @@ const TrackingTable = ({
                 className="tracking-row"
                 style={{
                   "--priority-color": priorityColor,
-                  backgroundColor: priorityColor,
                   backgroundColor: `color-mix(in srgb, ${priorityColor} 8%, white)`,
                 }}
               >

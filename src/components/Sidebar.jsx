@@ -352,7 +352,7 @@ const Sidebar = ({
             <div className="sidebar-header position-relative">
                 <div className="d-flex flex-column align-items-center w-100 text-center">
                     <img
-                        src="/logo3.png"
+                        src="/logo3.png?v=2"
                         alt="لوجو الفنار للاستقدام"
                         className="sidebar-logo mb-2"
                         style={{
