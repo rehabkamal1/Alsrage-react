@@ -48,7 +48,7 @@ ChartJS.register(
   Filler,
 );
 
-const DashboardPage = () => {
+const DashboardPage = ({ onNavigate }) => {
   const [stats, setStats] = useState({
     clients: 0,
     orders: 0,
@@ -82,117 +82,120 @@ const DashboardPage = () => {
     data: [0, 0, 0, 0, 0, 0],
   });
 
-  const fetchDashboardData = useCallback(async (isSilent = false) => {
-    if (!isSilent) setLoading(true);
-    try {
-      const params = {};
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
+  const fetchDashboardData = useCallback(
+    async (isSilent = false) => {
+      if (!isSilent) setLoading(true);
+      try {
+        const params = {};
+        if (fromDate) params.from_date = fromDate;
+        if (toDate) params.to_date = toDate;
 
-      const [clientsRes, ordersRes, employeesRes, saudiRes, externalRes] =
-        await Promise.all([
-          getClients(params),
-          getOrders(params),
-          getEmployees(params),
-          getSaudiOffices(params),
-          getExternalOffices(params),
-        ]);
+        const [clientsRes, ordersRes, employeesRes, saudiRes, externalRes] =
+          await Promise.all([
+            getClients(params),
+            getOrders(params),
+            getEmployees(params),
+            getSaudiOffices(params),
+            getExternalOffices(params),
+          ]);
 
-      const clientList = clientsRes.data?.data || clientsRes.data || [];
-      const orderList = ordersRes.data?.data || ordersRes.data || [];
-      const employeeList = employeesRes.data?.data || employeesRes.data || [];
-      const saudiList = saudiRes.data?.data || saudiRes.data || [];
-      const externalList = externalRes.data?.data || externalRes.data || [];
+        const clientList = clientsRes.data?.data || clientsRes.data || [];
+        const orderList = ordersRes.data?.data || ordersRes.data || [];
+        const employeeList = employeesRes.data?.data || employeesRes.data || [];
+        const saudiList = saudiRes.data?.data || saudiRes.data || [];
+        const externalList = externalRes.data?.data || externalRes.data || [];
 
-      setStats({
-        clients:
-          clientsRes.data?.meta?.total ??
-          clientsRes.data?.total ??
-          clientList.length,
-        orders:
-          ordersRes.data?.meta?.total ??
-          ordersRes.data?.total ??
-          orderList.length,
-        employees: employeesRes.data?.total ?? employeeList.length,
-        offices:
-          (saudiRes.data?.meta?.total ??
-            saudiRes.data?.total ??
-            saudiList.length) +
-          (externalRes.data?.meta?.total ??
-            externalRes.data?.total ??
-            externalList.length),
-      });
+        setStats({
+          clients:
+            clientsRes.data?.meta?.total ??
+            clientsRes.data?.total ??
+            clientList.length,
+          orders:
+            ordersRes.data?.meta?.total ??
+            ordersRes.data?.total ??
+            orderList.length,
+          employees: employeesRes.data?.total ?? employeeList.length,
+          offices:
+            (saudiRes.data?.meta?.total ??
+              saudiRes.data?.total ??
+              saudiList.length) +
+            (externalRes.data?.meta?.total ??
+              externalRes.data?.total ??
+              externalList.length),
+        });
 
-      setRecentOrders(orderList.slice(0, 6));
-      setRecentClients(clientList.slice(0, 6));
+        setRecentOrders(orderList.slice(0, 6));
+        setRecentClients(clientList.slice(0, 6));
 
-      // Calculate Status Distribution
-      const statusCounts = {
-        pending: 0,
-        processing: 0,
-        completed: 0,
-        cancelled: 0,
-        musaned_paid: 0,
-      };
-      orderList.forEach((order) => {
-        if (order.status && statusCounts[order.status] !== undefined) {
-          statusCounts[order.status]++;
-        } else if (order.status === "canceled") {
-          statusCounts.cancelled++;
+        // Calculate Status Distribution
+        const statusCounts = {
+          pending: 0,
+          processing: 0,
+          completed: 0,
+          cancelled: 0,
+          musaned_paid: 0,
+        };
+        orderList.forEach((order) => {
+          if (order.status && statusCounts[order.status] !== undefined) {
+            statusCounts[order.status]++;
+          } else if (order.status === "canceled") {
+            statusCounts.cancelled++;
+          }
+        });
+        setOrderStatusCounts(statusCounts);
+
+        // Calculate monthly order counts for line chart
+        const monthNames = [
+          "يناير",
+          "فبراير",
+          "مارس",
+          "أبريل",
+          "مايو",
+          "يونيو",
+          "يوليو",
+          "أغسطس",
+          "سبتمبر",
+          "أكتوبر",
+          "نوفمبر",
+          "ديسمبر",
+        ];
+        const orderCounts = Array(12).fill(0);
+        orderList.forEach((order) => {
+          if (order.created_at) {
+            const monthIndex = new Date(order.created_at).getMonth();
+            orderCounts[monthIndex]++;
+          }
+        });
+        const currentMonth = new Date().getMonth();
+        const last6MonthsIndices = [];
+        for (let i = 5; i >= 0; i--) {
+          last6MonthsIndices.push((currentMonth - i + 12) % 12);
         }
-      });
-      setOrderStatusCounts(statusCounts);
+        setMonthlyOrders({
+          labels: last6MonthsIndices.map((i) => monthNames[i]),
+          data: last6MonthsIndices.map((i) => orderCounts[i]),
+        });
 
-      // Calculate monthly order counts for line chart
-      const monthNames = [
-        "يناير",
-        "فبراير",
-        "مارس",
-        "أبريل",
-        "مايو",
-        "يونيو",
-        "يوليو",
-        "أغسطس",
-        "سبتمبر",
-        "أكتوبر",
-        "نوفمبر",
-        "ديسمبر",
-      ];
-      const orderCounts = Array(12).fill(0);
-      orderList.forEach((order) => {
-        if (order.created_at) {
-          const monthIndex = new Date(order.created_at).getMonth();
-          orderCounts[monthIndex]++;
-        }
-      });
-      const currentMonth = new Date().getMonth();
-      const last6MonthsIndices = [];
-      for (let i = 5; i >= 0; i--) {
-        last6MonthsIndices.push((currentMonth - i + 12) % 12);
+        // Calculate monthly clients for bar chart
+        const clientCounts = Array(12).fill(0);
+        clientList.forEach((client) => {
+          if (client.created_at) {
+            const monthIndex = new Date(client.created_at).getMonth();
+            clientCounts[monthIndex]++;
+          }
+        });
+        setMonthlyClients({
+          labels: last6MonthsIndices.map((i) => monthNames[i]),
+          data: last6MonthsIndices.map((i) => clientCounts[i]),
+        });
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        if (!isSilent) setLoading(false);
       }
-      setMonthlyOrders({
-        labels: last6MonthsIndices.map((i) => monthNames[i]),
-        data: last6MonthsIndices.map((i) => orderCounts[i]),
-      });
-
-      // Calculate monthly clients for bar chart
-      const clientCounts = Array(12).fill(0);
-      clientList.forEach((client) => {
-        if (client.created_at) {
-          const monthIndex = new Date(client.created_at).getMonth();
-          clientCounts[monthIndex]++;
-        }
-      });
-      setMonthlyClients({
-        labels: last6MonthsIndices.map((i) => monthNames[i]),
-        data: last6MonthsIndices.map((i) => clientCounts[i]),
-      });
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    } finally {
-      if (!isSilent) setLoading(false);
-    }
-  }, [fromDate, toDate]);
+    },
+    [fromDate, toDate],
+  );
 
   useEffect(() => {
     fetchDashboardData();
@@ -686,6 +689,7 @@ const DashboardPage = () => {
                         size="sm"
                         className="rounded-circle shadow-sm border text-primary hover-bg-primary hover-text-white transition-all"
                         style={{ width: "36px", height: "36px" }}
+                        onClick={() => onNavigate?.("orders")}
                         title="عرض التفاصيل"
                       >
                         <i className="fa-solid fa-eye"></i>

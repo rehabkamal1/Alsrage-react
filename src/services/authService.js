@@ -1,21 +1,5 @@
 import axios from "axios";
-
-// ─────────────────────────────────────────────
-//  HARDCODED ADMIN ACCOUNTS
-//  Admin data lives here in the app — no one
-//  can register as admin from the UI.
-// ─────────────────────────────────────────────
-const ADMIN_ACCOUNTS = [
-  {
-    id: 1,
-    name: "Super Admin",
-    email: "admin@alsrage.com",
-    password: "admin@1234",
-    role: "admin",
-  },
-  // Add more admins here if needed:
-  { id: 2, name: "Admin Two", email: "admin2@alsrage.com", password: "admin@1234", role: "admin" },
-];
+import { showValidationErrors } from "../utils/swalHelper";
 
 // ─────────────────────────────────────────────
 //  Axios instance pointing to Laravel API
@@ -29,6 +13,16 @@ const api = axios.create({
     Accept: "application/json",
   },
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 422 && error.response.data?.errors) {
+      showValidationErrors(error.response.data.errors);
+    }
+    return Promise.reject(error);
+  },
+);
 
 // ─────────────────────────────────────────────
 //  LOGIN

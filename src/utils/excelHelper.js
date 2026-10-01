@@ -15,7 +15,9 @@ export const exportToExcel = (data, columns, filename = "export.xlsx") => {
       if (col.format && typeof col.format === "function") {
         row[col.header] = col.format(item);
       } else {
-        row[col.header] = item[col.key] || "-";
+        const value = item[col.key];
+        row[col.header] =
+          value !== undefined && value !== null && value !== "" ? value : "-";
       }
     });
     return row;
@@ -29,7 +31,7 @@ export const exportToExcel = (data, columns, filename = "export.xlsx") => {
   const colWidths = columns.map((col) => {
     // Start with the header length
     let maxWidth = col.header.length;
-    
+
     // Check all data rows for this column
     formattedData.forEach((row) => {
       const cellValue = String(row[col.header] || "");
@@ -37,11 +39,11 @@ export const exportToExcel = (data, columns, filename = "export.xlsx") => {
         maxWidth = cellValue.length;
       }
     });
-    
+
     // Add a bit of padding (average character width in Excel is roughly 1 unit)
     return { wch: maxWidth + 5 };
   });
-  
+
   worksheet["!cols"] = colWidths;
 
   // Make worksheet RTL

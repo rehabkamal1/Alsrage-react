@@ -41,16 +41,17 @@ const LoginPage = ({ goToRegister, onLoginSuccess }) => {
       saveUser(data.user);
       setSuccess(`مرحباً بك، ${data.user.name}! جاري التوجيه…`);
       setForm({ email: "", password: "" });
-      
+
       // Update App state immediately
       if (onLoginSuccess) onLoginSuccess(data.user);
     } catch (error) {
       const apiErrors = error.response?.data?.errors || {};
+      const message = error.response?.data?.message;
       setErrors({
         email: apiErrors.email?.[0] || "",
         password: apiErrors.password?.[0] || "",
       });
-      setServerError(error.response?.data?.message || "بيانات الدخول غير صحيحة.");
+      setServerError(message || "بيانات الدخول غير صحيحة.");
     } finally {
       setLoading(false);
     }

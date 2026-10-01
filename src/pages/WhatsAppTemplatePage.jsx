@@ -1,14 +1,24 @@
 import React, { useState, useRef } from "react";
-import { Container, Card, Form, Button, Badge, Row, Col } from "react-bootstrap";
+import {
+  Container,
+  Card,
+  Form,
+  Button,
+  Badge,
+  Row,
+  Col,
+} from "react-bootstrap";
 import {
   getWhatsAppTemplate,
   saveWhatsAppTemplate,
   DEFAULT_WHATSAPP_TEMPLATE,
+  DEFAULT_WHATSAPP_TEMPLATES,
 } from "../utils/whatsappHelper";
 import { showSuccess } from "../utils/swalHelper";
 
 const WhatsAppTemplatePage = () => {
   const [template, setTemplate] = useState(getWhatsAppTemplate());
+  const [recipient, setRecipient] = useState("saudi");
   const textareaRef = useRef(null);
 
   const placeholders = [
@@ -16,7 +26,14 @@ const WhatsAppTemplatePage = () => {
     { tag: "{visa_holder}", label: "صاحب التأشيرة", icon: "fa-passport" },
     { tag: "{delegate_name}", label: "المندوب / العميل", icon: "fa-user" },
     { tag: "{visa_number}", label: "رقم التأشيرة", icon: "fa-id-card" },
-    { tag: "{contract_number}", label: "رقم عقد مساند", icon: "fa-file-contract" },
+    { tag: "{passport_number}", label: "رقم جواز السفر", icon: "fa-passport" },
+    { tag: "{birth_date}", label: "تاريخ الميلاد", icon: "fa-calendar" },
+    { tag: "{image_url}", label: "رابط الصورة", icon: "fa-image" },
+    {
+      tag: "{contract_number}",
+      label: "رقم عقد مساند",
+      icon: "fa-file-contract",
+    },
     {
       tag: "{authentication_contract_number}",
       label: "رقم عقد التوثيق",
@@ -43,14 +60,21 @@ const WhatsAppTemplatePage = () => {
   };
 
   const handleSave = () => {
-    saveWhatsAppTemplate(template);
+    saveWhatsAppTemplate(template, recipient);
     showSuccess("تم الحفظ!", "تم حفظ قالب رسالة الواتساب بنجاح");
   };
 
   const handleReset = () => {
-    setTemplate(DEFAULT_WHATSAPP_TEMPLATE);
-    saveWhatsAppTemplate(DEFAULT_WHATSAPP_TEMPLATE);
+    setTemplate(DEFAULT_WHATSAPP_TEMPLATES[recipient]);
+    saveWhatsAppTemplate(DEFAULT_WHATSAPP_TEMPLATES[recipient], recipient);
     showSuccess("تم الاسترجاع!", "تم إعادة قالب الواتساب إلى الوضع الافتراضي");
+  };
+
+  const handleRecipientChange = (event) => {
+    const nextRecipient = event.target.value;
+    saveWhatsAppTemplate(template, recipient);
+    setRecipient(nextRecipient);
+    setTemplate(getWhatsAppTemplate(nextRecipient));
   };
 
   // Live preview message
@@ -59,6 +83,9 @@ const WhatsAppTemplatePage = () => {
     .replace(/\{visa_holder\}/g, "عبدالله محمد السعيد")
     .replace(/\{delegate_name\}/g, "مكتب السرعة للخدمات")
     .replace(/\{visa_number\}/g, "2005489632")
+    .replace(/\{passport_number\}/g, "A12345678")
+    .replace(/\{birth_date\}/g, "1990-01-15")
+    .replace(/\{image_url\}/g, "https://example.com/passport.jpg")
     .replace(/\{contract_number\}/g, "MS-88942")
     .replace(/\{authentication_contract_number\}/g, "ATH-99320")
     .replace(/\{auth_contract_number\}/g, "ATH-99320")
@@ -81,7 +108,8 @@ const WhatsAppTemplatePage = () => {
               إعدادات قالب الواتساب
             </h1>
             <p className="text-muted mb-0">
-              تخصيص الرسائل التلقائية التي يتم إرسالها لأصحاب المكاتب والعملاء عند تغيير حالة الطلبات
+              تخصيص الرسائل التلقائية التي يتم إرسالها لأصحاب المكاتب والعملاء
+              عند تغيير حالة الطلبات
             </p>
           </div>
           <Button
@@ -122,7 +150,9 @@ const WhatsAppTemplatePage = () => {
                         onClick={() => insertPlaceholder(p.tag)}
                         title={`إدراج ${p.label}`}
                       >
-                        <i className={`fa-solid ${p.icon} text-primary me-1`}></i>
+                        <i
+                          className={`fa-solid ${p.icon} text-primary me-1`}
+                        ></i>
                         <code className="text-primary fw-bold">{p.tag}</code>
                         <span className="text-muted">({p.label})</span>
                       </Badge>
@@ -132,7 +162,21 @@ const WhatsAppTemplatePage = () => {
 
                 {/* Textarea */}
                 <Form.Group className="mb-4">
-                  <Form.Label className="fw-bold text-dark">صياغة قالب الرسالة:</Form.Label>
+                  <Form.Label className="fw-bold text-dark">
+                    القالب المرسل إلى:
+                  </Form.Label>
+                  <Form.Select
+                    value={recipient}
+                    onChange={handleRecipientChange}
+                    className="mb-3"
+                  >
+                    <option value="saudi">الشركة السعودية</option>
+                    <option value="external">الوكيل الخارجي</option>
+                    <option value="client">العميل</option>
+                  </Form.Select>
+                  <Form.Label className="fw-bold text-dark">
+                    صياغة قالب الرسالة:
+                  </Form.Label>
                   <Form.Control
                     ref={textareaRef}
                     as="textarea"
@@ -151,7 +195,8 @@ const WhatsAppTemplatePage = () => {
                     onClick={handleReset}
                     className="rounded-pill px-3 py-2"
                   >
-                    <i className="fa-solid fa-rotate-left me-1"></i> استعادة القالب الافتراضي
+                    <i className="fa-solid fa-rotate-left me-1"></i> استعادة
+                    القالب الافتراضي
                   </Button>
 
                   <small className="text-muted">
@@ -170,7 +215,10 @@ const WhatsAppTemplatePage = () => {
                   <i className="fa-solid fa-mobile-screen text-success"></i>
                   معاينة الرسالة الحية
                 </h5>
-                <Badge bg="success" className="bg-opacity-10 text-success px-2 py-1">
+                <Badge
+                  bg="success"
+                  className="bg-opacity-10 text-success px-2 py-1"
+                >
                   مثال حي
                 </Badge>
               </Card.Header>
@@ -179,7 +227,8 @@ const WhatsAppTemplatePage = () => {
                 className="p-4 d-flex flex-column justify-content-between"
                 style={{
                   backgroundColor: "#efeae2", // WhatsApp Chat background feel
-                  backgroundImage: "radial-gradient(#d1d7db 1px, transparent 1px)",
+                  backgroundImage:
+                    "radial-gradient(#d1d7db 1px, transparent 1px)",
                   backgroundSize: "16px 16px",
                   borderRadius: "0 0 16px 16px",
                 }}
@@ -203,17 +252,27 @@ const WhatsAppTemplatePage = () => {
                   >
                     {previewText}
                   </div>
-                  <div className="text-end text-muted mt-2" style={{ fontSize: "0.72rem" }}>
-                    10:30 ص <i className="fa-solid fa-check-double text-primary ms-1"></i>
+                  <div
+                    className="text-end text-muted mt-2"
+                    style={{ fontSize: "0.72rem" }}
+                  >
+                    10:30 ص{" "}
+                    <i className="fa-solid fa-check-double text-primary ms-1"></i>
                   </div>
                 </div>
 
                 <div className="mt-4 p-3 bg-white bg-opacity-75 rounded-3 border">
                   <div className="fw-bold text-dark mb-1 small">
-                    <i className="fa-solid fa-circle-info text-info me-1"></i> ملاحظة توضيحية:
+                    <i className="fa-solid fa-circle-info text-info me-1"></i>{" "}
+                    ملاحظة توضيحية:
                   </div>
-                  <div className="text-muted extra-small" style={{ fontSize: "0.82rem" }}>
-                    سيقوم النظام تلقائياً بتبديل الأكواد مثل <code>{"{order_id}"}</code> ببيانات الطلب الحقيقية عند الضغط على زر الإرسال.
+                  <div
+                    className="text-muted extra-small"
+                    style={{ fontSize: "0.82rem" }}
+                  >
+                    سيقوم النظام تلقائياً بتبديل الأكواد مثل{" "}
+                    <code>{"{order_id}"}</code> ببيانات الطلب الحقيقية عند الضغط
+                    على زر الإرسال.
                   </div>
                 </div>
               </Card.Body>

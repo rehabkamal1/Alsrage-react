@@ -30,12 +30,20 @@ const DashboardLayout = ({ user, onLogout }) => {
   };
 
   const renderAccessDenied = () => (
-    <div className="d-flex align-items-center justify-content-center" style={{ minHeight: "80vh" }}>
-      <Card className="text-center p-5 shadow-sm border-0 rounded-4" style={{ maxWidth: "500px" }}>
+    <div
+      className="d-flex align-items-center justify-content-center"
+      style={{ minHeight: "80vh" }}
+    >
+      <Card
+        className="text-center p-5 shadow-sm border-0 rounded-4"
+        style={{ maxWidth: "500px" }}
+      >
         <Card.Body>
           <div className="fs-1 mb-3">🚫</div>
           <h3 className="fw-bold mb-3">غير مصرح بالدخول</h3>
-          <p className="text-muted mb-0">عذراً، ليس لديك الصلاحية الكافية للوصول إلى هذه الصفحة.</p>
+          <p className="text-muted mb-0">
+            عذراً، ليس لديك الصلاحية الكافية للوصول إلى هذه الصفحة.
+          </p>
         </Card.Body>
       </Card>
     </div>
@@ -44,9 +52,13 @@ const DashboardLayout = ({ user, onLogout }) => {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardPage />;
+        return <DashboardPage onNavigate={setActiveTab} />;
       case "clients":
-        return hasPermission("view_clients") ? <ClientsPage /> : renderAccessDenied();
+        return hasPermission("view_clients") ? (
+          <ClientsPage />
+        ) : (
+          renderAccessDenied()
+        );
       case "saudi-offices":
         return hasPermission("view_saudi_offices") ? (
           <SaudiOfficesPage user={user} />
@@ -60,13 +72,29 @@ const DashboardLayout = ({ user, onLogout }) => {
           renderAccessDenied()
         );
       case "employees":
-        return hasPermission("manage_employees") ? <EmployeesPage /> : renderAccessDenied();
+        return hasPermission("manage_employees") ? (
+          <EmployeesPage />
+        ) : (
+          renderAccessDenied()
+        );
       case "orders":
-        return hasPermission("view_orders") ? <OrdersPage /> : renderAccessDenied();
+        return hasPermission("view_orders") ? (
+          <OrdersPage />
+        ) : (
+          renderAccessDenied()
+        );
       case "completed-orders":
-        return hasPermission("view_orders") ? <CompletedOrdersPage /> : renderAccessDenied();
+        return hasPermission("view_orders") ? (
+          <CompletedOrdersPage />
+        ) : (
+          renderAccessDenied()
+        );
       case "tracking":
-        return hasPermission("view_orders") ? <TrackingPage /> : renderAccessDenied();
+        return hasPermission("view_orders") ? (
+          <TrackingPage />
+        ) : (
+          renderAccessDenied()
+        );
       case "finance":
         return isAdmin ? <FinancePage /> : renderAccessDenied();
       case "settings":
@@ -76,22 +104,44 @@ const DashboardLayout = ({ user, onLogout }) => {
       case "whatsapp-template":
         return isAdmin ? <WhatsAppTemplatePage /> : renderAccessDenied();
       case "report-order-tracking":
-        return hasPermission("view_reports") ? <OrderFollowUpReport /> : renderAccessDenied();
+        return hasPermission("view_reports") ? (
+          <OrderFollowUpReport />
+        ) : (
+          renderAccessDenied()
+        );
       case "report-completed-orders":
-        return hasPermission("view_reports") ? <CompletedOrdersReport /> : renderAccessDenied();
+        return hasPermission("view_reports") ? (
+          <CompletedOrdersReport />
+        ) : (
+          renderAccessDenied()
+        );
       case "report-offices-performance":
-        return hasPermission("view_reports") ? <OfficesPerformanceReport /> : renderAccessDenied();
+        return hasPermission("view_reports") ? (
+          <OfficesPerformanceReport />
+        ) : (
+          renderAccessDenied()
+        );
       case "report-financial-collections":
-        return hasPermission("view_reports") ? <FinancialCollectionsReport /> : renderAccessDenied();
+        return hasPermission("view_reports") ? (
+          <FinancialCollectionsReport />
+        ) : (
+          renderAccessDenied()
+        );
       case "report-employees-performance":
-        return hasPermission("view_reports") ? <EmployeesPerformanceReport /> : renderAccessDenied();
+        return hasPermission("view_reports") ? (
+          <EmployeesPerformanceReport />
+        ) : (
+          renderAccessDenied()
+        );
       default:
         return <DashboardPage />;
     }
   };
 
   return (
-    <div className={`dashboard-container ${isSidebarOpen ? "sidebar-open" : ""}`}>
+    <div
+      className={`dashboard-container ${isSidebarOpen ? "sidebar-open" : ""}`}
+    >
       <Sidebar
         user={user}
         activeTab={activeTab}
@@ -105,23 +155,23 @@ const DashboardLayout = ({ user, onLogout }) => {
       />
       <main className="content-area">
         <div className="mobile-top-bar d-lg-none shadow-sm mb-3">
-          <Button 
-            variant="link" 
-            className="text-dark p-0" 
+          <Button
+            variant="link"
+            className="text-dark p-0"
             onClick={() => setIsSidebarOpen(true)}
           >
             <i className="fa-solid fa-bars fs-4"></i>
           </Button>
           <div className="fw-bold text-primary fs-5">السراج</div>
-          <div style={{ width: '24px' }}></div> {/* Spacer */}
+          <div style={{ width: "24px" }}></div> {/* Spacer */}
         </div>
         {renderContent()}
       </main>
-      
+
       {/* Overlay for mobile */}
       {isSidebarOpen && (
-        <div 
-          className="sidebar-overlay d-lg-none" 
+        <div
+          className="sidebar-overlay d-lg-none"
           onClick={() => setIsSidebarOpen(false)}
         ></div>
       )}
@@ -130,4 +180,3 @@ const DashboardLayout = ({ user, onLogout }) => {
 };
 
 export default DashboardLayout;
-

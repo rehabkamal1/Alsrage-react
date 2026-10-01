@@ -33,7 +33,9 @@ export const exportToPDF = (data, columns, filename = "export.pdf") => {
   header.appendChild(logo);
 
   // Title
-  const titleText = filename.replace(/\.(pdf|xlsx|doc)$/i, "").replace(/_/g, " ");
+  const titleText = filename
+    .replace(/\.(pdf|xlsx|doc)$/i, "")
+    .replace(/_/g, " ");
   const title = document.createElement("h1");
   title.innerText = titleText;
   title.style.fontSize = "26px";
@@ -49,7 +51,7 @@ export const exportToPDF = (data, columns, filename = "export.pdf") => {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: true
+    hour12: true,
   });
   const dateLabel = document.createElement("p");
   dateLabel.innerText = `تاريخ الاستخراج: ${dateStr}`;
@@ -115,16 +117,12 @@ export const exportToPDF = (data, columns, filename = "export.pdf") => {
       td.style.lineHeight = "1.4";
       td.style.wordBreak = "break-word";
 
-      if (col.format && typeof col.format === "function") {
-        td.innerText = col.format(item);
-      } else {
-        td.innerText =
-          item[col.key] !== undefined &&
-          item[col.key] !== null &&
-          item[col.key] !== ""
-            ? item[col.key]
-            : "-";
-      }
+      const value =
+        col.format && typeof col.format === "function"
+          ? col.format(item)
+          : item[col.key];
+      td.innerText =
+        value !== undefined && value !== null && value !== "" ? value : "-";
       row.appendChild(td);
     });
     table.appendChild(row);
@@ -139,9 +137,10 @@ export const exportToPDF = (data, columns, filename = "export.pdf") => {
   footer.style.textAlign = "center";
   footer.style.fontSize = "11px";
   footer.style.color = "#94a3b8";
-  
+
   const footerText = document.createElement("p");
-  footerText.innerText = "تم الاستخراج بواسطة نظام السراج لإدارة المكاتب الخارجية";
+  footerText.innerText =
+    "تم الاستخراج بواسطة نظام السراج لإدارة المكاتب الخارجية";
   footerText.style.margin = "0 0 5px 0";
   footerText.style.fontWeight = "600";
   footer.appendChild(footerText);
@@ -158,15 +157,20 @@ export const exportToPDF = (data, columns, filename = "export.pdf") => {
     margin: [10, 5, 10, 5],
     filename: filename,
     image: { type: "jpeg", quality: 1.0 },
-    pagebreak: { mode: ['css', 'legacy'], avoid: '.pdf-row' },
-    html2canvas: { 
-      scale: 3, 
-      useCORS: true, 
+    pagebreak: { mode: ["css", "legacy"], avoid: ".pdf-row" },
+    html2canvas: {
+      scale: 3,
+      useCORS: true,
       letterRendering: false,
       logging: false,
-      allowTaint: true
+      allowTaint: true,
     },
-    jsPDF: { unit: "mm", format: "a4", orientation: "landscape", precision: 32 },
+    jsPDF: {
+      unit: "mm",
+      format: "a4",
+      orientation: "landscape",
+      precision: 32,
+    },
   };
 
   html2pdf().from(container).set(opt).save();

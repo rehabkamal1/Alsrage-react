@@ -134,13 +134,23 @@ const CompletedOrdersPage = () => {
     setShowModal(true);
   };
 
+  const handleWhatsAppNotification = (order) => {
+    showWhatsAppNotificationModal({
+      order,
+      orderStatuses,
+      saudiOffices,
+      externalOffices,
+    });
+  };
+
   const handleSubmit = async (formData) => {
     setLoading(true);
     setSubmitError(null);
     try {
       if (editingOrder) {
-        await updateOrder(editingOrder.id, formData);
+        const response = await updateOrder(editingOrder.id, formData);
         showSuccess("تم التحديث!", "تم تحديث الطلب بنجاح");
+        handleWhatsAppNotification(response.data?.data || editingOrder);
       }
       setShowModal(false);
       setEditingOrder(null);

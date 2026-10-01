@@ -4,6 +4,7 @@ import {
   getWhatsAppTemplate,
   saveWhatsAppTemplate,
   DEFAULT_WHATSAPP_TEMPLATE,
+  DEFAULT_WHATSAPP_TEMPLATES,
 } from "../../utils/whatsappHelper";
 import { showSuccess } from "../../utils/swalHelper";
 
@@ -16,6 +17,8 @@ const WhatsAppTemplateCard = () => {
     { tag: "{visa_holder}", label: "صاحب التأشيرة" },
     { tag: "{delegate_name}", label: "المندوب / العميل" },
     { tag: "{visa_number}", label: "رقم التأشيرة" },
+    { tag: "{passport_number}", label: "رقم جواز السفر" },
+    { tag: "{birth_date}", label: "تاريخ الميلاد" },
     { tag: "{contract_number}", label: "رقم عقد مساند" },
     {
       tag: "{authentication_contract_number}",
@@ -47,8 +50,8 @@ const WhatsAppTemplateCard = () => {
   };
 
   const handleReset = () => {
-    setTemplate(DEFAULT_WHATSAPP_TEMPLATE);
-    saveWhatsAppTemplate(DEFAULT_WHATSAPP_TEMPLATE);
+    setTemplate(DEFAULT_WHATSAPP_TEMPLATES.saudi);
+    saveWhatsAppTemplate(DEFAULT_WHATSAPP_TEMPLATES.saudi, "saudi");
     showSuccess("تم الاسترجاع!", "تم إعادة قالب الواتساب إلى الوضع الافتراضي");
   };
 
@@ -126,7 +129,11 @@ const WhatsAppTemplateCard = () => {
           </div>
           <div
             className="p-3 bg-white rounded-3 shadow-sm border border-success border-opacity-25"
-            style={{ whiteSpace: "pre-wrap", fontSize: "0.92rem", lineHeight: "1.6" }}
+            style={{
+              whiteSpace: "pre-wrap",
+              fontSize: "0.92rem",
+              lineHeight: "1.6",
+            }}
           >
             {previewText}
           </div>
@@ -140,7 +147,8 @@ const WhatsAppTemplateCard = () => {
             onClick={handleReset}
             className="rounded-pill px-3 py-2"
           >
-            <i className="fa-solid fa-rotate-left me-1"></i> استعادة القالب الافتراضي
+            <i className="fa-solid fa-rotate-left me-1"></i> استعادة القالب
+            الافتراضي
           </Button>
 
           <Button
