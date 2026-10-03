@@ -9,6 +9,11 @@ const formatDateForInput = (val) => {
   return val.substring(0, 10);
 };
 
+const workflowStatusOptions = [
+  { value: "reviewed", label: "تمت الخدمة" },
+  { value: "certified", label: "تم التصديق" },
+];
+
 const TrackingFormModal = ({
   show,
   onHide,
@@ -28,6 +33,7 @@ const TrackingFormModal = ({
 }) => {
   const [formData, setFormData] = useState({
     order_id: "",
+    workflow_status: "",
     is_authenticated: false,
     authentication_date: "",
     certification_date: "",
@@ -56,6 +62,7 @@ const TrackingFormModal = ({
 
       setFormData({
         order_id: initialData.order_id || "",
+        workflow_status: initialData.workflow_status || "",
         is_authenticated: initialData.is_authenticated || false,
         authentication_date: formatDateForInput(
           initialData.authentication_date,
@@ -86,6 +93,7 @@ const TrackingFormModal = ({
     } else {
       setFormData({
         order_id: "",
+        workflow_status: "",
         is_authenticated: false,
         authentication_date: "",
         certification_date: "",
@@ -332,33 +340,6 @@ const TrackingFormModal = ({
               </Col>
             </Row>
 
-            {displayOrder && (
-              <div className="bg-light p-3 rounded-3 mb-4">
-                <div className="mb-2">
-                  <small className="text-muted d-block">صاحب التأشيرة</small>
-                  <strong>
-                    {displayOrder.visa_holder_name ||
-                      displayOrder.client?.visa_holder_name ||
-                      "-"}
-                  </strong>
-                </div>
-                <Row>
-                  <Col xs={4}>
-                    <small className="text-muted d-block">التأشيرة</small>
-                    <strong>{displayOrder.visa_number || "-"}</strong>
-                  </Col>
-                  <Col xs={4}>
-                    <small className="text-muted d-block">الهوية</small>
-                    <strong>{displayOrder.id_number || "-"}</strong>
-                  </Col>
-                  <Col xs={4}>
-                    <small className="text-muted d-block">الجواز</small>
-                    <strong>{displayOrder.passport_number || "-"}</strong>
-                  </Col>
-                </Row>
-              </div>
-            )}
-
             <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
@@ -400,7 +381,33 @@ const TrackingFormModal = ({
               </Col>
             </Row>
 
-            {/* باقي الكود كما هو */}
+            {displayOrder && (
+              <div className="bg-light p-3 rounded-3 mb-4">
+                <div className="mb-2">
+                  <small className="text-muted d-block">صاحب التأشيرة</small>
+                  <strong>
+                    {displayOrder.visa_holder_name ||
+                      displayOrder.client?.visa_holder_name ||
+                      "-"}
+                  </strong>
+                </div>
+                <Row>
+                  <Col xs={4}>
+                    <small className="text-muted d-block">التأشيرة</small>
+                    <strong>{displayOrder.visa_number || "-"}</strong>
+                  </Col>
+                  <Col xs={4}>
+                    <small className="text-muted d-block">الهوية</small>
+                    <strong>{displayOrder.id_number || "-"}</strong>
+                  </Col>
+                  <Col xs={4}>
+                    <small className="text-muted d-block">الجواز</small>
+                    <strong>{displayOrder.passport_number || "-"}</strong>
+                  </Col>
+                </Row>
+              </div>
+            )}
+
             <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
@@ -460,21 +467,6 @@ const TrackingFormModal = ({
                 </Form.Group>
               </Col>
               <Col md={6}>
-                <Form.Group className="d-flex align-items-center h-100 pt-4">
-                  <Form.Check
-                    type="checkbox"
-                    id="is_authenticated"
-                    name="is_authenticated"
-                    label="تم اكتمال الخدمة"
-                    checked={formData.is_authenticated}
-                    onChange={handleChange}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-
-            <Row className="mb-3">
-              <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold small text-secondary">
                     درجة الأهمية
@@ -499,6 +491,9 @@ const TrackingFormModal = ({
                   )}
                 </Form.Group>
               </Col>
+            </Row>
+
+            <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold small text-secondary">
@@ -524,9 +519,6 @@ const TrackingFormModal = ({
                   )}
                 </Form.Group>
               </Col>
-            </Row>
-
-            <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold small text-secondary">
@@ -552,6 +544,9 @@ const TrackingFormModal = ({
                   )}
                 </Form.Group>
               </Col>
+            </Row>
+
+            <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold small text-secondary">
@@ -587,9 +582,6 @@ const TrackingFormModal = ({
                   />
                 </Form.Group>
               </Col>
-            </Row>
-
-            <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold small text-secondary">
@@ -627,24 +619,58 @@ const TrackingFormModal = ({
               </Col>
             </Row>
 
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold small text-secondary">
-                الملاحظات
-              </Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                name="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                isInvalid={!!getFieldError("notes")}
-                className="rounded-3"
-                placeholder="أدخل ملاحظات إضافية..."
-              />
-              <Form.Control.Feedback type="invalid">
-                {getFieldError("notes")}
-              </Form.Control.Feedback>
-            </Form.Group>
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold small text-secondary">
+                    حالة المتابعة
+                  </Form.Label>
+                  <Select
+                    options={workflowStatusOptions}
+                    value={getSelectedOption(
+                      workflowStatusOptions,
+                      formData.workflow_status,
+                    )}
+                    onChange={(option) =>
+                      setFormData((previous) => ({
+                        ...previous,
+                        workflow_status: option?.value || "",
+                      }))
+                    }
+                    placeholder="اختر حالة المتابعة..."
+                    isClearable
+                    isRtl
+                  />
+                  <Form.Text className="text-muted">
+                    تمت الخدمة تظهر في «تم الوصول»، وتم التصديق تظهر في «الطلبات
+                    المكتملة».
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row className="mb-3">
+              <Col md={12}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold small text-secondary">
+                    الملاحظات
+                  </Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleChange}
+                    isInvalid={!!getFieldError("notes")}
+                    className="rounded-3"
+                    placeholder="أدخل ملاحظات إضافية..."
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {getFieldError("notes")}
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
           </Modal.Body>
 
           <Modal.Footer className="border-0 pb-4 px-4">

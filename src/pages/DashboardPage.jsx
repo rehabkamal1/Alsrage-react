@@ -34,7 +34,6 @@ import {
   getExternalOffices,
 } from "../services/apiService";
 
-// Register ChartJS components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -47,6 +46,23 @@ ChartJS.register(
   Legend,
   Filler,
 );
+
+const ARABIC_MONTHS = [
+  "يناير",
+  "فبراير",
+  "مارس",
+  "أبريل",
+  "مايو",
+  "يونيو",
+  "يوليو",
+  "أغسطس",
+  "سبتمبر",
+  "أكتوبر",
+  "نوفمبر",
+  "ديسمبر",
+];
+
+const RECENT_LIMIT = 6;
 
 const DashboardPage = ({ onNavigate }) => {
   const [stats, setStats] = useState({
@@ -68,18 +84,21 @@ const DashboardPage = ({ onNavigate }) => {
   });
   const [loading, setLoading] = useState(true);
 
-  // Date Filtering State
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  // Chart datasets
   const [monthlyOrders, setMonthlyOrders] = useState({
-    labels: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"],
-    data: [0, 0, 0, 0, 0, 0],
+    labels: [],
+    data: [],
   });
   const [monthlyClients, setMonthlyClients] = useState({
-    labels: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"],
-    data: [0, 0, 0, 0, 0, 0],
+    labels: [],
+    data: [],
+  });
+
+  const [growth, setGrowth] = useState({
+    clients: 0,
+    orders: 0,
   });
 
   const fetchDashboardData = useCallback(
@@ -105,15 +124,18 @@ const DashboardPage = ({ onNavigate }) => {
         const saudiList = saudiRes.data?.data || saudiRes.data || [];
         const externalList = externalRes.data?.data || externalRes.data || [];
 
+        const totalClients =
+          clientsRes.data?.meta?.total ??
+          clientsRes.data?.total ??
+          clientList.length;
+        const totalOrders =
+          ordersRes.data?.meta?.total ??
+          ordersRes.data?.total ??
+          orderList.length;
+
         setStats({
-          clients:
-            clientsRes.data?.meta?.total ??
-            clientsRes.data?.total ??
-            clientList.length,
-          orders:
-            ordersRes.data?.meta?.total ??
-            ordersRes.data?.total ??
-            orderList.length,
+          clients: totalClients,
+          orders: totalOrders,
           employees: employeesRes.data?.total ?? employeeList.length,
           offices:
             (saudiRes.data?.meta?.total ??
@@ -124,10 +146,9 @@ const DashboardPage = ({ onNavigate }) => {
               externalList.length),
         });
 
-        setRecentOrders(orderList.slice(0, 6));
-        setRecentClients(clientList.slice(0, 6));
+        setRecentOrders(orderList.slice(0, RECENT_LIMIT));
+        setRecentClients(clientList.slice(0, RECENT_LIMIT));
 
-        // Calculate Status Distribution
         const statusCounts = {
           pending: 0,
           processing: 0,
@@ -144,49 +165,75 @@ const DashboardPage = ({ onNavigate }) => {
         });
         setOrderStatusCounts(statusCounts);
 
-        // Calculate monthly order counts for line chart
-        const monthNames = [
-          "يناير",
-          "فبراير",
-          "مارس",
-          "أبريل",
-          "مايو",
-          "يونيو",
-          "يوليو",
-          "أغسطس",
-          "سبتمبر",
-          "أكتوبر",
-          "نوفمبر",
-          "ديسمبر",
-        ];
-        const orderCounts = Array(12).fill(0);
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        const last6 = [];
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(currentYear, currentMonth - i, 1);
+          last6.push({
+            monthIndex: d.getMonth(),
+            year: d.getFullYear(),
+            label: `${ARABIC_MONTHS[d.getMonth()]} ${d.getFullYear()}`,
+          });
+        }
+
+        const orderCountsMap = {};
+        last6.forEach((m) => {
+          orderCountsMap[`${m.year}-${m.monthIndex}`] = 0;
+        });
         orderList.forEach((order) => {
           if (order.created_at) {
-            const monthIndex = new Date(order.created_at).getMonth();
-            orderCounts[monthIndex]++;
+            const d = new Date(order.created_at);
+            const key = `${d.getFullYear()}-${d.getMonth()}`;
+            if (orderCountsMap[key] !== undefined) orderCountsMap[key]++;
           }
-        });
-        const currentMonth = new Date().getMonth();
-        const last6MonthsIndices = [];
-        for (let i = 5; i >= 0; i--) {
-          last6MonthsIndices.push((currentMonth - i + 12) % 12);
-        }
-        setMonthlyOrders({
-          labels: last6MonthsIndices.map((i) => monthNames[i]),
-          data: last6MonthsIndices.map((i) => orderCounts[i]),
         });
 
-        // Calculate monthly clients for bar chart
-        const clientCounts = Array(12).fill(0);
+        const monthlyOrdersLabels = last6.map((m) => m.label);
+        const monthlyOrdersData = last6.map(
+          (m) => orderCountsMap[`${m.year}-${m.monthIndex}`],
+        );
+
+        setMonthlyOrders({
+          labels: monthlyOrdersLabels,
+          data: monthlyOrdersData,
+        });
+
+        const clientCountsMap = {};
+        last6.forEach((m) => {
+          clientCountsMap[`${m.year}-${m.monthIndex}`] = 0;
+        });
         clientList.forEach((client) => {
           if (client.created_at) {
-            const monthIndex = new Date(client.created_at).getMonth();
-            clientCounts[monthIndex]++;
+            const d = new Date(client.created_at);
+            const key = `${d.getFullYear()}-${d.getMonth()}`;
+            if (clientCountsMap[key] !== undefined) clientCountsMap[key]++;
           }
         });
+
+        const monthlyClientsLabels = last6.map((m) => m.label);
+        const monthlyClientsData = last6.map(
+          (m) => clientCountsMap[`${m.year}-${m.monthIndex}`],
+        );
+
         setMonthlyClients({
-          labels: last6MonthsIndices.map((i) => monthNames[i]),
-          data: last6MonthsIndices.map((i) => clientCounts[i]),
+          labels: monthlyClientsLabels,
+          data: monthlyClientsData,
+        });
+
+        const calcGrowth = (arr) => {
+          if (!arr || arr.length < 2) return 0;
+          const prev = arr[arr.length - 2] || 0;
+          const curr = arr[arr.length - 1] || 0;
+          if (prev === 0) return curr > 0 ? 100 : 0;
+          return Math.round(((curr - prev) / prev) * 100);
+        };
+
+        setGrowth({
+          clients: calcGrowth(monthlyClientsData),
+          orders: calcGrowth(monthlyOrdersData),
         });
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -201,7 +248,6 @@ const DashboardPage = ({ onNavigate }) => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Silent auto refresh every 12 seconds and on window focus
   useAutoRefresh(fetchDashboardData, 12000);
 
   const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
@@ -211,42 +257,15 @@ const DashboardPage = ({ onNavigate }) => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      pending: {
-        label: "قيد الانتظار",
-        bg: "warning",
-        text: "dark",
-        pulse: "warning",
-      },
-      processing: {
-        label: "تحت المعالجة",
-        bg: "info",
-        text: "white",
-        pulse: "info",
-      },
-      completed: {
-        label: "مكتمل",
-        bg: "success",
-        text: "white",
-        pulse: "success",
-      },
-      cancelled: {
-        label: "ملغي",
-        bg: "danger",
-        text: "white",
-        pulse: "danger",
-      },
-      canceled: { label: "ملغي", bg: "danger", text: "white", pulse: "danger" },
-      musaned_paid: {
-        label: "تم سداد مساند",
-        bg: "primary",
-        text: "white",
-        pulse: "primary",
-      },
+      pending: { label: "قيد الانتظار", pulse: "warning" },
+      processing: { label: "تحت المعالجة", pulse: "info" },
+      completed: { label: "مكتمل", pulse: "success" },
+      cancelled: { label: "ملغي", pulse: "danger" },
+      canceled: { label: "ملغي", pulse: "danger" },
+      musaned_paid: { label: "تم سداد مساند", pulse: "primary" },
     };
     const config = statusMap[status] || {
       label: status,
-      bg: "secondary",
-      text: "white",
       pulse: "secondary",
     };
     return (
@@ -257,7 +276,6 @@ const DashboardPage = ({ onNavigate }) => {
     );
   };
 
-  // Line Chart Data
   const lineData = {
     labels: monthlyOrders.labels,
     datasets: [
@@ -276,7 +294,6 @@ const DashboardPage = ({ onNavigate }) => {
     ],
   };
 
-  // Bar Chart Data
   const barData = {
     labels: monthlyClients.labels,
     datasets: [
@@ -291,7 +308,6 @@ const DashboardPage = ({ onNavigate }) => {
     ],
   };
 
-  // Doughnut Chart Data for Status Distribution
   const doughnutData = {
     labels: ["قيد الانتظار", "تحت المعالجة", "مكتمل", "سداد مساند", "ملغي"],
     datasets: [
@@ -364,9 +380,13 @@ const DashboardPage = ({ onNavigate }) => {
     },
   };
 
+  const doughnutLegend = doughnutData.labels.map((label, i) => ({
+    label,
+    color: doughnutData.datasets[0].backgroundColor[i],
+  }));
+
   return (
     <div className="page-container pb-5">
-      {/* Hero Welcome Banner */}
       <div className="dash-hero-card p-4 p-md-5 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-4">
         <div>
           <div className="d-flex align-items-center gap-2 mb-2">
@@ -419,7 +439,6 @@ const DashboardPage = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Date Filter Bar - Using the new component */}
       <DateFilterBar
         onFilterChange={handleDateFilterChange}
         initialFromDate={fromDate}
@@ -428,7 +447,6 @@ const DashboardPage = ({ onNavigate }) => {
         size="md"
       />
 
-      {/* Elevated Stats Grid */}
       <Row className="g-4 mb-4">
         <Col xs={12} md={4}>
           <div className="dash-stat-box glow-ring-box">
@@ -446,8 +464,22 @@ const DashboardPage = ({ onNavigate }) => {
               </div>
             </div>
             <div className="d-flex align-items-center justify-content-between pt-2 border-top">
-              <span className="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2.5 py-1 small fw-semibold">
-                <i className="fa-solid fa-arrow-trend-up me-1"></i> +12% نمو
+              <span
+                className={`badge rounded-pill px-2.5 py-1 small fw-semibold ${
+                  growth.clients >= 0
+                    ? "bg-primary bg-opacity-10 text-primary"
+                    : "bg-danger bg-opacity-10 text-danger"
+                }`}
+              >
+                <i
+                  className={`fa-solid ${
+                    growth.clients >= 0
+                      ? "fa-arrow-trend-up"
+                      : "fa-arrow-trend-down"
+                  } me-1`}
+                ></i>
+                {growth.clients >= 0 ? "+" : ""}
+                {growth.clients}% نمو
               </span>
               <span className="text-muted small">عملاء مسجلين</span>
             </div>
@@ -470,8 +502,22 @@ const DashboardPage = ({ onNavigate }) => {
               </div>
             </div>
             <div className="d-flex align-items-center justify-content-between pt-2 border-top">
-              <span className="badge bg-success bg-opacity-10 text-success rounded-pill px-2.5 py-1 small fw-semibold">
-                <i className="fa-solid fa-circle-check me-1"></i> متابعة مباشرة
+              <span
+                className={`badge rounded-pill px-2.5 py-1 small fw-semibold ${
+                  growth.orders >= 0
+                    ? "bg-success bg-opacity-10 text-success"
+                    : "bg-danger bg-opacity-10 text-danger"
+                }`}
+              >
+                <i
+                  className={`fa-solid ${
+                    growth.orders >= 0
+                      ? "fa-arrow-trend-up"
+                      : "fa-arrow-trend-down"
+                  } me-1`}
+                ></i>
+                {growth.orders >= 0 ? "+" : ""}
+                {growth.orders}% تغير
               </span>
               <span className="text-muted small">طلبات جارية</span>
             </div>
@@ -503,20 +549,18 @@ const DashboardPage = ({ onNavigate }) => {
         </Col>
       </Row>
 
-      {/* 3-Column Analytics Grid */}
       <Row className="g-4 mb-4">
-        {/* Line Chart */}
         <Col xs={12} lg={4}>
           <div className="dash-glass-card p-4 h-100">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <div>
                 <h6 className="fw-bold text-dark mb-1">حركة الطلبات الشهرية</h6>
                 <span className="text-muted small">
-                  تتبع الإنشاء على مدى الأشهر
+                  تتبع الإنشاء على مدى آخر 6 أشهر
                 </span>
               </div>
               <span className="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1 small">
-                خطّي
+                {monthlyOrders.data.reduce((a, b) => a + b, 0)} طلب
               </span>
             </div>
             <div style={{ height: "230px" }}>
@@ -525,7 +569,6 @@ const DashboardPage = ({ onNavigate }) => {
           </div>
         </Col>
 
-        {/* Bar Chart */}
         <Col xs={12} lg={4}>
           <div className="dash-glass-card p-4 h-100">
             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -534,7 +577,7 @@ const DashboardPage = ({ onNavigate }) => {
                 <span className="text-muted small">معدل الانضمام الشهري</span>
               </div>
               <span className="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 small">
-                أعمدة
+                {monthlyClients.data.reduce((a, b) => a + b, 0)} عميل
               </span>
             </div>
             <div style={{ height: "230px" }}>
@@ -543,7 +586,6 @@ const DashboardPage = ({ onNavigate }) => {
           </div>
         </Col>
 
-        {/* Doughnut Chart */}
         <Col xs={12} lg={4}>
           <div className="dash-glass-card p-4 h-100">
             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -554,7 +596,7 @@ const DashboardPage = ({ onNavigate }) => {
                 </span>
               </div>
               <span className="badge bg-info-subtle text-info rounded-pill px-2.5 py-1 small">
-                دائري
+                {stats.orders} إجمالي
               </span>
             </div>
             <div style={{ height: "180px" }} className="position-relative">
@@ -572,13 +614,7 @@ const DashboardPage = ({ onNavigate }) => {
               </div>
             </div>
             <div className="d-flex flex-wrap justify-content-center gap-2 mt-3 pt-2 border-top">
-              {[
-                { label: "انتظار", color: "#f59e0b" },
-                { label: "معالجة", color: "#06b6d4" },
-                { label: "مكتمل", color: "#10b981" },
-                { label: "مساند", color: "#6366f1" },
-                { label: "ملغي", color: "#ef4444" },
-              ].map((st, i) => (
+              {doughnutLegend.map((st, i) => (
                 <span
                   key={i}
                   className="badge bg-light text-dark border rounded-pill px-2.5 py-1 small d-flex align-items-center gap-1"
@@ -599,7 +635,6 @@ const DashboardPage = ({ onNavigate }) => {
         </Col>
       </Row>
 
-      {/* Recent Activity Table with Interactive Tabs */}
       <div className="dash-glass-card overflow-hidden">
         <div className="p-4 bg-white border-bottom d-flex justify-content-between align-items-center flex-wrap gap-3">
           <div className="d-flex align-items-center gap-2 bg-light p-1 rounded-3 border">
@@ -621,12 +656,11 @@ const DashboardPage = ({ onNavigate }) => {
 
           <span className="text-muted small fw-semibold">
             {activeTab === "orders"
-              ? "أحدث 6 طلبات مسجلة"
-              : "أحدث 6 عملاء مسجلين"}
+              ? `أحدث ${recentOrders.length} طلبات مسجلة`
+              : `أحدث ${recentClients.length} عملاء مسجلين`}
           </span>
         </div>
 
-        {/* Tab 1: Orders Table */}
         {activeTab === "orders" && (
           <div className="table-responsive">
             <Table hover className="dash-table align-middle mb-0">
@@ -717,7 +751,6 @@ const DashboardPage = ({ onNavigate }) => {
           </div>
         )}
 
-        {/* Tab 2: Clients Table */}
         {activeTab === "clients" && (
           <div className="table-responsive">
             <Table hover className="dash-table align-middle mb-0">

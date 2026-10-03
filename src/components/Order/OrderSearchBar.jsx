@@ -9,7 +9,9 @@ const OrderSearchBar = ({
     loading,
     filters,
     onFilterChange,
+    serviceTypeOptions = [],
     statusOptions = [],
+    orderStatusOptions = [],
     isCompletedPage = false,
 }) => {
     const handleSubmit = (e) => {
@@ -62,7 +64,7 @@ const OrderSearchBar = ({
                     <div className="flex-grow-1" style={{ minWidth: "160px" }}>
                         <Select
                             options={[
-                                { value: "", label: "كل الحالات" },
+                                { value: "", label: "كل حالات سداد مساند" },
                                 ...statusOptions.map((s) => ({
                                     value: s.key || s.id,
                                     label: s.label,
@@ -79,13 +81,87 @@ const OrderSearchBar = ({
                                                       filters.status,
                                               )?.label || filters.status,
                                       }
-                                    : { value: "", label: "كل الحالات" }
+                                    : { value: "", label: "كل حالات سداد مساند" }
                             }
                             onChange={(opt) =>
                                 onFilterChange("status", opt ? opt.value : "")
                             }
                             styles={customStyles}
-                            placeholder="كل الحالات"
+                            placeholder="حالة سداد مساند"
+                            isRtl
+                        />
+                    </div>
+                )}
+
+                {!isCompletedPage && orderStatusOptions.length > 0 && (
+                    <div className="flex-grow-1" style={{ minWidth: "160px" }}>
+                        <Select
+                            options={[
+                                { value: "", label: "كل حالات الطلب" },
+                                ...orderStatusOptions.map((status) => ({
+                                    value: status.key || status.id,
+                                    label: status.label,
+                                })),
+                            ]}
+                            value={
+                                filters.order_status
+                                    ? {
+                                          value: filters.order_status,
+                                          label:
+                                              orderStatusOptions.find(
+                                                  (status) =>
+                                                      (status.key || status.id) ===
+                                                      filters.order_status,
+                                              )?.label || filters.order_status,
+                                      }
+                                    : { value: "", label: "كل حالات الطلب" }
+                            }
+                            onChange={(option) =>
+                                onFilterChange(
+                                    "order_status",
+                                    option ? option.value : "",
+                                )
+                            }
+                            styles={customStyles}
+                            placeholder="حالة الطلب"
+                            isRtl
+                        />
+                    </div>
+                )}
+
+                {serviceTypeOptions.length > 0 && (
+                    <div className="flex-grow-1" style={{ minWidth: "160px" }}>
+                        <Select
+                            options={[
+                                { value: "", label: "كل أنواع الخدمات" },
+                                ...serviceTypeOptions.map((serviceType) => ({
+                                    value: serviceType.key || serviceType.label,
+                                    label: serviceType.label,
+                                })),
+                            ]}
+                            value={
+                                filters.service_type
+                                    ? {
+                                          value: filters.service_type,
+                                          label:
+                                              serviceTypeOptions.find(
+                                                  (serviceType) =>
+                                                      (serviceType.key ||
+                                                          serviceType.label) ===
+                                                      filters.service_type,
+                                              )?.label || filters.service_type,
+                                      }
+                                    : { value: "", label: "كل أنواع الخدمات" }
+                            }
+                            onChange={(option) =>
+                                onFilterChange(
+                                    "service_type",
+                                    option ? option.value : "",
+                                )
+                            }
+                            styles={customStyles}
+                            placeholder="نوع الخدمة"
+                            isClearable
                             isRtl
                         />
                     </div>
@@ -108,7 +184,8 @@ const OrderSearchBar = ({
                             },
                             { value: "total_price", label: "إجمالي السعر" },
                             { value: "musaned_paid", label: "المبلغ المدفوع" },
-                            { value: "status", label: "الحالة" },
+                            { value: "order_status", label: "حالة الطلب" },
+                            { value: "status", label: "حالة سداد مساند" },
                         ]}
                         value={
                             [
@@ -129,7 +206,8 @@ const OrderSearchBar = ({
                                     value: "musaned_paid",
                                     label: "المبلغ المدفوع",
                                 },
-                                { value: "status", label: "الحالة" },
+                                { value: "order_status", label: "حالة الطلب" },
+                                { value: "status", label: "حالة سداد مساند" },
                             ].find((opt) => opt.value === filters.sort_by) || {
                                 value: "id",
                                 label: "رقم الطلب",

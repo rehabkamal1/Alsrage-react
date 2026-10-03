@@ -12,6 +12,7 @@ import {
   getExternalOffices,
   getEmployees,
   getSettingsOrderStatuses,
+  getSettingsOrderProcessStatuses,
   getSettingsServiceTypes,
   searchClients,
   quickCreateClient,
@@ -28,13 +29,18 @@ import { showWhatsAppNotificationModal } from "../utils/whatsappHelper";
 import { getUser } from "../services/authService";
 import { useDebounce } from "../hooks/useDebounce";
 
-const OrdersPage = () => {
+const OrdersPage = ({
+  trackingStatus,
+  pageTitle = "الطلبات",
+  showCreateOrder = true,
+}) => {
   const [orders, setOrders] = useState([]);
   const [clients, setClients] = useState([]);
   const [saudiOffices, setSaudiOffices] = useState([]);
   const [externalOffices, setExternalOffices] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [orderStatuses, setOrderStatuses] = useState([]);
+  const [orderProcessStatuses, setOrderProcessStatuses] = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -51,6 +57,8 @@ const OrdersPage = () => {
 
   const [filters, setFilters] = useState({
     status: "",
+    order_status: "",
+    service_type: "",
     sort_by: "id",
     sort_dir: "desc",
     is_paid_by_office: "",
@@ -69,37 +77,35 @@ const OrdersPage = () => {
     fetchAllData();
   }, [currentPage, debouncedSearch, filters, fromDate, toDate]);
 
-  const fetchAllData = async (isSilent = false) => {
-    if (!isSilent) {
-      if (initialLoading) {
-        setInitialLoading(true);
-      } else {
-        setLoading(true);
-      }
-    }
+  const fetchAllData = async () => {
+    setLoading(true);
     try {
       const params = {
         page: currentPage,
         per_page: itemsPerPage,
         search: debouncedSearch || undefined,
         status: filters.status || undefined,
+        order_status: filters.order_status || undefined,
+        service_type: filters.service_type || undefined,
         sort_by: filters.sort_by,
         sort_dir: filters.sort_dir,
         is_paid_by_office: filters.is_paid_by_office || undefined,
+        tracking_status: trackingStatus || undefined,
       };
 
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
 
       const [
-        ordersRes,
-        clientsRes,
-        saudiRes,
-        externalRes,
-        employeesRes,
-        orderStatusesRes,
-        serviceTypesRes,
-      ] = await Promise.all([
+        ordersResult,
+        clientsResult,
+        saudiResult,
+        externalResult,
+        employeesResult,
+        orderStatusesResult,
+        orderProcessStatusesResult,
+        serviceTypesResult,
+      ] = await Promise.allSettled([
         getOrders(params),
         getClients({ per_page: 200, sort_by: "name", sort_dir: "asc" }),
         getSaudiOffices({ all: 1, per_page: 500 }),
@@ -110,34 +116,113 @@ const OrdersPage = () => {
           sort_dir: "asc",
         }),
         getSettingsOrderStatuses(),
+        getSettingsOrderProcessStatuses(),
         getSettingsServiceTypes(),
       ]);
+
+      if (ordersResult.status === "rejected") {
+        throw ordersResult.reason;
+      }
+
+      const ordersRes = ordersResult.value;
       setOrders(ordersRes.data?.data || []);
       setTotalPages(ordersRes.data?.meta?.last_page || 1);
-      setTotalOrders(ordersRes.data?.meta?.total || (ordersRes.data?.data || []).length);
-      setClients(clientsRes.data?.data || []);
-      const saudiList = Array.isArray(saudiRes.data?.data)
-        ? saudiRes.data.data
-        : Array.isArray(saudiRes.data)
-          ? saudiRes.data
-          : [];
-      setSaudiOffices(saudiList);
-      const externalList = Array.isArray(externalRes.data?.data)
-        ? externalRes.data.data
-        : Array.isArray(externalRes.data)
-          ? externalRes.data
-          : [];
-      setExternalOffices(externalList);
-      setEmployees(employeesRes.data?.data || employeesRes.data || []);
-      setOrderStatuses(orderStatusesRes.data?.data || []);
-      setServiceTypes(serviceTypesRes.data?.data || []);
+      setTotalOrders(
+        ordersRes.data?.meta?.total ||
+          (ordersRes.data?.data || []).length,
+      );
+
+      const failedLookups = [];
+      if (clientsResult.status === "fulfilled") {
+        setClients(clientsResult.value.data?.data || []);
+      } else {
+        failedLookups.push("المندوبين");
+        console.error("Error fetching clients:", clientsResult.reason);
+      }
+
+      const saudiRes =
+        saudiResult.status === "fulfilled" ? saudiResult.value : null;
+      if (saudiRes) {
+        const saudiList = Array.isArray(saudiRes.data?.data)
+          ? saudiRes.data.data
+          : Array.isArray(saudiRes.data)
+            ? saudiRes.data
+            : [];
+        setSaudiOffices(saudiList);
+      } else {
+        failedLookups.push("المكاتب السعودية");
+        console.error("Error fetching Saudi offices:", saudiResult.reason);
+      }
+
+      const externalRes =
+        externalResult.status === "fulfilled" ? externalResult.value : null;
+      if (externalRes) {
+        const externalList = Array.isArray(externalRes.data?.data)
+          ? externalRes.data.data
+          : Array.isArray(externalRes.data)
+            ? externalRes.data
+            : [];
+        setExternalOffices(externalList);
+      } else {
+        failedLookups.push("المكاتب الخارجية");
+        console.error("Error fetching external offices:", externalResult.reason);
+      }
+
+      if (employeesResult.status === "fulfilled") {
+        setEmployees(
+          employeesResult.value.data?.data || employeesResult.value.data || [],
+        );
+      } else {
+        failedLookups.push("الموظفين");
+        console.error("Error fetching employees:", employeesResult.reason);
+      }
+
+      if (orderStatusesResult.status === "fulfilled") {
+        setOrderStatuses(orderStatusesResult.value.data?.data || []);
+      } else {
+        failedLookups.push("حالات سداد مساند");
+        console.error(
+          "Error fetching Musaned payment statuses:",
+          orderStatusesResult.reason,
+        );
+      }
+
+      if (orderProcessStatusesResult.status === "fulfilled") {
+        setOrderProcessStatuses(
+          (orderProcessStatusesResult.value.data?.data || []).filter(
+            (status) => status.is_active,
+          ),
+        );
+      } else {
+        failedLookups.push("حالات الطلب");
+        console.error(
+          "Error fetching order process statuses:",
+          orderProcessStatusesResult.reason,
+        );
+      }
+
+      if (serviceTypesResult.status === "fulfilled") {
+        setServiceTypes(serviceTypesResult.value.data?.data || []);
+      } else {
+        failedLookups.push("أنواع الخدمات");
+        console.error("Error fetching service types:", serviceTypesResult.reason);
+      }
+
+      if (failedLookups.length > 0) {
+        showError(
+          "تنبيه",
+          `تم تحميل الطلبات، لكن تعذر تحميل: ${failedLookups.join("، ")}`,
+        );
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
+      showError(
+        "تعذر تحميل الطلبات",
+        error.response?.data?.message || "حدث خطأ أثناء تحميل الطلبات",
+      );
     } finally {
-      if (!isSilent) {
-        setLoading(false);
-        setInitialLoading(false);
-      }
+      setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -156,6 +241,8 @@ const OrdersPage = () => {
     setSearchQuery("");
     setFilters({
       status: "",
+      order_status: "",
+      service_type: "",
       sort_by: "id",
       sort_dir: "desc",
       is_paid_by_office: "",
@@ -227,6 +314,23 @@ const OrdersPage = () => {
     } catch (error) {
       console.error("Error updating status:", error);
       showError("خطأ!", "حدث خطأ أثناء تحديث الحالة");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOrderStatusChange = async (order, newStatus) => {
+    setLoading(true);
+    try {
+      await updateOrder(order.id, { order_status: newStatus || null });
+      showSuccess("تم تحديث الحالة!", "تم تغيير حالة الطلب بنجاح");
+      fetchAllData();
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      showError(
+        "خطأ!",
+        error.response?.data?.message || "حدث خطأ أثناء تحديث حالة الطلب",
+      );
     } finally {
       setLoading(false);
     }
@@ -318,10 +422,18 @@ const OrdersPage = () => {
         format: (order) => (order.is_paid_by_office ? "نعم" : "لا"),
       },
       {
-        header: "الحالة",
+        header: "حالة الطلب",
+        format: (order) =>
+          orderProcessStatuses.find(
+            (status) => (status.key || status.id) === order.order_status,
+          )?.label || order.order_status || "-",
+      },
+      {
+        header: "حالة سداد مساند",
         format: (order) =>
           orderStatuses.find((s) => (s.key || s.id) === order.status)?.label ||
-          order.status,
+          order.status ||
+          "-",
       },
       {
         header: "التاريخ",
@@ -348,10 +460,18 @@ const OrdersPage = () => {
         format: (order) => (order.is_paid_by_office ? "نعم" : "لا"),
       },
       {
-        header: "الحالة",
+        header: "حالة الطلب",
+        format: (order) =>
+          orderProcessStatuses.find(
+            (status) => (status.key || status.id) === order.order_status,
+          )?.label || order.order_status || "-",
+      },
+      {
+        header: "حالة سداد مساند",
         format: (order) =>
           orderStatuses.find((s) => (s.key || s.id) === order.status)?.label ||
-          order.status,
+          order.status ||
+          "-",
       },
       {
         header: "التاريخ",
@@ -373,7 +493,7 @@ const OrdersPage = () => {
       >
         <Container fluid>
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-            <h1 className="h3 mb-0 fw-bold">الطلبات</h1>
+            <h1 className="h3 mb-0 fw-bold">{pageTitle}</h1>
             <Button variant="dark" disabled className="w-fit">
               + طلب جديد
             </Button>
@@ -430,7 +550,7 @@ const OrdersPage = () => {
               <i className="fa-solid fa-file-pdf fs-5"></i>
               <span>بي دي اف</span>
             </Button>
-            {hasPermission("create_orders") && (
+            {showCreateOrder && hasPermission("create_orders") && (
               <Button
                 variant="dark"
                 onClick={handleAddOrder}
@@ -457,7 +577,9 @@ const OrdersPage = () => {
           onClear={handleClearSearch}
           filters={filters}
           onFilterChange={handleFilterChange}
+          serviceTypeOptions={serviceTypes}
           statusOptions={orderStatuses}
+          orderStatusOptions={orderProcessStatuses}
           loading={loading}
         />
 
@@ -474,9 +596,11 @@ const OrdersPage = () => {
                   onEdit={handleEditOrder}
                   onDelete={handleDeleteOrder}
                   onStatusChange={handleStatusChange}
+                  onOrderStatusChange={handleOrderStatusChange}
                   onServiceTypeChange={handleServiceTypeChange}
                   onWhatsApp={(order) => handleWhatsAppNotification(order)}
                   statusOptions={orderStatuses}
+                  orderStatusOptions={orderProcessStatuses}
                   serviceTypeOptions={serviceTypes}
                   canEdit={hasPermission("edit_orders")}
                   canDelete={hasPermission("delete_orders")}
@@ -509,6 +633,7 @@ const OrdersPage = () => {
         saudiOffices={saudiOffices}
         externalOffices={externalOffices}
         statusOptions={orderStatuses}
+        orderStatusOptions={orderProcessStatuses}
         serviceTypeOptions={serviceTypes}
         searchClients={searchClients}
         quickCreateClient={quickCreateClient}

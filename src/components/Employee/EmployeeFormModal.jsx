@@ -50,6 +50,14 @@ const PERMISSION_GROUPS = [
       { id: "manage_employees", label: "الموظفين" },
     ],
   },
+  {
+    module: "البيانات الحساسة",
+    icon: "🔒",
+    permissions: [
+      { id: "hide_transactions", label: "إخفاء جميع المعاملات المالية" },
+      { id: "hide_delegate_numbers", label: "إخفاء أرقام المناديب" },
+    ],
+  },
 ];
 
 

@@ -3,7 +3,7 @@ export const defaultColumns = [
     { id: "id", label: "#", width: "60px" },
     { id: "employee", label: "الموظف المسؤول", width: "130px" },
     { id: "type", label: "نوع المعاملة", width: "110px" },
-    { id: "client", label: "رقم المندوب", width: "120px" },
+    { id: "client", label: "المندوب", width: "120px" },
     { id: "order", label: "رقم الطلب", width: "90px" },
     { id: "amount", label: "المبلغ", width: "110px" },
     { id: "visa_holder", label: "صاحب التأشيرة", width: "130px" },

@@ -30,6 +30,7 @@
 /* =============== Sortable Header =============== */
 .sortable-header {
     position: relative;
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -63,6 +64,24 @@
     cursor: grabbing;
 }
 
+.sort-icon {
+    display: inline-block;
+    transition: all 0.2s ease;
+}
+
+.sortable-header:hover .sort-icon {
+    opacity: 1 !important;
+}
+
+.sortable-header .fa-sort {
+    color: #adb5bd;
+}
+
+.sortable-header .fa-arrow-up-wide-short,
+.sortable-header .fa-arrow-down-wide-short {
+    color: #0d6efd;
+}
+
 /* =============== Status Dropdowns =============== */
 .status-select:hover,
 .priority-select:hover,
@@ -81,40 +100,122 @@
     outline: 0;
 }
 
-/* ============ Tracking Table Styles ============ */
+/* ============ Order Table ============ */
+.order-table {
+    font-size: 0.85rem;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.order-table thead th {
+    background-color: #f8f9fa;
+    font-weight: 700;
+    white-space: nowrap;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.order-table tbody tr {
+    transition: all 0.25s ease;
+    background-color: color-mix(in srgb, var(--row-color, #6c757d) 7%, white);
+}
+
+.order-table tbody tr:hover {
+    background-color: color-mix(in srgb, var(--row-color, #6c757d) 20%, white) !important;
+    filter: brightness(0.98);
+}
+
+/* ============ Tracking Table ============ */
+.tracking-table {
+    font-size: 0.85rem;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.tracking-table thead th {
+    background-color: #f8f9fa;
+    font-weight: 700;
+    white-space: nowrap;
+    border-bottom: 2px solid #dee2e6;
+}
+
 .tracking-table tbody tr {
-    transition: background-color 0.2s ease;
+    transition: all 0.25s ease;
+    background-color: color-mix(in srgb, var(--row-color, #6c757d) 7%, white);
 }
 
 .tracking-table tbody tr:hover {
-    background-color: var(--priority-color, #6c757d) !important;
-    background-color: color-mix(in srgb, var(--priority-color, #6c757d) 15%, white) !important;
+    background-color: color-mix(in srgb, var(--row-color, #6c757d) 20%, white) !important;
+    filter: brightness(0.98);
 }
 
-.tracking-table tbody tr .priority-strip {
-    transition: none !important;
+/* ============ Status / Priority Strip ============ */
+.order-table .order-status-strip,
+.tracking-table .priority-strip {
+    padding: 0 !important;
+    width: 10px !important;
+    min-width: 10px !important;
+    max-width: 10px !important;
+    border: none !important;
+    position: relative;
+    overflow: visible;
 }
 
-.tracking-table tbody tr:hover .priority-strip {
-    background-color: var(--priority-color, #6c757d) !important;
+.order-table .order-status-strip::before,
+.tracking-table .priority-strip::before {
+    content: "";
+    position: absolute;
+    inset: 6px 2px 6px 0;
+    background: inherit;
+    border-radius: 0 6px 6px 0;
+    box-shadow:
+        2px 0 8px rgba(0, 0, 0, 0.12),
+        inset -1px 0 3px rgba(255, 255, 255, 0.25);
+    transition: all 0.25s ease;
+    z-index: 1;
 }
 
-/* ============ Finance Table Styles ============ */
-.finance-table tbody tr {
-    transition: background-color 0.2s ease;
+.order-table .order-status-strip::after,
+.tracking-table .priority-strip::after {
+    content: "";
+    position: absolute;
+    inset: 50% 6px auto 0;
+    height: 0;
+    background: inherit;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    transition: all 0.25s ease;
+    opacity: 0;
 }
 
-.finance-table tbody tr:hover {
-    background-color: var(--priority-color, #6c757d) !important;
-    background-color: color-mix(in srgb, var(--priority-color, #6c757d) 15%, white) !important;
+.order-table tbody tr:hover .order-status-strip::before,
+.tracking-table tbody tr:hover .priority-strip::before {
+    inset: 4px 2px 4px 0;
+    box-shadow:
+        3px 0 12px rgba(0, 0, 0, 0.18),
+        inset -1px 0 3px rgba(255, 255, 255, 0.3);
+    filter: brightness(0.92) saturate(1.1);
 }
 
-.finance-table tbody tr .priority-strip {
-    transition: none !important;
+.order-table tbody tr:hover .order-status-strip::after,
+.tracking-table tbody tr:hover .priority-strip::after {
+    opacity: 0.35;
+    inset: 50% 4px auto 0;
+    width: 6px;
+    height: 6px;
 }
 
-.finance-table tbody tr:hover .priority-strip {
-    background-color: var(--priority-color, #6c757d) !important;
+.order-table thead th:first-child,
+.tracking-table thead th:first-child {
+    width: 10px !important;
+    min-width: 10px !important;
+    max-width: 10px !important;
+    padding: 0 !important;
+    background-color: #f8f9fa;
+}
+
+.order-table thead th:first-child > *,
+.tracking-table thead th:first-child > * {
+    display: none !important;
 }
 
 /* ============ Phone Badge ============ */
@@ -126,21 +227,4 @@
     padding: 2px 10px;
     border-radius: 20px;
     display: inline-block;
-}
-
-.sortable-table tbody tr {
-    transition: all 0.2s ease;
-}
-
-.sortable-table tbody tr:hover {
-    background-color: var(--priority-color, #f8f9fa);
-    background-color: color-mix(in srgb, var(--priority-color, #f8f9fa) 15%, white);
-}
-
-.sortable-table tbody tr .priority-strip {
-    transition: none !important;
-}
-
-.sortable-table tbody tr:hover .priority-strip {
-    background-color: var(--priority-color, #6c757d) !important;
 }

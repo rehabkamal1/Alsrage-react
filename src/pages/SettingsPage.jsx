@@ -7,6 +7,7 @@ import api, {
   deletePaymentMethod,
   deleteBankName,
   deleteOrderStatus,
+  deleteOrderProcessStatus,
   deleteServiceType,
   deleteAuthenticationStatus,
   deleteAuthorizationStatus,
@@ -69,6 +70,7 @@ const SettingsPage = () => {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [bankNames, setBankNames] = useState([]);
   const [orderStatuses, setOrderStatuses] = useState([]);
+  const [orderProcessStatuses, setOrderProcessStatuses] = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
   const [authenticationStatuses, setAuthenticationStatuses] = useState([]);
   const [authorizationStatuses, setAuthorizationStatuses] = useState([]);
@@ -92,6 +94,7 @@ const SettingsPage = () => {
         paymentRes,
         bankRes,
         orderRes,
+        orderProcessRes,
         serviceTypesRes,
         authRes,
         authzRes,
@@ -105,6 +108,7 @@ const SettingsPage = () => {
         api.get("/settings/payment-methods"),
         api.get("/settings/bank-names"),
         api.get("/settings/order-statuses"),
+        api.get("/settings/order-process-statuses"),
         api.get("/settings/service-types"),
         api.get("/settings/authentication-statuses"),
         api.get("/settings/authorization-statuses"),
@@ -126,6 +130,7 @@ const SettingsPage = () => {
       setPaymentMethods(withMeta(paymentRes.data.data));
       setBankNames(withMeta(bankRes.data.data));
       setOrderStatuses(withMeta(orderRes.data.data));
+      setOrderProcessStatuses(withMeta(orderProcessRes.data.data));
       setServiceTypes(withMeta(serviceTypesRes.data.data));
       setAuthenticationStatuses(withMeta(authRes.data?.data));
       setAuthorizationStatuses(withMeta(authzRes.data?.data));
@@ -196,7 +201,13 @@ const SettingsPage = () => {
     });
   };
 
-  const saveItems = async (items, apiUrl, dataKey, successMessage) => {
+  const saveItems = async (
+    items,
+    apiUrl,
+    dataKey,
+    successMessage,
+    includeTargetDays = true,
+  ) => {
     setSaving(true);
     try {
       const dataToSend = items
@@ -206,7 +217,13 @@ const SettingsPage = () => {
           label: item.label,
           color: item.color || "#6c757d",
           sort_order: item.sort_order || 0,
-          target_days: item.target_days ? parseInt(item.target_days, 10) : 60,
+          ...(includeTargetDays
+            ? {
+                target_days: item.target_days
+                  ? parseInt(item.target_days, 10)
+                  : 60,
+              }
+            : {}),
           is_active: item.is_active !== undefined ? item.is_active : true,
           ...(item.nationality_key !== undefined
             ? { nationality_key: item.nationality_key }
@@ -376,14 +393,14 @@ const SettingsPage = () => {
         </Row>
 
         <SectionTitle
-          title="حالات الطلبات والمراحل"
-          subtitle="تتبع دورة حياة الطلب"
+          title="حالات الطلب وسداد مساند"
+          subtitle="إدارة كل حالة بشكل مستقل، مع المدد المستهدفة لمراحل سداد مساند"
           icon="🔄"
         />
         <Row className="g-4">
           <Col xs={12} lg={6}>
             <SettingsCard
-              title="حالات الطلبات (والمراحل المستهدفة بالأيام)"
+              title="حالات سداد مساند (المراحل المستهدفة بالأيام)"
               items={orderStatuses}
               showTargetDays={true}
               onAdd={() => addItem(setOrderStatuses)}
@@ -405,11 +422,42 @@ const SettingsPage = () => {
                   orderStatuses,
                   "/settings/order-statuses",
                   "statuses",
-                  "تم حفظ حالات الطلبات والمدد المستهدفة بنجاح",
+                  "تم حفظ حالات سداد مساند والمدد المستهدفة بنجاح",
                 )
               }
               saving={saving}
-              emptyMessage="لا توجد حالات طلبات"
+              emptyMessage="لا توجد حالات سداد مساند"
+            />
+          </Col>
+          <Col xs={12} lg={6}>
+            <SettingsCard
+              title="حالات الطلب"
+              items={orderProcessStatuses}
+              onAdd={() => addItem(setOrderProcessStatuses)}
+              onUpdate={(idx, field, val) =>
+                updateItem(setOrderProcessStatuses, idx, field, val)
+              }
+              onDelete={(id, isNew, idx) =>
+                deleteItem(
+                  id,
+                  isNew,
+                  idx,
+                  orderProcessStatuses,
+                  setOrderProcessStatuses,
+                  deleteOrderProcessStatus,
+                )
+              }
+              onSave={() =>
+                saveItems(
+                  orderProcessStatuses,
+                  "/settings/order-process-statuses",
+                  "statuses",
+                  "تم حفظ حالات الطلب بنجاح",
+                  false,
+                )
+              }
+              saving={saving}
+              emptyMessage="لا توجد حالات طلب"
             />
           </Col>
           <Col xs={12} lg={6}>

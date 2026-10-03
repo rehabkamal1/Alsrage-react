@@ -126,6 +126,8 @@ export const getSettingsPaymentMethods = () =>
 export const getSettingsBankNames = () => api.get("/settings/bank-names");
 export const getSettingsOrderStatuses = () =>
   api.get("/settings/order-statuses");
+export const getSettingsOrderProcessStatuses = () =>
+  api.get("/settings/order-process-statuses");
 export const getSettingsServiceTypes = () =>
   api.get("/settings/service-types").catch((err) => {
     console.warn(
@@ -192,6 +194,8 @@ export const updateSettingsBankNames = (data) =>
   api.post("/settings/bank-names", data);
 export const updateSettingsOrderStatuses = (data) =>
   api.post("/settings/order-statuses", data);
+export const updateSettingsOrderProcessStatuses = (data) =>
+  api.post("/settings/order-process-statuses", data);
 export const updateSettingsServiceTypes = (data) =>
   api.post("/settings/service-types", data);
 export const updateSettingsAuthenticationStatuses = (data) =>
@@ -210,6 +214,8 @@ export const deletePaymentMethod = (id) =>
 export const deleteBankName = (id) => api.delete(`/settings/bank-names/${id}`);
 export const deleteOrderStatus = (id) =>
   api.delete(`/settings/order-statuses/${id}`);
+export const deleteOrderProcessStatus = (id) =>
+  api.delete(`/settings/order-process-statuses/${id}`);
 export const deleteServiceType = (id) =>
   api.delete(`/settings/service-types/${id}`);
 export const deleteAuthenticationStatus = (id) =>

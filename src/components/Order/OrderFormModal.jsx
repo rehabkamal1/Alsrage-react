@@ -28,17 +28,19 @@ import "../../styles/FormModal.css";
 
 const API_URL =
   import.meta.env.VITE_API_URL || "https://alserage.alfanar-rec.com";
+const EMPTY_ARRAY = [];
 
 const OrderFormModal = ({
   show,
   onHide,
   onSubmit,
   initialData,
-  clients = [],
+  clients = EMPTY_ARRAY,
   employees = [],
   saudiOffices = [],
   externalOffices = [],
   statusOptions = [],
+  orderStatusOptions = [],
   serviceTypeOptions = [],
   searchClients,
   quickCreateClient,
@@ -185,6 +187,7 @@ const OrderFormModal = ({
     musaned_paid: "",
     is_paid_by_office: false,
     status: "",
+    order_status: "",
     notes: "",
     visa_image: null,
     contract_image: null,
@@ -249,6 +252,7 @@ const OrderFormModal = ({
         musaned_paid: initialData.musaned_paid || "",
         is_paid_by_office: initialData.is_paid_by_office || false,
         status: initialData.status || "",
+        order_status: initialData.order_status || "",
         notes: initialData.notes || "",
         visa_image: null,
         contract_image: null,
@@ -287,6 +291,7 @@ const OrderFormModal = ({
         musaned_paid: "",
         is_paid_by_office: false,
         status: "",
+        order_status: "",
         notes: "",
         visa_image: null,
         contract_image: null,
@@ -1372,10 +1377,10 @@ const OrderFormModal = ({
                   </Row>
 
                   <Row>
-                    <Col md={12}>
+                    <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label className="fw-semibold small text-secondary">
-                          حالة الطلب
+                          حالة سداد مساند
                         </Form.Label>
                         <Select
                           className="react-select-container"
@@ -1417,6 +1422,61 @@ const OrderFormModal = ({
                         {getFieldError("status") && (
                           <div className="text-danger small mt-1">
                             {getFieldError("status")}
+                          </div>
+                        )}
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-semibold small text-secondary">
+                          حالة الطلب
+                        </Form.Label>
+                        <Select
+                          className="react-select-container"
+                          classNamePrefix="react-select"
+                          options={orderStatusOptions.map((status) => ({
+                            value: status.key || status.id,
+                            label: status.label,
+                          }))}
+                          value={
+                            formData.order_status
+                              ? {
+                                  value: formData.order_status,
+                                  label:
+                                    orderStatusOptions.find(
+                                      (status) =>
+                                        (status.key || status.id) ===
+                                        formData.order_status,
+                                    )?.label || formData.order_status,
+                                }
+                              : null
+                          }
+                          onChange={(option) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              order_status: option ? option.value : "",
+                            }))
+                          }
+                          placeholder={
+                            orderStatusOptions.length
+                              ? "اختر حالة الطلب..."
+                              : "أضيفي حالات الطلب من الإعدادات أولاً"
+                          }
+                          isClearable
+                          isDisabled={orderStatusOptions.length === 0}
+                          isRtl
+                          styles={{
+                            control: (base) => ({
+                              ...base,
+                              borderColor: getFieldError("order_status")
+                                ? "#dc3545"
+                                : base.borderColor,
+                            }),
+                          }}
+                        />
+                        {getFieldError("order_status") && (
+                          <div className="text-danger small mt-1">
+                            {getFieldError("order_status")}
                           </div>
                         )}
                       </Form.Group>

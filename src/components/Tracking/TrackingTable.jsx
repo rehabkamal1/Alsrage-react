@@ -1,19 +1,20 @@
 import React, { useState, useCallback } from "react";
-import { Table, Button, Badge, Image, Modal, Form } from "react-bootstrap";
+import { Button, Image, Modal, Form } from "react-bootstrap";
+import SortableTable from "../common/SortableTable";
 import api from "../../services/apiService";
 import { showSuccess, showError, showConfirm } from "../../utils/swalHelper";
+import { trackingColumns } from "../../constants/trackingColumns";
 
 const TrackingTable = ({
   tracking,
   onEdit,
   onDelete,
   onRefresh,
-  priorityLevels,
-  passportStatuses,
-  transferStatuses,
+  priorityLevels = [],
+  passportStatuses = [],
+  transferStatuses = [],
   authenticationStatuses = [],
   authorizationStatuses = [],
-  externalOffices,
   onWhatsAppUpdate,
 }) => {
   const [showImageModal, setShowImageModal] = useState(false);
@@ -27,34 +28,11 @@ const TrackingTable = ({
   const [dragActive, setDragActive] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const getPriorityColor = (level) => {
-    const found = priorityLevels?.find((p) => p.value === level);
+  const getColor = (value, options) => {
+    const found = options?.find(
+      (o) => String(o.value || o.key || o.id) === String(value),
+    );
     return found?.color || "#6c757d";
-  };
-
-  const getPriorityLabel = (level) => {
-    const found = priorityLevels?.find((p) => p.value === level);
-    return found?.label || level || "-";
-  };
-
-  const getPassportColor = (status) => {
-    const found = passportStatuses?.find((s) => s.value === status);
-    return found?.color || "#6c757d";
-  };
-
-  const getPassportLabel = (status) => {
-    const found = passportStatuses?.find((s) => s.value === status);
-    return found?.label || status || "-";
-  };
-
-  const getTransferColor = (status) => {
-    const found = transferStatuses?.find((s) => s.value === status);
-    return found?.color || "#6c757d";
-  };
-
-  const getTransferLabel = (status) => {
-    const found = transferStatuses?.find((s) => s.value === status);
-    return found?.label || status || "-";
   };
 
   const formatDate = (val) => {
@@ -82,210 +60,36 @@ const TrackingTable = ({
     }
   };
 
-  const renderPassportStatusDropdown = (item) => {
-    const currentColor = getPassportColor(item.passport_status);
+  const renderInlineSelect = (item, field, options, extraClass = "") => {
+    const current = getColor(item[field], options);
 
     return (
       <div className="d-flex justify-content-center">
         <Form.Select
           size="sm"
-          value={item.passport_status || ""}
-          onChange={(e) =>
-            handleInlineUpdate(item.id, "passport_status", e.target.value)
-          }
-          className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select"
+          value={item[field] || ""}
+          onChange={(e) => handleInlineUpdate(item.id, field, e.target.value)}
+          className={`rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select ${extraClass}`}
           style={{
-            backgroundColor: currentColor,
+            backgroundColor: current,
             color: "#fff",
             cursor: "pointer",
             fontSize: "0.85rem",
             width: "fit-content",
             minWidth: "130px",
-            transition: "all 0.2s ease-in-out",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           }}
-          title="اضغط لتغيير حالة ترشيح الجواز"
         >
           <option value="">-- اختر --</option>
-          {passportStatuses.map((status) => (
+          {options.map((opt) => (
             <option
-              key={status.value}
-              value={status.value}
-              style={{ backgroundColor: status.color, color: "#fff" }}
-            >
-              {status.label}
-            </option>
-          ))}
-        </Form.Select>
-      </div>
-    );
-  };
-
-  const renderTransferStatusDropdown = (item) => {
-    const currentColor = getTransferColor(item.transfer_status);
-
-    return (
-      <div className="d-flex justify-content-center">
-        <Form.Select
-          size="sm"
-          value={item.transfer_status || ""}
-          onChange={(e) =>
-            handleInlineUpdate(item.id, "transfer_status", e.target.value)
-          }
-          className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select"
-          style={{
-            backgroundColor: currentColor,
-            color: "#fff",
-            cursor: "pointer",
-            fontSize: "0.85rem",
-            width: "fit-content",
-            minWidth: "130px",
-            transition: "all 0.2s ease-in-out",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          }}
-          title="اضغط لتغيير حالة التحويل"
-        >
-          <option value="">-- اختر --</option>
-          {transferStatuses.map((status) => (
-            <option
-              key={status.value}
-              value={status.value}
-              style={{ backgroundColor: status.color, color: "#fff" }}
-            >
-              {status.label}
-            </option>
-          ))}
-        </Form.Select>
-      </div>
-    );
-  };
-
-  const renderPriorityDropdown = (item) => {
-    const currentColor = getPriorityColor(item.priority_level);
-
-    return (
-      <div className="d-flex justify-content-center">
-        <Form.Select
-          size="sm"
-          value={item.priority_level || ""}
-          onChange={(e) =>
-            handleInlineUpdate(item.id, "priority_level", e.target.value)
-          }
-          className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 priority-select"
-          style={{
-            backgroundColor: currentColor,
-            color: "#fff",
-            cursor: "pointer",
-            fontSize: "0.85rem",
-            width: "fit-content",
-            minWidth: "130px",
-            transition: "all 0.2s ease-in-out",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          }}
-          title="اضغط لتغيير درجة الأهمية"
-        >
-          <option value="">-- اختر --</option>
-          {priorityLevels.map((priority) => (
-            <option
-              key={priority.value}
-              value={priority.value}
-              style={{ backgroundColor: priority.color, color: "#fff" }}
-            >
-              {priority.label}
-            </option>
-          ))}
-        </Form.Select>
-      </div>
-    );
-  };
-
-  const renderAuthenticationStatusDropdown = (item) => {
-    const currentStatus = authenticationStatuses?.find(
-      (s) => (s.key || s.label) === item.authentication_status,
-    );
-    const currentColor = currentStatus?.color || "#6c757d";
-
-    return (
-      <div className="d-flex justify-content-center">
-        <Form.Select
-          size="sm"
-          value={item.authentication_status || ""}
-          onChange={(e) =>
-            handleInlineUpdate(item.id, "authentication_status", e.target.value)
-          }
-          className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select"
-          style={{
-            backgroundColor: currentColor,
-            color: "#fff",
-            cursor: "pointer",
-            fontSize: "0.85rem",
-            width: "fit-content",
-            minWidth: "130px",
-            transition: "all 0.2s ease-in-out",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          }}
-          title="اضغط لتغيير حالة التوثيق"
-        >
-          <option value="" style={{ backgroundColor: "#fff", color: "#000" }}>
-            -- اختر --
-          </option>
-          {authenticationStatuses.map((status) => (
-            <option
-              key={status.key || status.label}
-              value={status.key || status.label}
+              key={opt.value || opt.key || opt.id}
+              value={opt.value || opt.key || opt.id}
               style={{
-                backgroundColor: status.color || "#6c757d",
+                backgroundColor: opt.color || "#6c757d",
                 color: "#fff",
               }}
             >
-              {status.label}
-            </option>
-          ))}
-        </Form.Select>
-      </div>
-    );
-  };
-
-  const renderAuthorizationStatusDropdown = (item) => {
-    const currentStatus = authorizationStatuses?.find(
-      (s) => (s.key || s.label) === item.authorization_status,
-    );
-    const currentColor = currentStatus?.color || "#6c757d";
-
-    return (
-      <div className="d-flex justify-content-center">
-        <Form.Select
-          size="sm"
-          value={item.authorization_status || ""}
-          onChange={(e) =>
-            handleInlineUpdate(item.id, "authorization_status", e.target.value)
-          }
-          className="rounded-pill border-0 shadow-sm text-center fw-bold px-3 py-1 status-select"
-          style={{
-            backgroundColor: currentColor,
-            color: "#fff",
-            cursor: "pointer",
-            fontSize: "0.85rem",
-            width: "fit-content",
-            minWidth: "130px",
-            transition: "all 0.2s ease-in-out",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          }}
-          title="اضغط لتغيير حالة التفويض"
-        >
-          <option value="" style={{ backgroundColor: "#fff", color: "#000" }}>
-            -- اختر --
-          </option>
-          {authorizationStatuses.map((status) => (
-            <option
-              key={status.key || status.label}
-              value={status.key || status.label}
-              style={{
-                backgroundColor: status.color || "#6c757d",
-                color: "#fff",
-              }}
-            >
-              {status.label}
+              {opt.label}
             </option>
           ))}
         </Form.Select>
@@ -300,39 +104,30 @@ const TrackingTable = ({
     else if (e.type === "dragleave") setDragActive(false);
   }, []);
 
+  const validateFile = (file) => {
+    const allowed = ["image/jpeg", "image/png", "image/jpg", "image/gif"];
+    if (!allowed.includes(file.type)) {
+      showError("خطأ", "صيغة غير مدعومة");
+      return false;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showError("خطأ", "الحجم أكبر من 5MB");
+      return false;
+    }
+    return true;
+  };
+
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    if (
-      !["image/jpeg", "image/png", "image/jpg", "image/gif"].includes(file.type)
-    ) {
-      showError("خطأ", "صيغة غير مدعومة");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      showError("خطأ", "الحجم أكبر من 5MB");
-      return;
-    }
-    setSelectedFile(file);
+    if (file && validateFile(file)) setSelectedFile(file);
   }, []);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    if (
-      !["image/jpeg", "image/png", "image/jpg", "image/gif"].includes(file.type)
-    ) {
-      showError("خطأ", "صيغة غير مدعومة");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      showError("خطأ", "الحجم أكبر من 5MB");
-      return;
-    }
-    setSelectedFile(file);
+    if (file && validateFile(file)) setSelectedFile(file);
   };
 
   const openUploadModal = (trackingId) => {
@@ -343,14 +138,8 @@ const TrackingTable = ({
   };
 
   const handleUploadImage = async () => {
-    if (!selectedFile) {
-      showError("تنبيه", "اختر صورة أولاً");
-      return;
-    }
-    if (!imageTitle.trim()) {
-      showError("تنبيه", "أدخل عنوان الصورة");
-      return;
-    }
+    if (!selectedFile) return showError("تنبيه", "اختر صورة أولاً");
+    if (!imageTitle.trim()) return showError("تنبيه", "أدخل عنوان الصورة");
     setUploading(true);
     const formData = new FormData();
     formData.append("title", imageTitle);
@@ -390,261 +179,283 @@ const TrackingTable = ({
     }
   };
 
-  return (
-    <div className="table-responsive">
-      <Table
-        hover
-        className="mb-0 align-middle tracking-table"
-        style={{ fontSize: "0.85rem" }}
-      >
-        <thead className="table-light">
-          <tr>
-            <th style={{ minWidth: "5px", width: "5px", padding: "0" }}></th>
-            <th style={{ minWidth: "70px" }}># الطلب</th>
-            <th style={{ minWidth: "170px" }}>صاحب التأشيرة</th>
-            <th style={{ minWidth: "90px" }}>التأشيرة</th>
-            <th style={{ minWidth: "80px" }}>الهوية</th>
-            <th style={{ minWidth: "80px" }}>رقم المندوب</th>
-            <th style={{ minWidth: "80px" }}>رقم الجواز</th>
-            <th style={{ minWidth: "90px" }}>رقم التفويض</th>
-            <th style={{ minWidth: "80px" }}>رقم التوثيق</th>
-            <th style={{ minWidth: "90px" }}>تاريخ التوثيق</th>
-            <th style={{ minWidth: "90px" }}>تاريخ التصديق</th>
-            <th style={{ minWidth: "100px" }}>آخر إجراء</th>
-            <th style={{ minWidth: "120px" }}>المكتب الخارجي</th>
-            <th style={{ minWidth: "150px" }}>حالة ترشيح الجواز</th>
-            <th style={{ minWidth: "150px" }}>حالة التحويل</th>
-            <th style={{ minWidth: "150px" }}>حالة التوثيق</th>
-            <th style={{ minWidth: "150px" }}>حالة التفويض</th>
-            <th style={{ minWidth: "150px" }}>درجة الأهمية</th>
-            <th style={{ minWidth: "130px" }}>الصور</th>
-            <th style={{ minWidth: "80px" }}>إجراءات</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tracking?.map((item) => {
-            const priorityColor = getPriorityColor(item.priority_level);
-            return (
-              <tr
-                key={item.id}
-                className="tracking-row"
+  const renderCell = (item, columnId) => {
+    const priorityColor = getColor(item.priority_level, priorityLevels);
+
+    switch (columnId) {
+      case "strip":
+        return (
+          <td
+            className="priority-strip"
+            style={{
+              padding: 0,
+              width: "5px",
+              minWidth: "5px",
+              backgroundColor: priorityColor,
+              border: "none",
+            }}
+          ></td>
+        );
+
+      case "order_number":
+        return (
+          <td className="fw-semibold">#{item.order_number || item.order_id}</td>
+        );
+
+      case "visa_holder":
+        return (
+          <td>
+            <div>{item.visa_holder_name || "-"}</div>
+            <small className="text-muted" style={{ fontSize: "0.72rem" }}>
+              {item.saudi_office_name && `سعودي: ${item.saudi_office_name}`}
+              {item.external_office_name && item.saudi_office_name && <br />}
+              {item.external_office_name &&
+                `خارجي: ${item.external_office_name}`}
+            </small>
+          </td>
+        );
+
+      case "visa_number":
+        return <td dir="ltr">{item.visa_number || "-"}</td>;
+
+      case "id_number":
+        return <td dir="ltr">{item.id_number || "-"}</td>;
+
+      case "delegate_phone":
+        return (
+          <td dir="ltr">{item.delegate_phone || item.sponsor_number || "-"}</td>
+        );
+
+      case "passport_number":
+        return <td dir="ltr">{item.passport_number || "-"}</td>;
+
+      case "authorization_number":
+        return <td dir="ltr">{item.authorization_number || "-"}</td>;
+
+      case "authentication_number":
+        return <td dir="ltr">{item.authentication_number || "-"}</td>;
+
+      case "authentication_date":
+        return <td>{formatDate(item.authentication_date)}</td>;
+
+      case "certification_date":
+        return <td>{formatDate(item.certification_date)}</td>;
+
+      case "last_action_date":
+        return <td>{formatDate(item.last_action_date)}</td>;
+
+      case "external_office":
+        return (
+          <td>
+            {item.external_office_name || "-"}
+            {item.external_office_country && (
+              <small className="text-muted d-block">
+                {item.external_office_country}
+              </small>
+            )}
+          </td>
+        );
+
+      case "passport_status":
+        return (
+          <td>
+            {renderInlineSelect(item, "passport_status", passportStatuses)}
+          </td>
+        );
+
+      case "transfer_status":
+        return (
+          <td>
+            {renderInlineSelect(item, "transfer_status", transferStatuses)}
+          </td>
+        );
+
+      case "authentication_status":
+        return (
+          <td>
+            {renderInlineSelect(
+              item,
+              "authentication_status",
+              authenticationStatuses,
+            )}
+          </td>
+        );
+
+      case "authorization_status":
+        return (
+          <td>
+            {renderInlineSelect(
+              item,
+              "authorization_status",
+              authorizationStatuses,
+            )}
+          </td>
+        );
+
+      case "priority_level":
+        return (
+          <td>
+            {renderInlineSelect(
+              item,
+              "priority_level",
+              priorityLevels,
+              "priority-select",
+            )}
+          </td>
+        );
+
+      case "attachments":
+        return (
+          <td className="align-middle">
+            <div className="d-flex flex-wrap gap-1 mb-1">
+              {item.attachments?.map((att) => (
+                <div
+                  key={att.id}
+                  style={{
+                    position: "relative",
+                    display: "inline-flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0 text-decoration-none text-primary"
+                    style={{ fontSize: "0.78rem" }}
+                    onClick={() => {
+                      setSelectedImage(att.file_path);
+                      setSelectedImageTitle(att.title);
+                      setShowImageModal(true);
+                    }}
+                    title={att.title}
+                  >
+                    📷{" "}
+                    {att.title?.length > 12
+                      ? att.title.substring(0, 12) + "…"
+                      : att.title}
+                  </Button>
+                  <button
+                    onClick={() => handleDeleteImage(att.id)}
+                    disabled={deleting}
+                    title="حذف الصورة"
+                    style={{
+                      marginRight: "4px",
+                      width: "18px",
+                      height: "18px",
+                      borderRadius: "50%",
+                      background: "#dc3545",
+                      border: "none",
+                      color: "#fff",
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      lineHeight: 1,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <Button
+              variant="outline-primary"
+              size="sm"
+              className="rounded-2"
+              style={{ fontSize: "0.75rem" }}
+              onClick={() => openUploadModal(item.id)}
+            >
+              + صورة
+            </Button>
+          </td>
+        );
+
+      case "actions":
+        return (
+          <td>
+            <div className="d-flex gap-1 justify-content-center">
+              <Button
+                variant="link"
+                className="text-primary p-0 rounded-circle"
+                onClick={() => onEdit(item)}
                 style={{
-                  "--priority-color": priorityColor,
-                  backgroundColor: `color-mix(in srgb, ${priorityColor} 8%, white)`,
+                  width: "30px",
+                  height: "30px",
+                  background: "rgba(13,110,253,0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <td
-                  className="priority-strip"
-                  style={{
-                    padding: "0",
-                    width: "5px",
-                    minWidth: "5px",
-                    backgroundColor: priorityColor,
-                  }}
-                ></td>
-                <td className="fw-semibold">
-                  #{item.order_number || item.order_id}
-                </td>
-                <td>
-                  <div>{item.visa_holder_name || "-"}</div>
-                  <small className="text-muted" style={{ fontSize: "0.72rem" }}>
-                    {item.saudi_office_name &&
-                      `سعودي: ${item.saudi_office_name}`}
-                    {item.external_office_name && item.saudi_office_name && (
-                      <br />
-                    )}
-                    {item.external_office_name &&
-                      `خارجي: ${item.external_office_name}`}
-                  </small>
-                </td>
-                <td dir="ltr">{item.visa_number || "-"}</td>
-                <td dir="ltr">{item.id_number || "-"}</td>
-                <td dir="ltr">
-                  {item.delegate_phone || item.sponsor_number || "-"}
-                </td>
-                <td dir="ltr">{item.passport_number || "-"}</td>
-                <td dir="ltr">{item.authorization_number || "-"}</td>
-                <td dir="ltr">{item.authentication_number || "-"}</td>
-                <td>{formatDate(item.authentication_date)}</td>
-                <td>{formatDate(item.certification_date)}</td>
-                <td>{formatDate(item.last_action_date)}</td>
-                <td>
-                  {item.external_office_name || "-"}
-                  {item.external_office_country && (
-                    <small className="text-muted d-block">
-                      {item.external_office_country}
-                    </small>
-                  )}
-                </td>
-                <td>{renderPassportStatusDropdown(item)}</td>
-                <td>{renderTransferStatusDropdown(item)}</td>
-                <td>{renderAuthenticationStatusDropdown(item)}</td>
-                <td>{renderAuthorizationStatusDropdown(item)}</td>
-                <td>{renderPriorityDropdown(item)}</td>
-                <td className="align-middle">
-                  <div className="d-flex flex-wrap gap-1 mb-1">
-                    {item.attachments?.map((att) => (
-                      <div
-                        key={att.id}
-                        style={{
-                          position: "relative",
-                          display: "inline-flex",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="p-0 text-decoration-none text-primary"
-                          style={{ fontSize: "0.78rem" }}
-                          onClick={() => {
-                            setSelectedImage(att.file_path);
-                            setSelectedImageTitle(att.title);
-                            setShowImageModal(true);
-                          }}
-                          title={att.title}
-                        >
-                          📷{" "}
-                          {att.title?.length > 12
-                            ? att.title.substring(0, 12) + "…"
-                            : att.title}
-                        </Button>
-                        <button
-                          onClick={() => handleDeleteImage(att.id)}
-                          disabled={deleting}
-                          title="حذف الصورة"
-                          style={{
-                            marginRight: "4px",
-                            width: "18px",
-                            height: "18px",
-                            borderRadius: "50%",
-                            background: "#dc3545",
-                            border: "none",
-                            color: "#fff",
-                            fontSize: "12px",
-                            fontWeight: "bold",
-                            lineHeight: 1,
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <Button
-                    variant="outline-primary"
-                    size="sm"
-                    className="rounded-2"
-                    style={{ fontSize: "0.75rem" }}
-                    onClick={() => openUploadModal(item.id)}
-                  >
-                    + صورة
-                  </Button>
-                </td>
-                <td>
-                  <div className="d-flex gap-1">
-                    <Button
-                      variant="link"
-                      className="text-primary p-0 rounded-circle"
-                      onClick={() => onEdit(item)}
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        background: "rgba(13,110,253,0.1)",
-                        textDecoration: "none",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                      </svg>
-                    </Button>
-                    <Button
-                      variant="link"
-                      className="text-danger p-0 rounded-circle"
-                      onClick={() => onDelete(item.id)}
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        background: "rgba(220,38,38,0.1)",
-                        textDecoration: "none",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      </svg>
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-          {(!tracking || tracking.length === 0) && (
-            <tr>
-              <td colSpan="20" className="text-center py-5 text-muted">
-                لا توجد متابعات
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </Table>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </Button>
+              <Button
+                variant="link"
+                className="text-danger p-0 rounded-circle"
+                onClick={() => onDelete(item.id)}
+                style={{
+                  width: "30px",
+                  height: "30px",
+                  background: "rgba(220,38,38,0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              </Button>
+            </div>
+          </td>
+        );
 
-      <style>{`
-        .status-select:hover, .priority-select:hover {
-          transform: translateY(-1px);
-          filter: brightness(1.1);
-          box-shadow: 0 4px 6px rgba(0,0,0,0.15) !important;
-        }
-        .status-select:focus, .priority-select:focus {
-          box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
-          outline: 0;
-        }
+      default:
+        return <td>-</td>;
+    }
+  };
 
-        .tracking-table tbody tr {
-          transition: all 0.2s ease;
-        }
+  const getRowProps = (item) => {
+    const color = getColor(item.priority_level, priorityLevels);
+    return {
+      style: {
+        "--priority-color": color,
+      },
+    };
+  };
 
-        .tracking-table tbody tr:hover {
-          background-color: var(--priority-color, #6c757d) !important;
-          background-color: color-mix(in srgb, var(--priority-color, #6c757d) 20%, white) !important;
-          filter: brightness(0.98);
-        }
-
-        .tracking-table tbody tr .priority-strip {
-          transition: none !important;
-        }
-
-        .tracking-table tbody tr:hover .priority-strip {
-          background-color: var(--priority-color, #6c757d) !important;
-          filter: brightness(0.85);
-        }
-      `}</style>
+  return (
+    <>
+      <SortableTable
+        data={tracking || []}
+        columns={trackingColumns}
+        storageKey="tracking_columns_order"
+        renderCell={renderCell}
+        getRowProps={getRowProps}
+        emptyMessage="لا توجد متابعات"
+        tableClassName="text-center tracking-table"
+      />
 
       <Modal
         show={showImageModal}
@@ -684,7 +495,9 @@ const TrackingTable = ({
               رفع الصورة <span className="text-danger">*</span>
             </Form.Label>
             <div
-              className={`border rounded-3 p-4 text-center ${dragActive ? "border-primary bg-primary bg-opacity-10" : ""}`}
+              className={`border rounded-3 p-4 text-center ${
+                dragActive ? "border-primary bg-primary bg-opacity-10" : ""
+              }`}
               style={{ cursor: "pointer", borderStyle: "dashed" }}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -726,7 +539,7 @@ const TrackingTable = ({
           </Button>
         </Modal.Footer>
       </Modal>
-    </div>
+    </>
   );
 };
 

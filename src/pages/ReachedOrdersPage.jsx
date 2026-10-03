@@ -25,7 +25,7 @@ import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
 import { showWhatsAppNotificationModal } from "../utils/whatsappHelper";
 
-const CompletedOrdersPage = () => {
+const ReachedOrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [orderStatuses, setOrderStatuses] = useState([]);
   const [orderProcessStatuses, setOrderProcessStatuses] = useState([]);
@@ -43,7 +43,6 @@ const CompletedOrdersPage = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [filters, setFilters] = useState({
-    service_type: "",
     sort_by: "id",
     sort_dir: "desc",
   });
@@ -102,7 +101,7 @@ const CompletedOrdersPage = () => {
 
       setServiceTypes(serviceTypesRes.data?.data || []);
     } catch (error) {
-      console.error("Error fetching completed orders settings:", error);
+      console.error("Error fetching reached orders settings:", error);
       showError(
         "خطأ",
         error.response?.data?.message || "حدث خطأ أثناء تحميل إعدادات الطلبات",
@@ -118,7 +117,7 @@ const CompletedOrdersPage = () => {
         page: currentPage,
         search: searchQuery,
         ...filters,
-        tracking_status: "certified",
+        tracking_status: "reviewed",
         per_page: 15,
       };
       if (fromDate) params.from_date = fromDate;
@@ -130,7 +129,7 @@ const CompletedOrdersPage = () => {
       setTotalPages(response.data.meta?.last_page || 1);
       setTotalOrders(response.data.meta?.total || 0);
     } catch (error) {
-      console.error("Error fetching completed orders:", error);
+      console.error("Error fetching reached orders:", error);
       showError(
         "خطأ",
         error.response?.data?.message || "حدث خطأ أثناء تحميل الطلبات",
@@ -280,7 +279,7 @@ const CompletedOrdersPage = () => {
         format: (o) => new Date(o.created_at).toLocaleDateString("ar-SA"),
       },
     ];
-    exportToExcel(orders, columns, "الطلبات_المكتملة.xlsx");
+    exportToExcel(orders, columns, "تم_الوصول.xlsx");
   };
 
   const handleExportPDF = () => {
@@ -315,7 +314,7 @@ const CompletedOrdersPage = () => {
         format: (o) => new Date(o.created_at).toLocaleDateString("ar-SA"),
       },
     ];
-    exportToPDF(orders, columns, "الطلبات_المكتملة.pdf");
+    exportToPDF(orders, columns, "تم_الوصول.pdf");
   };
 
   if (initialLoading) {
@@ -333,9 +332,9 @@ const CompletedOrdersPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
-            <h1 className="h3 mb-1 fw-bold">✅ الطلبات المكتملة</h1>
+            <h1 className="h3 mb-1 fw-bold">📥 تم الوصول</h1>
             <p className="text-muted small mb-0">
-              إجمالي الطلبات المكتملة: {totalOrders}
+              إجمالي الطلبات التي تم الوصول إليها: {totalOrders}
             </p>
           </div>
           <div className="d-flex gap-2">
@@ -384,7 +383,6 @@ const CompletedOrdersPage = () => {
           loading={loading}
           filters={filters}
           onFilterChange={handleFilterChange}
-          serviceTypeOptions={serviceTypes}
           statusOptions={orderStatuses}
           orderStatusOptions={orderProcessStatuses}
           isCompletedPage={true}
@@ -414,7 +412,7 @@ const CompletedOrdersPage = () => {
                     <polyline points="10 9 9 9 8 9"></polyline>
                   </svg>
                 </div>
-                <h5>لا توجد طلبات مكتملة</h5>
+                <h5>لا توجد طلبات تم الوصول إليها</h5>
                 <p className="small">جرب تغيير معايير البحث أو تصفية الطلبات</p>
               </div>
             ) : (
@@ -477,4 +475,4 @@ const CompletedOrdersPage = () => {
   );
 };
 
-export default CompletedOrdersPage;
+export default ReachedOrdersPage;

@@ -6,6 +6,7 @@ import SaudiOfficesPage from "../pages/SaudiOfficesPage";
 import ExternalOfficesPage from "../pages/ExternalOfficesPage";
 import OrdersPage from "../pages/OrdersPage";
 import CompletedOrdersPage from "../pages/CompletedOrdersPage";
+import ReachedOrdersPage from "../pages/ReachedOrdersPage";
 import EmployeesPage from "../pages/EmployeesPage";
 import DashboardPage from "../pages/DashboardPage";
 import TrackingPage from "../pages/TrackingPage";
@@ -89,6 +90,12 @@ const DashboardLayout = ({ user, onLogout }) => {
         ) : (
           renderAccessDenied()
         );
+      case "reached-orders":
+        return hasPermission("view_orders") ? (
+          <ReachedOrdersPage />
+        ) : (
+          renderAccessDenied()
+        );
       case "tracking":
         return hasPermission("view_orders") ? (
           <TrackingPage />
@@ -122,7 +129,8 @@ const DashboardLayout = ({ user, onLogout }) => {
           renderAccessDenied()
         );
       case "report-financial-collections":
-        return hasPermission("view_reports") ? (
+        return hasPermission("view_reports") &&
+          (isAdmin || !user?.permissions?.includes("hide_transactions")) ? (
           <FinancialCollectionsReport />
         ) : (
           renderAccessDenied()

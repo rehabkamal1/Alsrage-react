@@ -140,6 +140,26 @@ const Sidebar = ({
             ),
         },
         {
+            id: "reached-orders",
+            label: "تم الوصول",
+            icon: (
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                >
+                    <path d="M20 6L9 17l-5-5" />
+                    <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+        },
+        {
             id: "reports",
             type: "dropdown",
             label: "التقارير",
@@ -333,7 +353,8 @@ const Sidebar = ({
         if (
             item.id === "orders" ||
             item.id === "tracking" ||
-            item.id === "completed-orders"
+            item.id === "completed-orders" ||
+            item.id === "reached-orders"
         ) {
             return hasPermission("view_orders");
         }
@@ -353,7 +374,7 @@ const Sidebar = ({
                 <div className="d-flex flex-column align-items-center w-100 text-center">
                     <img
                         src="/logo3.png?v=2"
-                        alt="لوجو الفنار للاستقدام"
+                        alt="لوجو السراج للاستقدام"
                         className="sidebar-logo mb-2"
                         style={{
                             maxHeight: "80px",
@@ -365,7 +386,7 @@ const Sidebar = ({
                             e.target.style.display = "none";
                         }}
                     />
-                    <h2 className="fs-5 fw-bold mb-0">الفنار للاستقدام</h2>
+                    <h2 className="fs-5 fw-bold mb-0">السراج للاستقدام</h2>
                 </div>
                 <Button
                     variant="link"
@@ -378,9 +399,15 @@ const Sidebar = ({
             <nav className="sidebar-nav">
                 {filteredMenuItems.map((item) => {
                     if (item.type === "dropdown") {
+                        const visibleSubItems = item.subItems.filter(
+                            (sub) =>
+                                sub.id !== "report-financial-collections" ||
+                                isAdmin ||
+                                !user?.permissions?.includes("hide_transactions"),
+                        );
                         const isActive =
                             isReportsOpen ||
-                            item.subItems.some((sub) => activeTab === sub.id);
+                            visibleSubItems.some((sub) => activeTab === sub.id);
                         return (
                             <div key={item.id} className="mb-2">
                                 <button
@@ -427,7 +454,7 @@ const Sidebar = ({
                                             padding: "4px 0",
                                         }}
                                     >
-                                        {item.subItems.map((sub) => (
+                                        {visibleSubItems.map((sub) => (
                                             <button
                                                 key={sub.id}
                                                 className={`nav-item ${activeTab === sub.id ? "active" : ""}`}
