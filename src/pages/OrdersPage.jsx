@@ -44,6 +44,7 @@ const OrdersPage = () => {
   const debouncedSearch = useDebounce(searchQuery, 500);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -113,6 +114,7 @@ const OrdersPage = () => {
       ]);
       setOrders(ordersRes.data?.data || []);
       setTotalPages(ordersRes.data?.meta?.last_page || 1);
+      setTotalOrders(ordersRes.data?.meta?.total || (ordersRes.data?.data || []).length);
       setClients(clientsRes.data?.data || []);
       const saudiList = Array.isArray(saudiRes.data?.data)
         ? saudiRes.data.data
@@ -396,7 +398,12 @@ const OrdersPage = () => {
     >
       <Container fluid>
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-          <h1 className="h3 mb-0 fw-bold">الطلبات</h1>
+          <div className="d-flex align-items-center gap-3">
+            <h1 className="h3 mb-0 fw-bold">الطلبات</h1>
+            <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2 rounded-pill fs-7 fw-bold">
+              عدد الطلبات: {totalOrders}
+            </span>
+          </div>
           <div className="d-flex flex-wrap gap-2">
             <RefreshButton
               onClick={fetchAllData}

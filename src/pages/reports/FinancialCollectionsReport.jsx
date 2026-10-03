@@ -16,6 +16,8 @@ import {
 import {
   getFinancialCollectionsReport,
   getSaudiOffices,
+  getEmployees,
+  getClients,
 } from "../../services/apiService";
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
@@ -37,14 +39,17 @@ const FinancialCollectionsReport = () => {
     total_marketers: 0,
   });
 
+
   // Raw data from API
   const [orders, setOrders] = useState([]);
   const [clientsSummary, setClientsSummary] = useState([]);
   const [marketersSummary, setMarketersSummary] = useState([]);
   const [saudiOffices, setSaudiOffices] = useState([]);
+  const [clientsList, setClientsList] = useState([]);
+  const [employeesList, setEmployeesList] = useState([]);
 
   // Report Target & View Mode
-  // target: 'client' (تقارير العملاء) | 'marketer' (تقارير المسوقين)
+  // target: 'client' (تقارير العملاء / المناديب) | 'marketer' (تقارير المسوقين / الموظفين)
   const [reportTarget, setReportTarget] = useState("client");
   // mode: 'detailed' (تفصيلي) | 'summary' (إجمالي)
   const [reportMode, setReportMode] = useState("detailed");
@@ -53,6 +58,9 @@ const FinancialCollectionsReport = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedSaudiOffice, setSelectedSaudiOffice] = useState("");
+  const [selectedClient, setSelectedClient] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState("");
+  const [contractStatusFilter, setContractStatusFilter] = useState("musaned_paid");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -63,6 +71,10 @@ const FinancialCollectionsReport = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
+  // Statement Mode Detection (when filtering by client/delegate or marketer/employee)
+  const isStatementMode = Boolean(selectedClient || selectedEmployee);
+  const hideOrderStatus = isStatementMode;
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -70,32 +82,67 @@ const FinancialCollectionsReport = () => {
   // Reset pagination on tab/filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [reportTarget, reportMode, paymentStatusFilter, searchQuery, selectedSaudiOffice]);
+  }, [
+    reportTarget,
+    reportMode,
+    paymentStatusFilter,
+    searchQuery,
+    selectedSaudiOffice,
+    selectedClient,
+    selectedEmployee,
+    contractStatusFilter,
+  ]);
 
   useEffect(() => {
-    fetchSaudiOfficesList();
+    fetchInitialOptions();
     fetchData();
   }, []);
 
-  const fetchSaudiOfficesList = async () => {
+  const fetchInitialOptions = async () => {
     try {
-      const res = await getSaudiOffices();
-      const data = res.data?.data || res.data || [];
-      if (Array.isArray(data)) {
-        setSaudiOffices(data);
+      const [saudiRes, empRes, clientRes] = await Promise.allSettled([
+        getSaudiOffices({ all: 1, per_page: 500 }),
+        getEmployees({ all: 1, per_page: 500 }),
+        getClients({ all: 1, per_page: 500 }),
+      ]);
+
+      if (saudiRes.status === "fulfilled") {
+        const data = saudiRes.value.data?.data || saudiRes.value.data || [];
+        if (Array.isArray(data)) setSaudiOffices(data);
+      }
+      if (empRes.status === "fulfilled") {
+        const data = empRes.value.data?.data || empRes.value.data || [];
+        if (Array.isArray(data) && data.length > 0) setEmployeesList(data);
+      }
+      if (clientRes.status === "fulfilled") {
+        const data = clientRes.value.data?.data || clientRes.value.data || [];
+        if (Array.isArray(data) && data.length > 0) setClientsList(data);
       }
     } catch (err) {
-      console.warn("Error fetching Saudi offices:", err);
+      console.warn("Error fetching initial options:", err);
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = async (overrideParams = null) => {
     setLoading(true);
     try {
       const params = {};
-      if (dateFrom) params.date_from = dateFrom;
-      if (dateTo) params.date_to = dateTo;
-      if (selectedSaudiOffice) params.saudi_office_id = selectedSaudiOffice;
+      const dFrom = overrideParams && "date_from" in overrideParams ? overrideParams.date_from : dateFrom;
+      const dTo = overrideParams && "date_to" in overrideParams ? overrideParams.date_to : dateTo;
+      const offId = overrideParams && "saudi_office_id" in overrideParams ? overrideParams.saudi_office_id : selectedSaudiOffice;
+      const cId = overrideParams && "client_id" in overrideParams ? overrideParams.client_id : selectedClient;
+      const eId = overrideParams && "employee_id" in overrideParams ? overrideParams.employee_id : selectedEmployee;
+      const cStatus = overrideParams && "contract_status" in overrideParams ? overrideParams.contract_status : contractStatusFilter;
+
+      if (dFrom) params.date_from = dFrom;
+      if (dTo) params.date_to = dTo;
+      if (offId) params.saudi_office_id = offId;
+      if (cId) params.client_id = cId;
+      if (eId) {
+        params.employee_id = eId;
+        params.marketer_id = eId;
+      }
+      if (cStatus) params.contract_status = cStatus;
 
       const res = await getFinancialCollectionsReport(params);
       if (res.data) {
@@ -103,6 +150,34 @@ const FinancialCollectionsReport = () => {
         setOrders(res.data.orders || []);
         setClientsSummary(res.data.clients_summary || []);
         setMarketersSummary(res.data.marketers_summary || []);
+
+        // Robust merge of employees
+        const incomingEmps = res.data.employees || [];
+        const summaryEmps = (res.data.marketers_summary || [])
+          .map((m) => ({ id: m.employee_id, name: m.employee_name }))
+          .filter((m) => m.id);
+
+        setEmployeesList((prev) => {
+          const map = new Map();
+          prev.forEach((e) => e && e.id && map.set(String(e.id), e));
+          incomingEmps.forEach((e) => e && e.id && map.set(String(e.id), e));
+          summaryEmps.forEach((e) => e && e.id && !map.has(String(e.id)) && map.set(String(e.id), e));
+          return Array.from(map.values());
+        });
+
+        // Robust merge of clients
+        const incomingClients = res.data.clients || [];
+        const summaryClients = (res.data.clients_summary || [])
+          .map((c) => ({ id: c.client_id, name: c.client_name, phone: c.client_phone }))
+          .filter((c) => c.id);
+
+        setClientsList((prev) => {
+          const map = new Map();
+          prev.forEach((c) => c && c.id && map.set(String(c.id), c));
+          incomingClients.forEach((c) => c && c.id && map.set(String(c.id), c));
+          summaryClients.forEach((c) => c && c.id && !map.has(String(c.id)) && map.set(String(c.id), c));
+          return Array.from(map.values());
+        });
       }
     } catch (err) {
       console.error("Error fetching financial collections report:", err);
@@ -120,11 +195,33 @@ const FinancialCollectionsReport = () => {
     setDateFrom("");
     setDateTo("");
     setSelectedSaudiOffice("");
+    setSelectedClient("");
+    setSelectedEmployee("");
+    setContractStatusFilter("musaned_paid");
     setPaymentStatusFilter("all");
     setSearchQuery("");
-    setTimeout(() => {
-      fetchData();
-    }, 50);
+    fetchData({
+      date_from: "",
+      date_to: "",
+      saudi_office_id: "",
+      client_id: "",
+      employee_id: "",
+      contract_status: "musaned_paid",
+    });
+  };
+
+  const handleClientChange = (val) => {
+    setSelectedClient(val);
+    if (val) {
+      setReportTarget("client");
+    }
+  };
+
+  const handleEmployeeChange = (val) => {
+    setSelectedEmployee(val);
+    if (val) {
+      setReportTarget("marketer");
+    }
   };
 
   const handleViewOrderDetails = (order) => {
@@ -188,6 +285,12 @@ const FinancialCollectionsReport = () => {
       if (selectedSaudiOffice && String(ord.saudi_office_id) !== String(selectedSaudiOffice)) {
         return false;
       }
+      if (selectedClient && String(ord.client_id) !== String(selectedClient)) {
+        return false;
+      }
+      if (selectedEmployee && String(ord.employee_id) !== String(selectedEmployee)) {
+        return false;
+      }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const matchesClient = (ord.client_name || "").toLowerCase().includes(q);
@@ -202,12 +305,15 @@ const FinancialCollectionsReport = () => {
       }
       return true;
     });
-  }, [orders, paymentStatusFilter, selectedSaudiOffice, searchQuery]);
+  }, [orders, paymentStatusFilter, selectedSaudiOffice, selectedClient, selectedEmployee, searchQuery]);
 
   // 2. Client Summary List
   const filteredClients = useMemo(() => {
     return clientsSummary.filter((client) => {
       if (paymentStatusFilter !== "all" && client.payment_status !== paymentStatusFilter) {
+        return false;
+      }
+      if (selectedClient && String(client.client_id) !== String(selectedClient)) {
         return false;
       }
       if (searchQuery.trim()) {
@@ -220,12 +326,15 @@ const FinancialCollectionsReport = () => {
       }
       return true;
     });
-  }, [clientsSummary, paymentStatusFilter, searchQuery]);
+  }, [clientsSummary, paymentStatusFilter, selectedClient, searchQuery]);
 
   // 3. Marketers (Summary & Detailed)
   const filteredMarketers = useMemo(() => {
     return marketersSummary.filter((m) => {
       if (paymentStatusFilter !== "all" && m.payment_status !== paymentStatusFilter) {
+        return false;
+      }
+      if (selectedEmployee && String(m.employee_id) !== String(selectedEmployee)) {
         return false;
       }
       if (searchQuery.trim()) {
@@ -244,7 +353,7 @@ const FinancialCollectionsReport = () => {
       }
       return true;
     });
-  }, [marketersSummary, paymentStatusFilter, searchQuery]);
+  }, [marketersSummary, paymentStatusFilter, selectedEmployee, searchQuery]);
 
   // Active dataset for pagination
   const currentDataset = useMemo(() => {
@@ -272,14 +381,19 @@ const FinancialCollectionsReport = () => {
         { header: "المكتب السعودي", key: "saudi_office_name" },
         { header: "الجنسية", key: "nationality" },
         { header: "رقم التأشيرة", key: "visa_number" },
-        { header: "حالة الطلب", key: "order_status" },
+        ...(!hideOrderStatus ? [{ header: "حالة الطلب", key: "order_status" }] : []),
         { header: "إجمالي العقد (ر.س)", key: "total_price" },
         { header: "المبلغ المحصل (ر.س)", key: "paid_amount" },
         { header: "المبلغ المتبقي (ر.س)", key: "remaining_amount" },
         { header: "حالة التحصيل", key: "payment_status" },
+        { header: "وقت إضافة الحوالة الجديدة", key: "latest_transaction_time" },
         { header: "التاريخ", key: "created_at" },
       ];
-      exportToExcel(filteredOrders, columns, "التقرير_المالي_التفصيلي_للعملاء.xlsx");
+      exportToExcel(
+        filteredOrders,
+        columns,
+        isStatementMode ? "كشف_حساب_تفصيلي_للعميل.xlsx" : "التقرير_المالي_التفصيلي_للعملاء.xlsx"
+      );
     } else if (reportTarget === "client" && reportMode === "summary") {
       const columns = [
         { header: "اسم العميل", key: "client_name" },
@@ -291,7 +405,11 @@ const FinancialCollectionsReport = () => {
         { header: "نسبة التحصيل %", key: "collection_rate" },
         { header: "حالة التحصيل", key: "payment_status" },
       ];
-      exportToExcel(filteredClients, columns, "التقرير_المالي_الإجمالي_للعملاء.xlsx");
+      exportToExcel(
+        filteredClients,
+        columns,
+        isStatementMode ? "كشف_حساب_إجمالي_للعميل.xlsx" : "التقرير_المالي_الإجمالي_للعملاء.xlsx"
+      );
     } else if (reportTarget === "marketer" && reportMode === "summary") {
       const columns = [
         { header: "اسم المسوق / الموظف", key: "employee_name" },
@@ -304,7 +422,11 @@ const FinancialCollectionsReport = () => {
         { header: "نسبة التحصيل %", key: "collection_rate" },
         { header: "حالة التحصيل", key: "payment_status" },
       ];
-      exportToExcel(filteredMarketers, columns, "التقرير_المالي_الإجمالي_للمسوقين.xlsx");
+      exportToExcel(
+        filteredMarketers,
+        columns,
+        isStatementMode ? "كشف_حساب_إجمالي_للمسوق.xlsx" : "التقرير_المالي_الإجمالي_للمسوقين.xlsx"
+      );
     } else {
       // Marketer Detailed: flatten orders under each marketer
       const flatList = [];
@@ -322,6 +444,7 @@ const FinancialCollectionsReport = () => {
             paid_amount: o.paid_amount,
             remaining_amount: o.remaining_amount,
             payment_status: o.payment_status,
+            latest_transaction_time: o.latest_transaction_time || "-",
             created_at: o.created_at,
           });
         });
@@ -333,14 +456,19 @@ const FinancialCollectionsReport = () => {
         { header: "المكتب السعودي", key: "saudi_office_name" },
         { header: "الجنسية", key: "nationality" },
         { header: "رقم التأشيرة", key: "visa_number" },
-        { header: "حالة الطلب", key: "order_status" },
+        ...(!hideOrderStatus ? [{ header: "حالة الطلب", key: "order_status" }] : []),
         { header: "إجمالي العقد (ر.س)", key: "total_price" },
         { header: "المحصل (ر.س)", key: "paid_amount" },
         { header: "المتبقي (ر.س)", key: "remaining_amount" },
         { header: "حالة التحصيل", key: "payment_status" },
+        { header: "وقت إضافة الحوالة الجديدة", key: "latest_transaction_time" },
         { header: "التاريخ", key: "created_at" },
       ];
-      exportToExcel(flatList, columns, "التقرير_المالي_التفصيلي_للمسوقين.xlsx");
+      exportToExcel(
+        flatList,
+        columns,
+        isStatementMode ? "كشف_حساب_تفصيلي_للمسوق.xlsx" : "التقرير_المالي_التفصيلي_للمسوقين.xlsx"
+      );
     }
   };
 
@@ -352,13 +480,18 @@ const FinancialCollectionsReport = () => {
         { header: "المكتب السعودي", key: "saudi_office_name" },
         { header: "الجنسية", key: "nationality" },
         { header: "رقم التأشيرة", key: "visa_number" },
-        { header: "حالة الطلب", key: "order_status" },
+        ...(!hideOrderStatus ? [{ header: "حالة الطلب", key: "order_status" }] : []),
         { header: "إجمالي العقد", key: "total_price" },
         { header: "المحصل", key: "paid_amount" },
         { header: "المتبقي", key: "remaining_amount" },
         { header: "حالة التحصيل", key: "payment_status" },
+        { header: "وقت إضافة الحوالة", key: "latest_transaction_time" },
       ];
-      exportToPDF(filteredOrders, columns, "التقرير_المالي_التفصيلي_للعملاء.pdf");
+      exportToPDF(
+        filteredOrders,
+        columns,
+        isStatementMode ? "كشف_حساب_تفصيلي_للعميل.pdf" : "التقرير_المالي_التفصيلي_للعملاء.pdf"
+      );
     } else if (reportTarget === "client" && reportMode === "summary") {
       const columns = [
         { header: "اسم العميل", key: "client_name" },
@@ -368,7 +501,11 @@ const FinancialCollectionsReport = () => {
         { header: "المتبقي", key: "total_outstanding" },
         { header: "حالة التحصيل", key: "payment_status" },
       ];
-      exportToPDF(filteredClients, columns, "التقرير_المالي_الإجمالي_للعملاء.pdf");
+      exportToPDF(
+        filteredClients,
+        columns,
+        isStatementMode ? "كشف_حساب_إجمالي_للعميل.pdf" : "التقرير_المالي_الإجمالي_للعملاء.pdf"
+      );
     } else if (reportTarget === "marketer" && reportMode === "summary") {
       const columns = [
         { header: "المسوق", key: "employee_name" },
@@ -379,7 +516,11 @@ const FinancialCollectionsReport = () => {
         { header: "المتبقي", key: "total_outstanding" },
         { header: "حالة التحصيل", key: "payment_status" },
       ];
-      exportToPDF(filteredMarketers, columns, "التقرير_المالي_الإجمالي_للمسوقين.pdf");
+      exportToPDF(
+        filteredMarketers,
+        columns,
+        isStatementMode ? "كشف_حساب_إجمالي_للمسوق.pdf" : "التقرير_المالي_الإجمالي_للمسوقين.pdf"
+      );
     } else {
       const flatList = [];
       filteredMarketers.forEach((m) => {
@@ -396,6 +537,7 @@ const FinancialCollectionsReport = () => {
             paid_amount: o.paid_amount,
             remaining_amount: o.remaining_amount,
             payment_status: o.payment_status,
+            latest_transaction_time: o.latest_transaction_time || "-",
           });
         });
       });
@@ -406,12 +548,17 @@ const FinancialCollectionsReport = () => {
         { header: "المكتب السعودي", key: "saudi_office_name" },
         { header: "الجنسية", key: "nationality" },
         { header: "التأشيرة", key: "visa_number" },
-        { header: "الحالة", key: "order_status" },
+        ...(!hideOrderStatus ? [{ header: "الحالة", key: "order_status" }] : []),
         { header: "إجمالي العقد", key: "total_price" },
         { header: "المحصل", key: "paid_amount" },
         { header: "المتبقي", key: "remaining_amount" },
+        { header: "وقت إضافة الحوالة", key: "latest_transaction_time" },
       ];
-      exportToPDF(flatList, columns, "التقرير_المالي_التفصيلي_للمسوقين.pdf");
+      exportToPDF(
+        flatList,
+        columns,
+        isStatementMode ? "كشف_حساب_تفصيلي_للمسوق.pdf" : "التقرير_المالي_التفصيلي_للمسوقين.pdf"
+      );
     }
   };
 
@@ -584,6 +731,25 @@ const FinancialCollectionsReport = () => {
 
                 <Col xs={12} md={3}>
                   <Form.Label className="small fw-semibold text-secondary">
+                    <i className="fa-solid fa-file-contract me-1"></i> حالة العقود والسداد 📋
+                  </Form.Label>
+                  <Form.Select
+                    value={contractStatusFilter}
+                    onChange={(e) => setContractStatusFilter(e.target.value)}
+                    className="rounded-3 shadow-none border fw-semibold text-primary"
+                  >
+                    <option value="musaned_paid">تم السداد مساند (الافتراضي) ⭐</option>
+                    <option value="all">جميع العقود (المنفذة، الملغية، والسارية)</option>
+                    <option value="active">العقود السارية فقط</option>
+                    <option value="completed">العقود المكتملة</option>
+                    <option value="cancelled">العقود الملغية</option>
+                    <option value="awaiting_transfer">تم انتظار حوالة مساند</option>
+                    <option value="not_paid">لم يتم السداد</option>
+                  </Form.Select>
+                </Col>
+
+                <Col xs={12} md={3}>
+                  <Form.Label className="small fw-semibold text-secondary">
                     <i className="fa-solid fa-building me-1"></i> المكتب السعودي 🇸🇦
                   </Form.Label>
                   <Form.Select
@@ -600,7 +766,43 @@ const FinancialCollectionsReport = () => {
                   </Form.Select>
                 </Col>
 
-                <Col xs={12} md={3}>
+                <Col xs={12} md={4}>
+                  <Form.Label className="small fw-semibold text-secondary">
+                    <i className="fa-solid fa-user-tag me-1"></i> المندوب / العميل 👤
+                  </Form.Label>
+                  <Form.Select
+                    value={selectedClient}
+                    onChange={(e) => handleClientChange(e.target.value)}
+                    className="rounded-3 shadow-none border"
+                  >
+                    <option value="">جميع المناديب / العملاء</option>
+                    {clientsList.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name} {client.phone ? `(${client.phone})` : ""}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Col>
+
+                <Col xs={12} md={4}>
+                  <Form.Label className="small fw-semibold text-secondary">
+                    <i className="fa-solid fa-user-tie me-1"></i> المسوق / الموظف 👥
+                  </Form.Label>
+                  <Form.Select
+                    value={selectedEmployee}
+                    onChange={(e) => handleEmployeeChange(e.target.value)}
+                    className="rounded-3 shadow-none border"
+                  >
+                    <option value="">جميع المسوقين / الموظفين</option>
+                    {employeesList.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name || emp.username || `موظف #${emp.id}`}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Col>
+
+                <Col xs={12} md={4}>
                   <Form.Label className="small fw-semibold text-secondary">
                     <i className="fa-solid fa-filter me-1"></i> حالة التحصيل
                   </Form.Label>
@@ -654,6 +856,58 @@ const FinancialCollectionsReport = () => {
             </Form>
           </Card.Body>
         </Card>
+
+        {/* Statement Mode Card (Visible when filtering by Client/Delegate or Marketer/Employee) */}
+        {isStatementMode && (
+          <Card className="border-0 shadow-sm rounded-4 mb-4 bg-primary bg-opacity-10 border-start border-primary border-4">
+            <Card.Body className="p-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+              <div className="d-flex align-items-center gap-3">
+                <div
+                  className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                  style={{ width: "44px", height: "44px" }}
+                >
+                  <i className="fa-solid fa-file-invoice-dollar fs-5"></i>
+                </div>
+                <div>
+                  <h6 className="mb-1 fw-bold text-dark d-flex align-items-center gap-2">
+                    <span>كشف حساب:</span>
+                    <span className="badge bg-primary fs-7">
+                      {selectedClient
+                        ? `المندوب / العميل: ${clientsList.find((c) => String(c.id) === String(selectedClient))?.name || selectedClient}`
+                        : `المسوق / الموظف: ${employeesList.find((e) => String(e.id) === String(selectedEmployee))?.name || selectedEmployee}`}
+                    </span>
+                  </h6>
+                  <p className="mb-0 text-muted small">
+                    اختر نوع كشف الحساب المطلوب (تم إخفاء عمود حالة الطلب تلقائياً لطباعة كشف الحساب)
+                  </p>
+                </div>
+              </div>
+
+              <ButtonGroup className="p-1 bg-white rounded-pill border shadow-sm">
+                <Button
+                  variant={reportMode === "summary" ? "primary" : "transparent"}
+                  className={`rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center gap-2 ${
+                    reportMode === "summary" ? "shadow-sm text-white" : "text-dark"
+                  }`}
+                  onClick={() => setReportMode("summary")}
+                >
+                  <i className="fa-solid fa-chart-pie"></i>
+                  <span>كشف حساب إجمالي</span>
+                </Button>
+                <Button
+                  variant={reportMode === "detailed" ? "primary" : "transparent"}
+                  className={`rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center gap-2 ${
+                    reportMode === "detailed" ? "shadow-sm text-white" : "text-dark"
+                  }`}
+                  onClick={() => setReportMode("detailed")}
+                >
+                  <i className="fa-solid fa-list-check"></i>
+                  <span>كشف حساب تفصيلي</span>
+                </Button>
+              </ButtonGroup>
+            </Card.Body>
+          </Card>
+        )}
 
         {/* View Selection & Tabs Bar */}
         <Card className="border-0 shadow-sm rounded-4 mb-4 bg-white">
@@ -802,11 +1056,12 @@ const FinancialCollectionsReport = () => {
                           <th className="py-3">المكتب السعودي 🇸🇦</th>
                           <th className="py-3">الجنسية 🌍</th>
                           <th className="py-3">رقم التأشيرة 🎫</th>
-                          <th className="py-3">حالة الطلب 📌</th>
+                          {!hideOrderStatus && <th className="py-3">حالة الطلب 📌</th>}
                           <th className="py-3">إجمالي العقد</th>
                           <th className="py-3">المحصل</th>
                           <th className="py-3">المتبقي</th>
                           <th className="py-3">حالة التحصيل</th>
+                          <th className="py-3">وقت إضافة الحوالة الجديدة ⏱️</th>
                           <th className="py-3">التاريخ</th>
                           <th className="py-3 text-center">التفاصيل</th>
                         </tr>
@@ -838,7 +1093,7 @@ const FinancialCollectionsReport = () => {
                                 {order.visa_number || "-"}
                               </Badge>
                             </td>
-                            <td>{renderOrderStatusBadge(order)}</td>
+                            {!hideOrderStatus && <td>{renderOrderStatusBadge(order)}</td>}
                             <td className="fw-bold text-dark">
                               {(order.total_price || 0).toLocaleString()} ر.س
                             </td>
@@ -849,6 +1104,11 @@ const FinancialCollectionsReport = () => {
                               {(order.remaining_amount || 0).toLocaleString()} ر.س
                             </td>
                             <td>{renderPaymentBadge(order.payment_status)}</td>
+                            <td>
+                              <span className="badge bg-light text-dark border px-2.5 py-1.5 rounded-3 font-monospace small">
+                                {order.latest_transaction_time || "-"}
+                              </span>
+                            </td>
                             <td className="text-muted small">{order.created_at}</td>
                             <td className="text-center">
                               <Button
@@ -1198,11 +1458,12 @@ const FinancialCollectionsReport = () => {
                                           <th className="py-2.5">المكتب السعودي 🇸🇦</th>
                                           <th className="py-2.5">الجنسية 🌍</th>
                                           <th className="py-2.5">رقم التأشيرة 🎫</th>
-                                          <th className="py-2.5">حالة الطلب 📌</th>
+                                          {!hideOrderStatus && <th className="py-2.5">حالة الطلب 📌</th>}
                                           <th className="py-2.5">إجمالي العقد</th>
                                           <th className="py-2.5">المحصل</th>
                                           <th className="py-2.5">المتبقي</th>
                                           <th className="py-2.5">حالة التحصيل</th>
+                                          <th className="py-2.5">وقت إضافة الحوالة الجديدة ⏱️</th>
                                           <th className="py-2.5">التاريخ</th>
                                           <th className="py-2.5 text-center">التفاصيل</th>
                                         </tr>
@@ -1237,7 +1498,7 @@ const FinancialCollectionsReport = () => {
                                                 {ord.visa_number || "-"}
                                               </Badge>
                                             </td>
-                                            <td>{renderOrderStatusBadge(ord)}</td>
+                                            {!hideOrderStatus && <td>{renderOrderStatusBadge(ord)}</td>}
                                             <td className="fw-bold text-dark">
                                               {(ord.total_price || 0).toLocaleString()} ر.س
                                             </td>
@@ -1248,6 +1509,11 @@ const FinancialCollectionsReport = () => {
                                               {(ord.remaining_amount || 0).toLocaleString()} ر.س
                                             </td>
                                             <td>{renderPaymentBadge(ord.payment_status)}</td>
+                                            <td>
+                                              <span className="badge bg-light text-dark border px-2 py-1 rounded font-monospace small">
+                                                {ord.latest_transaction_time || "-"}
+                                              </span>
+                                            </td>
                                             <td className="text-muted small">{ord.created_at}</td>
                                             <td className="text-center">
                                               <Button
