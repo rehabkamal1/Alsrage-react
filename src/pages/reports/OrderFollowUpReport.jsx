@@ -4,6 +4,7 @@ import ReportFilters from "../../components/ReportFilters";
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
 import SortableHeader from "../../components/common/SortableHeader";
+import SortableTable from "../../components/common/SortableTable";
 import { useSortableData } from "../../hooks/useSortableData";
 import { getOrderFollowUpReport, getOrder, getSettingsAuthenticationStatuses } from "../../services/apiService";
 import { exportToExcel } from "../../utils/excelHelper";
@@ -247,6 +248,129 @@ const OrderFollowUpReport = () => {
   const withinSlaCount =
     reportData.kpis.within_sla ??
     (reportData.orders ? reportData.orders.filter((o) => !o.exceeded_sla && Number(o.delay_days || 0) <= 0).length : 0);
+
+  const tableColumns = useMemo(
+    () => [
+      { id: "order_number", label: "رقم الطلب", width: "120px" },
+      { id: "client_name", label: "العميل", width: "180px" },
+      { id: "visa_number", label: "رقم التأشيرة", width: "130px" },
+      { id: "status", label: "حالة الطلب", width: "130px" },
+      { id: "authentication_status", label: "حالة التوثيق", width: "140px" },
+      { id: "employee_name", label: "المسوق / الموظف", width: "160px" },
+      { id: "saudi_office", label: "المكتب الداخلي", width: "140px" },
+      { id: "external_office", label: "المكتب الخارجي", width: "140px" },
+      { id: "last_update_date", label: "آخر تحديث", width: "120px" },
+      { id: "delay_days", label: "أيام التأخير", width: "120px" },
+      { id: "exceeded_sla", label: "حالة SLA", width: "130px" },
+      { id: "actions", label: "الإجراءات", width: "90px", sortable: false },
+    ],
+    []
+  );
+
+  const renderCell = (order, columnId) => {
+    switch (columnId) {
+      case "order_number":
+        return <td className="fw-bold text-primary">#{order.order_number || order.id}</td>;
+      case "client_name":
+        return (
+          <td className="fw-semibold text-dark">
+            {order.client?.name || order.client_name || "-"}
+          </td>
+        );
+      case "visa_number":
+        return (
+          <td>
+            <Badge bg="light" text="dark" className="border px-2 py-1 font-monospace">
+              {order.visa_number || "-"}
+            </Badge>
+          </td>
+        );
+      case "status":
+        return (
+          <td>
+            <OrderStatusBadge
+              status={order.status?.name || order.status_name || order.status}
+              size="sm"
+            />
+          </td>
+        );
+      case "authentication_status":
+        return (
+          <td>
+            {order.authentication_status ? (
+              <span
+                className="badge rounded-pill px-2.5 py-1 fs-8 fw-semibold shadow-sm"
+                style={{
+                  backgroundColor: order.authentication_status_color || "#0284c7",
+                  color: "#ffffff",
+                }}
+              >
+                {order.authentication_status}
+              </span>
+            ) : (
+              <span className="text-muted">-</span>
+            )}
+          </td>
+        );
+      case "employee_name":
+        return (
+          <td className="fw-semibold">
+            {order.employee?.name || order.employee_name || "-"}
+          </td>
+        );
+      case "saudi_office":
+        return <td className="text-muted">{order.saudi_office || "-"}</td>;
+      case "external_office":
+        return <td className="text-muted">{order.external_office || "-"}</td>;
+      case "last_update_date":
+        return <td>{order.last_update_date || "-"}</td>;
+      case "delay_days":
+        return (
+          <td>
+            {order.delay_days > 0 ? (
+              <Badge bg="danger" className="px-2 py-1 rounded-pill">
+                {order.delay_days} يوم تأخير
+              </Badge>
+            ) : (
+              <Badge bg="success" className="px-2 py-1 rounded-pill">
+                في الموعد (0)
+              </Badge>
+            )}
+          </td>
+        );
+      case "exceeded_sla":
+        return (
+          <td>
+            {order.exceeded_sla ? (
+              <Badge bg="danger" className="px-3 py-2 rounded-pill">
+                مخالف لـ SLA
+              </Badge>
+            ) : (
+              <Badge bg="success" className="px-3 py-2 rounded-pill">
+                ضمن المدة ✓
+              </Badge>
+            )}
+          </td>
+        );
+      case "actions":
+        return (
+          <td className="text-center">
+            <Button
+              variant="light"
+              size="sm"
+              className="rounded-circle shadow-sm border text-primary d-inline-flex align-items-center justify-content-center"
+              style={{ width: "36px", height: "36px" }}
+              onClick={() => handleViewOrderDetails(order)}
+              title="عرض تفاصيل الطلب"
+            >
+              <i className="fa-solid fa-eye fs-6"></i>
+            </Button>
+          </td>
+        );
+      default:
+        return <td>-</td>;
+    }
+  };
 
   return (
     <div style={{ backgroundColor: "#f8fafc", minHeight: "100vh", padding: "24px" }} dir="rtl">
@@ -642,187 +766,16 @@ const OrderFollowUpReport = () => {
                 <TableSkeleton rows={6} columns={12} />
               </div>
             ) : (
-              <div className="table-responsive">
-                <Table hover className="mb-0 align-middle text-center">
-                  <thead className="bg-light text-secondary border-bottom">
-                    <tr>
-                      <SortableHeader
-                        title="رقم الطلب"
-                        sortKey="order_number"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="العميل"
-                        sortKey="client_name"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="رقم التأشيرة"
-                        sortKey="visa_number"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="حالة الطلب"
-                        sortKey="status"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="حالة التوثيق"
-                        sortKey="authentication_status"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="المسوق / الموظف"
-                        sortKey="employee_name"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="المكتب الداخلي"
-                        sortKey="saudi_office"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="المكتب الخارجي"
-                        sortKey="external_office"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="آخر تحديث"
-                        sortKey="last_update_date"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="أيام التأخير"
-                        sortKey="delay_days"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="حالة SLA"
-                        sortKey="exceeded_sla"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <th className="py-3 text-center">الإجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedOrders.length > 0 ? (
-                      paginatedOrders.map((order) => (
-                        <tr key={order.id}>
-                          <td className="fw-bold text-primary">#{order.order_number || order.id}</td>
-                          <td className="fw-semibold text-dark">
-                            {order.client?.name || order.client_name || "-"}
-                          </td>
-                          <td>
-                            <Badge bg="light" text="dark" className="border px-2 py-1 font-monospace">
-                              {order.visa_number || "-"}
-                            </Badge>
-                          </td>
-                          <td>
-                            <OrderStatusBadge
-                              status={order.status?.name || order.status_name || order.status}
-                              size="sm"
-                            />
-                          </td>
-                          <td>
-                            {order.authentication_status ? (
-                              <span
-                                className="badge rounded-pill px-2.5 py-1 fs-8 fw-semibold shadow-sm"
-                                style={{
-                                  backgroundColor: order.authentication_status_color || "#0284c7",
-                                  color: "#ffffff",
-                                }}
-                              >
-                                {order.authentication_status}
-                              </span>
-                            ) : (
-                              <span className="text-muted">-</span>
-                            )}
-                          </td>
-                          <td className="fw-semibold">
-                            {order.employee?.name || order.employee_name || "-"}
-                          </td>
-                          <td className="text-muted">{order.saudi_office || "-"}</td>
-                          <td className="text-muted">{order.external_office || "-"}</td>
-                          <td>{order.last_update_date || "-"}</td>
-                          <td>
-                            {order.delay_days > 0 ? (
-                              <Badge bg="danger" className="px-2 py-1 rounded-pill">
-                                {order.delay_days} يوم تأخير
-                              </Badge>
-                            ) : (
-                              <Badge bg="success" className="px-2 py-1 rounded-pill">
-                                في الموعد (0)
-                              </Badge>
-                            )}
-                          </td>
-                          <td>
-                            {order.exceeded_sla ? (
-                              <Badge bg="danger" className="px-3 py-2 rounded-pill">
-                                مخالف لـ SLA
-                              </Badge>
-                            ) : (
-                              <Badge bg="success" className="px-3 py-2 rounded-pill">
-                                ضمن المدة ✓
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="text-center">
-                            <Button
-                              variant="light"
-                              size="sm"
-                              className="rounded-circle shadow-sm border text-primary d-inline-flex align-items-center justify-content-center"
-                              style={{ width: "36px", height: "36px" }}
-                              onClick={() => handleViewOrderDetails(order)}
-                              title="عرض تفاصيل الطلب"
-                            >
-                              <i className="fa-solid fa-eye fs-6"></i>
-                            </Button>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="12" className="text-center py-5 text-muted">
-                          <i className="fa-solid fa-folder-open display-6 text-muted mb-3 d-block"></i>
-                          <h6 className="fw-semibold">لا توجد طلبات تطابق الفلاتر المحددة.</h6>
-                          {activeCardFilter !== "all" && (
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
-                              className="mt-2"
-                              onClick={() => setActiveCardFilter("all")}
-                            >
-                              عرض جميع الطلبات
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </Table>
-              </div>
+              <SortableTable
+                data={paginatedOrders}
+                columns={tableColumns}
+                storageKey="order_follow_up_report_columns"
+                renderCell={renderCell}
+                sortConfig={sortConfig}
+                onRequestSort={requestSort}
+                emptyMessage="لا توجد طلبات تطابق الفلاتر المحددة."
+                tableClassName="mb-0 align-middle text-center"
+              />
             )}
             <PaginationComponent
               currentPage={currentPage}

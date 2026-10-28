@@ -4,6 +4,7 @@ import { getOfficesPerformanceReport, getSettingsAuthenticationStatuses } from "
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
 import SortableHeader from "../../components/common/SortableHeader";
+import SortableTable from "../../components/common/SortableTable";
 import { useSortableData } from "../../hooks/useSortableData";
 import { exportToExcel } from "../../utils/excelHelper";
 import { exportToPDF } from "../../utils/pdfHelper";
@@ -315,6 +316,129 @@ const OfficesPerformanceReport = () => {
   const withOrdersCount = rawOfficesList.filter((o) => (o.total_orders || 0) > 0).length;
   const withRevenueCount = rawOfficesList.filter((o) => (o.total_revenue || 0) > 0).length;
   const zeroOrdersCount = rawOfficesList.filter((o) => (o.total_orders || 0) === 0).length;
+
+  const tableColumns = useMemo(
+    () => [
+      { id: "name", label: "اسم المكتب", width: "200px" },
+      {
+        id: key === "saudi" ? "city" : "country",
+        label: key === "saudi" ? "المدينة 🏙️" : "الدولة 🌍",
+        width: "150px",
+      },
+      { id: "total_orders", label: "إجمالي العقود", width: "130px" },
+      {
+        id: "status_distribution",
+        label: "توزيع جميع الحالات المختارة وعددهم 📊",
+        width: "280px",
+        sortable: false,
+      },
+      { id: "completion_rate", label: "نسبة الإنجاز", width: "150px" },
+      { id: "total_revenue", label: "إجمالي الإيرادات", width: "150px" },
+      { id: "actions", label: "التفاصيل", width: "110px", sortable: false },
+    ],
+    [key]
+  );
+
+  const renderCell = (office, columnId) => {
+    switch (columnId) {
+      case "name":
+        return <td className="fw-bold text-dark fs-6">{office.name}</td>;
+      case "city":
+      case "country":
+        return (
+          <td>
+            <Badge bg="light" text="dark" className="border px-3 py-1.5 rounded-pill fs-7 fw-semibold">
+              {key === "saudi" ? office.city : office.country}
+            </Badge>
+          </td>
+        );
+      case "total_orders":
+        return (
+          <td>
+            <Button
+              variant="outline-primary"
+              size="sm"
+              className="rounded-pill px-3 py-1 fw-bold fs-7"
+              onClick={() => handleOpenDetails(office)}
+            >
+              {office.total_orders} عقود 🔍
+            </Button>
+          </td>
+        );
+      case "status_distribution":
+        return (
+          <td>
+            {!office.status_counts || office.status_counts.length === 0 ? (
+              <span className="text-muted small">لا توجد عقود</span>
+            ) : (
+              <div className="d-flex flex-wrap justify-content-center gap-1.5">
+                {office.status_counts.map((sc, sIdx) => (
+                  <span
+                    key={sIdx}
+                    className="badge rounded-pill px-2.5 py-1 fs-8 d-flex align-items-center gap-1 shadow-sm"
+                    style={{
+                      backgroundColor: sc.color || "#6c757d",
+                      color: "#ffffff",
+                      boxShadow: `0 2px 4px ${sc.color}30`,
+                    }}
+                  >
+                    <span>{sc.label}:</span>
+                    <strong className="bg-white bg-opacity-25 px-1.5 py-0.2 rounded-circle fs-8">
+                      {sc.count}
+                    </strong>
+                  </span>
+                ))}
+              </div>
+            )}
+          </td>
+        );
+      case "completion_rate":
+        return (
+          <td>
+            <div
+              className="d-flex align-items-center gap-2 justify-content-center"
+              style={{ maxWidth: "160px", margin: "0 auto" }}
+            >
+              <ProgressBar
+                now={office.completion_rate}
+                variant={
+                  office.completion_rate >= 80
+                    ? "success"
+                    : office.completion_rate >= 50
+                    ? "info"
+                    : "danger"
+                }
+                style={{ flex: 1, height: "8px" }}
+                className="rounded-pill shadow-inner"
+              />
+              <span className="small fw-bold">{office.completion_rate}%</span>
+            </div>
+          </td>
+        );
+      case "total_revenue":
+        return (
+          <td className="fw-bold text-primary fs-6 font-monospace">
+            {(office.total_revenue || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "actions":
+        return (
+          <td>
+            <Button
+              variant="light"
+              size="sm"
+              className="rounded-3 border text-primary fw-semibold hover-lift d-inline-flex align-items-center gap-1"
+              onClick={() => handleOpenDetails(office)}
+            >
+              <i className="fa-solid fa-eye"></i>
+              <span>عرض العقود</span>
+            </Button>
+          </td>
+        );
+      default:
+        return <td>-</td>;
+    }
+  };
 
   return (
     <div style={{ backgroundColor: "#f1f5f9", minHeight: "100vh", padding: "28px 24px" }} dir="rtl">
@@ -781,96 +905,17 @@ const OfficesPerformanceReport = () => {
             {loading ? (
               <div className="p-4"><TableSkeleton rows={5} columns={7} /></div>
             ) : (
-              <div className="table-responsive">
-                <Table hover align="middle" className="mb-0 text-center border-0">
-                  <thead className="bg-slate-50 text-secondary border-bottom">
-                    <tr>
-                      <SortableHeader title="اسم المكتب" sortKey="name" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3.5 text-dark fw-bold" />
-                      <SortableHeader title={key === "saudi" ? "المدينة 🏙️" : "الدولة 🌍"} sortKey={key === "saudi" ? "city" : "country"} sortConfig={sortConfig} onRequestSort={requestSort} className="py-3.5" />
-                      <SortableHeader title="إجمالي العقود" sortKey="total_orders" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3.5" />
-                      <th className="py-3.5" style={{ minWidth: "260px" }}>توزيع جميع الحالات المختارة وعددهم 📊</th>
-                      <SortableHeader title="نسبة الإنجاز" sortKey="completion_rate" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3.5" style={{ minWidth: "150px" }} />
-                      <SortableHeader title="إجمالي الإيرادات" sortKey="total_revenue" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3.5" />
-                      <th className="py-3.5">التفاصيل</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedOffices.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-5 text-center text-muted">
-                          لا توجد مكاتب تطابق الفلاتر المحددة
-                        </td>
-                      </tr>
-                    ) : (
-                      paginatedOffices.map((office, idx) => (
-                        <tr key={office.id || idx} className="hover-row">
-                          <td className="fw-bold text-dark fs-6">{office.name}</td>
-                          <td>
-                            <Badge bg="light" text="dark" className="border px-3 py-1.5 rounded-pill fs-7 fw-semibold">
-                              {key === "saudi" ? office.city : office.country}
-                            </Badge>
-                          </td>
-                          <td>
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
-                              className="rounded-pill px-3 py-1 fw-bold fs-7"
-                              onClick={() => handleOpenDetails(office)}
-                            >
-                              {office.total_orders} عقود 🔍
-                            </Button>
-                          </td>
-                          <td>
-                            {(!office.status_counts || office.status_counts.length === 0) ? (
-                              <span className="text-muted small">لا توجد عقود</span>
-                            ) : (
-                              <div className="d-flex flex-wrap justify-content-center gap-1.5">
-                                {office.status_counts.map((sc, sIdx) => (
-                                  <span
-                                    key={sIdx}
-                                    className="badge rounded-pill px-2.5 py-1 fs-8 d-flex align-items-center gap-1 shadow-sm"
-                                    style={{
-                                      backgroundColor: sc.color || "#6c757d",
-                                      color: "#ffffff",
-                                      boxShadow: `0 2px 4px ${sc.color}30`,
-                                    }}
-                                  >
-                                    <span>{sc.label}:</span>
-                                    <strong className="bg-white bg-opacity-25 px-1.5 py-0.2 rounded-circle fs-8">{sc.count}</strong>
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </td>
-                          <td>
-                            <div className="d-flex align-items-center gap-2 justify-content-center" style={{ maxWidth: "160px", margin: "0 auto" }}>
-                              <ProgressBar
-                                now={office.completion_rate}
-                                variant={office.completion_rate >= 80 ? "success" : office.completion_rate >= 50 ? "info" : "danger"}
-                                style={{ flex: 1, height: "8px" }}
-                                className="rounded-pill shadow-inner"
-                              />
-                              <span className="small fw-bold">{office.completion_rate}%</span>
-                            </div>
-                          </td>
-                          <td className="fw-bold text-primary fs-6">{(office.total_revenue || 0).toLocaleString()} ر.س</td>
-                          <td>
-                            <Button
-                              variant="light"
-                              size="sm"
-                              className="rounded-3 border text-primary fw-semibold hover-lift d-inline-flex align-items-center gap-1"
-                              onClick={() => handleOpenDetails(office)}
-                            >
-                              <i className="fa-solid fa-eye"></i>
-                              <span>عرض العقود</span>
-                            </Button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </Table>
-              </div>
+              <SortableTable
+                data={paginatedOffices}
+                columns={tableColumns}
+                storageKey={`offices_performance_report_${key}_columns`}
+                renderCell={renderCell}
+                sortConfig={sortConfig}
+                onRequestSort={requestSort}
+                emptyMessage="لا توجد مكاتب تطابق الفلاتر المحددة"
+                tableClassName="mb-0 text-center border-0"
+                rowClassName="hover-row"
+              />
             )}
             <PaginationComponent
               currentPage={currentPage}

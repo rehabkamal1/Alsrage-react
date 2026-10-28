@@ -26,6 +26,8 @@ import { exportToPDF } from "../../utils/pdfHelper";
 import PaginationComponent from "../../components/common/Pagination";
 import OrderDetailsModal from "../../components/Order/OrderDetailsModal";
 import { OrderStatusBadge } from "../../utils/statusHelper";
+import SortableTable from "../../components/common/SortableTable";
+import { useSortableData } from "../../hooks/useSortableData";
 
 const FinancialCollectionsReport = () => {
   const [loading, setLoading] = useState(true);
@@ -558,14 +560,89 @@ const FinancialCollectionsReport = () => {
     return { marketersCount, ordersCount, clientsCount, totalContract, totalCollected, totalOutstanding, rate };
   }, [filteredMarketers]);
 
+  // -------------------------------------------------------------
+  // Default Columns for SortableTable (with drag & drop + sort)
+  // -------------------------------------------------------------
+  const defaultClientDetailedColumns = useMemo(
+    () => [
+      { id: "id", label: "#", width: "70px" },
+      { id: "client_name", label: "اسم العميل", width: "160px" },
+      { id: "saudi_office_name", label: "المكتب السعودي 🇸🇦", width: "140px" },
+      { id: "nationality", label: "الجنسية 🌍", width: "110px" },
+      { id: "visa_number", label: "رقم التأشيرة 🎫", width: "130px" },
+      ...(!hideOrderStatus ? [{ id: "order_status", label: "حالة الطلب 📌", width: "120px" }] : []),
+      { id: "total_price", label: "إجمالي العقد", width: "130px" },
+      { id: "paid_amount", label: "المحصل", width: "120px" },
+      { id: "remaining_amount", label: "المتبقي", width: "120px" },
+      { id: "payment_status", label: "حالة التحصيل", width: "130px" },
+      { id: "latest_transaction_time", label: "وقت إضافة الحوالة الجديدة ⏱️", width: "160px" },
+      { id: "created_at", label: "التاريخ", width: "110px" },
+      { id: "actions", label: "التفاصيل", width: "90px", sortable: false },
+    ],
+    [hideOrderStatus]
+  );
+
+  const defaultClientSummaryColumns = useMemo(
+    () => [
+      { id: "index", label: "#", width: "60px" },
+      { id: "client_name", label: "اسم العميل", width: "180px" },
+      { id: "orders_count", label: "عدد الطلبات", width: "110px" },
+      { id: "opening_balance", label: "الرصيد الافتتاحي 💰", width: "140px" },
+      { id: "total_contract_value", label: "إجمالي العقود", width: "130px" },
+      { id: "total_due", label: "إجمالي المستحق", width: "140px" },
+      { id: "total_collected", label: "المحصل الفعلي", width: "130px" },
+      { id: "total_outstanding", label: "المتبقي المطلوب", width: "130px" },
+      { id: "collection_rate", label: "نسبة التحصيل", width: "140px" },
+      { id: "payment_status", label: "حالة التحصيل", width: "130px" },
+      { id: "actions", label: "التفاصيل", width: "90px", sortable: false },
+    ],
+    []
+  );
+
+  const defaultMarketerSummaryColumns = useMemo(
+    () => [
+      { id: "index", label: "#", width: "60px" },
+      { id: "employee_name", label: "اسم المسوق / الموظف", width: "180px" },
+      { id: "office_name", label: "المكتب التابع له", width: "140px" },
+      { id: "orders_count", label: "عدد الطلبات", width: "110px" },
+      { id: "clients_count", label: "عدد العملاء", width: "110px" },
+      { id: "total_contract_value", label: "إجمالي العقود", width: "130px" },
+      { id: "total_collected", label: "المحصل الفعلي", width: "130px" },
+      { id: "total_outstanding", label: "المتبقي", width: "130px" },
+      { id: "collection_rate", label: "نسبة التحصيل", width: "140px" },
+      { id: "payment_status", label: "حالة التحصيل", width: "130px" },
+      { id: "actions", label: "التفاصيل", width: "110px", sortable: false },
+    ],
+    []
+  );
+
+  // Sorting Hooks across full datasets
+  const {
+    items: sortedOrders,
+    requestSort: requestOrderSort,
+    sortConfig: orderSortConfig,
+  } = useSortableData(filteredOrders, { key: "id", direction: "desc" });
+
+  const {
+    items: sortedClients,
+    requestSort: requestClientSort,
+    sortConfig: clientSortConfig,
+  } = useSortableData(filteredClients, { key: "total_outstanding", direction: "desc" });
+
+  const {
+    items: sortedMarketers,
+    requestSort: requestMarketerSort,
+    sortConfig: marketerSortConfig,
+  } = useSortableData(filteredMarketers, { key: "total_outstanding", direction: "desc" });
+
   // Active dataset for pagination
   const currentDataset = useMemo(() => {
     if (reportTarget === "client") {
-      return reportMode === "detailed" ? filteredOrders : filteredClients;
+      return reportMode === "detailed" ? sortedOrders : sortedClients;
     } else {
-      return filteredMarketers;
+      return sortedMarketers;
     }
-  }, [reportTarget, reportMode, filteredOrders, filteredClients, filteredMarketers]);
+  }, [reportTarget, reportMode, sortedOrders, sortedClients, sortedMarketers]);
 
   const totalPages = Math.ceil(currentDataset.length / itemsPerPage);
   const paginatedData = useMemo(() => {
@@ -767,6 +844,645 @@ const FinancialCollectionsReport = () => {
         isStatementMode ? "كشف_حساب_تفصيلي_للمسوق.pdf" : "التقرير_المالي_التفصيلي_للمسوقين.pdf"
       );
     }
+  };
+
+  // -------------------------------------------------------------
+  // Render Cells & Footers for SortableTable
+  // -------------------------------------------------------------
+  const renderClientDetailedCell = (order, columnId) => {
+    switch (columnId) {
+      case "id":
+        return <td className="fw-bold text-muted">{order.id}</td>;
+      case "client_name":
+        return (
+          <td className="fw-semibold text-dark text-start px-3">
+            <div>{order.client_name}</div>
+            {order.client_phone && (
+              <div className="text-muted small dir-ltr text-end" style={{ fontSize: "0.8rem" }}>
+                {order.client_phone}
+              </div>
+            )}
+          </td>
+        );
+      case "saudi_office_name":
+        return (
+          <td>
+            <span className="badge bg-light text-dark border px-2.5 py-1.5 rounded-3">
+              {order.saudi_office_name || "-"}
+            </span>
+          </td>
+        );
+      case "nationality":
+        return (
+          <td>
+            <span className="badge bg-light text-secondary border px-2.5 py-1.5 rounded-3">
+              {order.nationality || "-"}
+            </span>
+          </td>
+        );
+      case "visa_number":
+        return (
+          <td>
+            <Badge bg="secondary" className="px-2.5 py-1.5 font-monospace">
+              {order.visa_number || "-"}
+            </Badge>
+          </td>
+        );
+      case "order_status":
+        return <td>{renderOrderStatusBadge(order)}</td>;
+      case "total_price":
+        return (
+          <td className="fw-bold text-dark font-monospace">
+            {(order.total_price || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "paid_amount":
+        return (
+          <td className="fw-bold text-success font-monospace">
+            {(order.paid_amount || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "remaining_amount":
+        return (
+          <td className="fw-bold text-danger font-monospace">
+            {(order.remaining_amount || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "payment_status":
+        return <td>{renderPaymentBadge(order.payment_status)}</td>;
+      case "latest_transaction_time":
+        return (
+          <td>
+            <span className="badge bg-light text-dark border px-2.5 py-1.5 rounded-3 font-monospace small">
+              {order.latest_transaction_time || "-"}
+            </span>
+          </td>
+        );
+      case "created_at":
+        return <td className="text-muted small">{order.created_at}</td>;
+      case "actions":
+        return (
+          <td className="text-center">
+            <Button
+              variant="light"
+              size="sm"
+              className="rounded-circle shadow-sm border text-primary d-inline-flex align-items-center justify-content-center"
+              style={{ width: "36px", height: "36px" }}
+              onClick={() => handleViewOrderDetails(order)}
+              title="عرض تفاصيل الطلب والحساب الكامل"
+            >
+              <i className="fa-solid fa-eye fs-6"></i>
+            </Button>
+          </td>
+        );
+      default:
+        return <td>-</td>;
+    }
+  };
+
+  const renderClientDetailedFooter = (cols) => {
+    const openingBal = selectedClient ? selectedClientOpeningBalance : 0;
+    const finalTotalPrice = clientDetailedTotals.totalPrice + openingBal;
+    const finalPaid = clientDetailedTotals.paidAmount || 0;
+    const finalRemaining = Math.max(0, finalTotalPrice - finalPaid);
+    const finalStatus =
+      finalPaid >= finalTotalPrice && finalTotalPrice > 0
+        ? "محصل بالكامل"
+        : finalPaid > 0
+        ? "محصل جزئياً"
+        : "غير محصل";
+
+    return (
+      <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
+        {selectedClient && openingBal > 0 && (
+          <tr className="bg-warning bg-opacity-10" style={{ fontSize: "0.9rem" }}>
+            {cols.map((col) => {
+              if (col.id === "id" || col.id === cols[0]?.id) {
+                return (
+                  <td key={col.id} className="text-start py-2 px-3 fw-bold text-dark text-nowrap">
+                    <i className="fa-solid fa-coins text-warning me-1"></i>
+                    <span>الرصيد الافتتاحي:</span>
+                  </td>
+                );
+              }
+              if (col.id === "total_price") {
+                return (
+                  <td key={col.id} className="fw-bold text-dark py-2 font-monospace">
+                    {openingBal.toLocaleString()} ر.س
+                  </td>
+                );
+              }
+              if (col.id === "remaining_amount") {
+                return (
+                  <td key={col.id} className="fw-bold text-danger py-2 font-monospace">
+                    {openingBal.toLocaleString()} ر.س
+                  </td>
+                );
+              }
+              return <td key={col.id} className="text-muted small py-2">-</td>;
+            })}
+          </tr>
+        )}
+        <tr style={{ fontSize: "0.95rem" }}>
+          {cols.map((col) => {
+            if (col.id === "id" || col.id === cols[0]?.id) {
+              return (
+                <td key={col.id} className="text-start py-3 px-3 fw-bold text-dark text-nowrap">
+                  <div className="d-flex align-items-center gap-1">
+                    <i className="fa-solid fa-calculator text-primary fs-6"></i>
+                    <span>
+                      الإجمالي {selectedClient && openingBal > 0 ? "(شامل الافتتاحي)" : `(${clientDetailedTotals.count} طلب)`}
+                    </span>
+                  </div>
+                </td>
+              );
+            }
+            if (col.id === "total_price") {
+              return (
+                <td key={col.id} className="fw-bold text-dark py-3 font-monospace">
+                  {finalTotalPrice.toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "paid_amount") {
+              return (
+                <td key={col.id} className="fw-bold text-success py-3 font-monospace">
+                  {finalPaid.toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "remaining_amount") {
+              return (
+                <td key={col.id} className="fw-bold text-danger py-3 font-monospace">
+                  {finalRemaining.toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "payment_status") {
+              return <td key={col.id} className="py-3">{renderPaymentBadge(finalStatus)}</td>;
+            }
+            return <td key={col.id} className="text-muted small py-3">-</td>;
+          })}
+        </tr>
+      </tfoot>
+    );
+  };
+
+  const renderClientSummaryCell = (client, columnId, idx) => {
+    switch (columnId) {
+      case "index":
+        return (
+          <td className="text-muted fw-bold">
+            {(currentPage - 1) * itemsPerPage + idx + 1}
+          </td>
+        );
+      case "client_name":
+        return (
+          <td className="fw-semibold text-dark text-start px-4">
+            <div className="fs-6">{client.client_name}</div>
+            {client.client_phone && (
+              <div className="text-muted small dir-ltr text-end" style={{ fontSize: "0.8rem" }}>
+                {client.client_phone}
+              </div>
+            )}
+          </td>
+        );
+      case "orders_count":
+        return (
+          <td>
+            <Badge bg="primary" className="px-2.5 py-1.5 rounded-pill">
+              {client.orders_count} طلبات
+            </Badge>
+          </td>
+        );
+      case "opening_balance":
+        return (
+          <td className="fw-bold text-secondary font-monospace">
+            {(Number(client.opening_balance) || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "total_contract_value":
+        return (
+          <td className="fw-bold text-dark font-monospace">
+            {(client.total_contract_value || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "total_due":
+        return (
+          <td className="fw-bold text-primary font-monospace">
+            {((client.total_due ?? ((client.total_contract_value || 0) + (Number(client.opening_balance) || 0)))).toLocaleString()} ر.س
+          </td>
+        );
+      case "total_collected":
+        return (
+          <td className="fw-bold text-success font-monospace">
+            {(client.total_collected || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "total_outstanding":
+        return (
+          <td className="fw-bold text-danger font-monospace">
+            {(client.total_outstanding || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "collection_rate":
+        return (
+          <td style={{ minWidth: "120px" }}>
+            <div className="d-flex align-items-center gap-2 justify-content-center">
+              <span className="small fw-bold">{client.collection_rate || 0}%</span>
+              <div className="flex-grow-1" style={{ maxWidth: "70px" }}>
+                <ProgressBar
+                  now={client.collection_rate || 0}
+                  variant={
+                    (client.collection_rate || 0) >= 100
+                      ? "success"
+                      : (client.collection_rate || 0) > 0
+                      ? "warning"
+                      : "danger"
+                  }
+                  style={{ height: "6px" }}
+                  className="rounded-pill"
+                />
+              </div>
+            </div>
+          </td>
+        );
+      case "payment_status":
+        return <td>{renderPaymentBadge(client.payment_status)}</td>;
+      case "actions":
+        return (
+          <td className="text-center">
+            {client.orders && client.orders.length > 0 && (
+              <Button
+                variant="light"
+                size="sm"
+                className="rounded-circle shadow-sm border text-primary d-inline-flex align-items-center justify-content-center"
+                style={{ width: "36px", height: "36px" }}
+                onClick={() => handleViewOrderDetails(client.orders[0])}
+                title="عرض أول طلب للعميل"
+              >
+                <i className="fa-solid fa-eye fs-6"></i>
+              </Button>
+            )}
+          </td>
+        );
+      default:
+        return <td>-</td>;
+    }
+  };
+
+  const renderClientSummaryFooter = (cols) => {
+    return (
+      <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
+        <tr style={{ fontSize: "0.95rem" }}>
+          {cols.map((col) => {
+            if (col.id === "index" || col.id === "client_name") {
+              if (col.id === "index" && cols[0]?.id === "index") {
+                return (
+                  <td key={col.id} className="text-start py-3 px-3 fw-bold text-dark text-nowrap">
+                    <div className="d-flex align-items-center gap-1">
+                      <i className="fa-solid fa-calculator text-primary fs-6"></i>
+                      <span>الإجمالي</span>
+                    </div>
+                  </td>
+                );
+              }
+              if (col.id === "client_name" && cols[0]?.id !== "client_name") {
+                return (
+                  <td key={col.id} className="text-start py-3 px-3 fw-bold text-dark text-nowrap">
+                    <span>({clientSummaryTotals.clientsCount} عميل)</span>
+                  </td>
+                );
+              }
+              return (
+                <td key={col.id} className="text-start py-3 px-3 fw-bold text-dark text-nowrap">
+                  <span>الإجمالي ({clientSummaryTotals.clientsCount} عميل)</span>
+                </td>
+              );
+            }
+            if (col.id === "orders_count") {
+              return (
+                <td key={col.id} className="py-3">
+                  <Badge bg="primary" className="px-2.5 py-1.5 rounded-pill">
+                    {clientSummaryTotals.ordersCount} طلبات
+                  </Badge>
+                </td>
+              );
+            }
+            if (col.id === "opening_balance") {
+              return (
+                <td key={col.id} className="fw-bold text-secondary py-3 font-monospace">
+                  {(clientSummaryTotals.totalOpeningBalance || 0).toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "total_contract_value") {
+              return (
+                <td key={col.id} className="fw-bold text-dark py-3 font-monospace">
+                  {(clientSummaryTotals.totalContract || 0).toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "total_due") {
+              return (
+                <td key={col.id} className="fw-bold text-primary py-3 font-monospace">
+                  {(clientSummaryTotals.totalDue || 0).toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "total_collected") {
+              return (
+                <td key={col.id} className="fw-bold text-success py-3 font-monospace">
+                  {(clientSummaryTotals.totalCollected || 0).toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "total_outstanding") {
+              return (
+                <td key={col.id} className="fw-bold text-danger py-3 font-monospace">
+                  {(clientSummaryTotals.totalOutstanding || 0).toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "collection_rate") {
+              return (
+                <td key={col.id} className="py-3 fw-bold text-primary font-monospace">
+                  {clientSummaryTotals.rate}%
+                </td>
+              );
+            }
+            if (col.id === "payment_status") {
+              return (
+                <td key={col.id} className="py-3">
+                  {renderPaymentBadge(
+                    clientSummaryTotals.totalCollected >= clientSummaryTotals.totalDue && clientSummaryTotals.totalDue > 0
+                      ? "محصل بالكامل"
+                      : clientSummaryTotals.totalCollected > 0
+                      ? "محصل جزئياً"
+                      : "غير محصل"
+                  )}
+                </td>
+              );
+            }
+            return <td key={col.id} className="text-muted small py-3">-</td>;
+          })}
+        </tr>
+      </tfoot>
+    );
+  };
+
+  const renderMarketerSummaryCell = (marketer, columnId, idx) => {
+    switch (columnId) {
+      case "index":
+        return (
+          <td className="text-muted fw-bold">
+            {(currentPage - 1) * itemsPerPage + idx + 1}
+          </td>
+        );
+      case "employee_name":
+        return (
+          <td className="fw-semibold text-dark text-start px-4">
+            <div className="d-flex align-items-center gap-2">
+              <div
+                className="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center fw-bold"
+                style={{ width: "34px", height: "34px", fontSize: "0.85rem" }}
+              >
+                {(marketer.employee_name || "م").substring(0, 1)}
+              </div>
+              <div>
+                <div className="fw-bold">{marketer.employee_name}</div>
+              </div>
+            </div>
+          </td>
+        );
+      case "office_name":
+        return (
+          <td>
+            <span className="badge bg-light text-dark border px-2.5 py-1.5 rounded-3">
+              {marketer.office_name || "الفرع الرئيسي"}
+            </span>
+          </td>
+        );
+      case "orders_count":
+        return (
+          <td>
+            <Badge bg="primary" className="px-2.5 py-1.5 rounded-pill">
+              {marketer.orders_count} عقود
+            </Badge>
+          </td>
+        );
+      case "clients_count":
+        return (
+          <td>
+            <Badge bg="secondary" className="px-2.5 py-1.5 rounded-pill">
+              {marketer.clients_count || 0} عملاء
+            </Badge>
+          </td>
+        );
+      case "total_contract_value":
+        return (
+          <td className="fw-bold text-dark font-monospace">
+            {(marketer.total_contract_value || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "total_collected":
+        return (
+          <td className="fw-bold text-success font-monospace">
+            {(marketer.total_collected || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "total_outstanding":
+        return (
+          <td className="fw-bold text-danger font-monospace">
+            {(marketer.total_outstanding || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "collection_rate":
+        return (
+          <td style={{ minWidth: "120px" }}>
+            <div className="d-flex align-items-center gap-2 justify-content-center">
+              <span className="small fw-bold">{marketer.collection_rate || 0}%</span>
+              <div className="flex-grow-1" style={{ maxWidth: "70px" }}>
+                <ProgressBar
+                  now={marketer.collection_rate || 0}
+                  variant={
+                    (marketer.collection_rate || 0) >= 100
+                      ? "success"
+                      : (marketer.collection_rate || 0) > 0
+                      ? "warning"
+                      : "danger"
+                  }
+                  style={{ height: "6px" }}
+                  className="rounded-pill"
+                />
+              </div>
+            </div>
+          </td>
+        );
+      case "payment_status":
+        return <td>{renderPaymentBadge(marketer.payment_status)}</td>;
+      case "actions":
+        return (
+          <td className="text-center">
+            <Button
+              variant="outline-primary"
+              size="sm"
+              className="rounded-pill px-3 py-1 fw-semibold small"
+              onClick={() => {
+                setReportMode("detailed");
+                const key = marketer.employee_id ? `emp_${marketer.employee_id}` : `m_${idx}`;
+                setExpandedMarketers({ [key]: true });
+              }}
+              title="عرض العملاء والطلبات التفصيلية لهذا المسوق"
+            >
+              عرض التفاصيل
+            </Button>
+          </td>
+        );
+      default:
+        return <td>-</td>;
+    }
+  };
+
+  const renderMarketerSummaryFooter = (cols) => {
+    return (
+      <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
+        <tr style={{ fontSize: "0.95rem" }}>
+          {cols.map((col) => {
+            if (col.id === "index" || col.id === "employee_name") {
+              if (col.id === "index" && cols[0]?.id === "index") {
+                return (
+                  <td key={col.id} className="text-start py-3 px-3 fw-bold text-dark text-nowrap">
+                    <div className="d-flex align-items-center gap-1">
+                      <i className="fa-solid fa-calculator text-primary fs-6"></i>
+                      <span>الإجمالي</span>
+                    </div>
+                  </td>
+                );
+              }
+              return (
+                <td key={col.id} className="text-start py-3 px-3 fw-bold text-dark text-nowrap">
+                  <span>({marketerSummaryTotals.marketersCount} مسوق)</span>
+                </td>
+              );
+            }
+            if (col.id === "office_name") {
+              return <td key={col.id} className="text-muted small py-3">-</td>;
+            }
+            if (col.id === "orders_count") {
+              return (
+                <td key={col.id} className="py-3">
+                  <Badge bg="primary" className="px-2.5 py-1.5 rounded-pill">
+                    {marketerSummaryTotals.ordersCount} عقود
+                  </Badge>
+                </td>
+              );
+            }
+            if (col.id === "clients_count") {
+              return (
+                <td key={col.id} className="py-3">
+                  <Badge bg="secondary" className="px-2.5 py-1.5 rounded-pill">
+                    {marketerSummaryTotals.clientsCount} عملاء
+                  </Badge>
+                </td>
+              );
+            }
+            if (col.id === "total_contract_value") {
+              return (
+                <td key={col.id} className="fw-bold text-dark py-3 font-monospace">
+                  {(marketerSummaryTotals.totalContract || 0).toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "total_collected") {
+              return (
+                <td key={col.id} className="fw-bold text-success py-3 font-monospace">
+                  {(marketerSummaryTotals.totalCollected || 0).toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "total_outstanding") {
+              return (
+                <td key={col.id} className="fw-bold text-danger py-3 font-monospace">
+                  {(marketerSummaryTotals.totalOutstanding || 0).toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "collection_rate") {
+              return (
+                <td key={col.id} className="py-3 fw-bold text-primary font-monospace">
+                  {marketerSummaryTotals.rate}%
+                </td>
+              );
+            }
+            if (col.id === "payment_status") {
+              return (
+                <td key={col.id} className="py-3">
+                  {renderPaymentBadge(
+                    marketerSummaryTotals.totalCollected >= marketerSummaryTotals.totalContract && marketerSummaryTotals.totalContract > 0
+                      ? "محصل بالكامل"
+                      : marketerSummaryTotals.totalCollected > 0
+                      ? "محصل جزئياً"
+                      : "غير محصل"
+                  )}
+                </td>
+              );
+            }
+            return <td key={col.id} className="text-muted small py-3">-</td>;
+          })}
+        </tr>
+      </tfoot>
+    );
+  };
+
+  const renderMarketerOrdersFooter = (cols, marketer, marketerOrders) => {
+    return (
+      <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
+        <tr style={{ fontSize: "0.88rem" }}>
+          {cols.map((col) => {
+            if (col.id === "id" || col.id === cols[0]?.id) {
+              return (
+                <td key={col.id} className="text-start py-2.5 px-3 fw-bold text-dark text-nowrap">
+                  <div className="d-flex align-items-center gap-1.5">
+                    <i className="fa-solid fa-calculator text-primary"></i>
+                    <span>إجمالي طلبات المسوق ({marketerOrders.length} طلب)</span>
+                  </div>
+                </td>
+              );
+            }
+            if (col.id === "total_price") {
+              return (
+                <td key={col.id} className="fw-bold text-dark py-2.5 font-monospace">
+                  {(marketer.total_contract_value || 0).toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "paid_amount") {
+              return (
+                <td key={col.id} className="fw-bold text-success py-2.5 font-monospace">
+                  {(marketer.total_collected || 0).toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "remaining_amount") {
+              return (
+                <td key={col.id} className="fw-bold text-danger py-2.5 font-monospace">
+                  {(marketer.total_outstanding || 0).toLocaleString()} ر.س
+                </td>
+              );
+            }
+            if (col.id === "payment_status") {
+              return (
+                <td key={col.id} className="py-2.5">
+                  {renderPaymentBadge(marketer.payment_status)}
+                </td>
+              );
+            }
+            return <td key={col.id} className="text-muted small py-2.5">-</td>;
+          })}
+        </tr>
+      </tfoot>
+    );
   };
 
   return (
@@ -1262,135 +1978,17 @@ const FinancialCollectionsReport = () => {
                 {/*          حالة التحصيل, التاريخ, التفاصيل                 */}
                 {/* ======================================================== */}
                 {reportTarget === "client" && reportMode === "detailed" && (
-                  <div className="table-responsive">
-                    <Table hover align="middle" className="mb-0 text-center">
-                      <thead className="bg-light text-secondary border-bottom">
-                        <tr>
-                          <th className="py-3">#</th>
-                          <th className="py-3">اسم العميل</th>
-                          <th className="py-3">المكتب السعودي 🇸🇦</th>
-                          <th className="py-3">الجنسية 🌍</th>
-                          <th className="py-3">رقم التأشيرة 🎫</th>
-                          {!hideOrderStatus && <th className="py-3">حالة الطلب 📌</th>}
-                          <th className="py-3">إجمالي العقد</th>
-                          <th className="py-3">المحصل</th>
-                          <th className="py-3">المتبقي</th>
-                          <th className="py-3">حالة التحصيل</th>
-                          <th className="py-3">وقت إضافة الحوالة الجديدة ⏱️</th>
-                          <th className="py-3">التاريخ</th>
-                          <th className="py-3 text-center">التفاصيل</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paginatedData.map((order, idx) => (
-                          <tr key={order.id || idx}>
-                            <td className="fw-bold text-muted">{order.id}</td>
-                            <td className="fw-semibold text-dark text-start px-3">
-                              <div>{order.client_name}</div>
-                              {order.client_phone && (
-                                <div className="text-muted small dir-ltr text-end" style={{ fontSize: "0.8rem" }}>
-                                  {order.client_phone}
-                                </div>
-                              )}
-                            </td>
-                            <td>
-                              <span className="badge bg-light text-dark border px-2.5 py-1.5 rounded-3">
-                                {order.saudi_office_name || "-"}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="badge bg-light text-secondary border px-2.5 py-1.5 rounded-3">
-                                {order.nationality || "-"}
-                              </span>
-                            </td>
-                            <td>
-                              <Badge bg="secondary" className="px-2.5 py-1.5 font-monospace">
-                                {order.visa_number || "-"}
-                              </Badge>
-                            </td>
-                            {!hideOrderStatus && <td>{renderOrderStatusBadge(order)}</td>}
-                            <td className="fw-bold text-dark">
-                              {(order.total_price || 0).toLocaleString()} ر.س
-                            </td>
-                            <td className="fw-bold text-success">
-                              {(order.paid_amount || 0).toLocaleString()} ر.س
-                            </td>
-                            <td className="fw-bold text-danger">
-                              {(order.remaining_amount || 0).toLocaleString()} ر.س
-                            </td>
-                            <td>{renderPaymentBadge(order.payment_status)}</td>
-                            <td>
-                              <span className="badge bg-light text-dark border px-2.5 py-1.5 rounded-3 font-monospace small">
-                                {order.latest_transaction_time || "-"}
-                              </span>
-                            </td>
-                            <td className="text-muted small">{order.created_at}</td>
-                            <td className="text-center">
-                              <Button
-                                variant="light"
-                                size="sm"
-                                className="rounded-circle shadow-sm border text-primary d-inline-flex align-items-center justify-content-center"
-                                style={{ width: "36px", height: "36px" }}
-                                onClick={() => handleViewOrderDetails(order)}
-                                title="عرض تفاصيل الطلب والحساب الكامل"
-                              >
-                                <i className="fa-solid fa-eye fs-6"></i>
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
-                        {selectedClient && selectedClientOpeningBalance > 0 && (
-                          <tr className="bg-warning bg-opacity-10" style={{ fontSize: "0.9rem" }}>
-                            <td colSpan={hideOrderStatus ? 5 : 6} className="text-start py-2 px-3 fw-bold text-dark">
-                              <i className="fa-solid fa-coins text-warning me-2"></i>
-                              <span>الرصيد الافتتاحي المستحق على العميل (مديونية سابقة):</span>
-                            </td>
-                            <td className="fw-bold text-dark py-2 font-monospace">
-                              {selectedClientOpeningBalance.toLocaleString()} ر.س
-                            </td>
-                            <td className="text-muted small py-2">-</td>
-                            <td className="fw-bold text-danger py-2 font-monospace">
-                              {selectedClientOpeningBalance.toLocaleString()} ر.س
-                            </td>
-                            <td colSpan={4} className="text-muted small py-2"></td>
-                          </tr>
-                        )}
-                        <tr style={{ fontSize: "0.95rem" }}>
-                          <td colSpan={hideOrderStatus ? 5 : 6} className="text-start py-3 px-3 fw-bold text-dark">
-                            <div className="d-flex align-items-center gap-2">
-                              <i className="fa-solid fa-calculator text-primary fs-5"></i>
-                              <span>
-                                الإجمالي الكلي {selectedClient && selectedClientOpeningBalance > 0 ? "(شامل الرصيد الافتتاحي)" : `(${clientDetailedTotals.count} طلب)`}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="fw-bold text-dark py-3 font-monospace">
-                            {(clientDetailedTotals.totalPrice + (selectedClient ? selectedClientOpeningBalance : 0)).toLocaleString()} ر.س
-                          </td>
-                          <td className="fw-bold text-success py-3 font-monospace">
-                            {(clientDetailedTotals.paidAmount || 0).toLocaleString()} ر.س
-                          </td>
-                          <td className="fw-bold text-danger py-3 font-monospace">
-                            {Math.max(0, (clientDetailedTotals.totalPrice + (selectedClient ? selectedClientOpeningBalance : 0)) - clientDetailedTotals.paidAmount).toLocaleString()} ر.س
-                          </td>
-                          <td className="py-3">
-                            {renderPaymentBadge(
-                              clientDetailedTotals.paidAmount >= (clientDetailedTotals.totalPrice + (selectedClient ? selectedClientOpeningBalance : 0)) && (clientDetailedTotals.totalPrice + (selectedClient ? selectedClientOpeningBalance : 0)) > 0
-                                ? "محصل بالكامل"
-                                : clientDetailedTotals.paidAmount > 0
-                                ? "محصل جزئياً"
-                                : "غير محصل"
-                            )}
-                          </td>
-                          <td className="text-muted small py-3">-</td>
-                          <td className="text-muted small py-3">-</td>
-                          <td className="text-muted small py-3">-</td>
-                        </tr>
-                      </tfoot>
-                    </Table>
-                  </div>
+                  <SortableTable
+                    data={paginatedData}
+                    columns={defaultClientDetailedColumns}
+                    storageKey="financial_client_detailed_columns"
+                    renderCell={renderClientDetailedCell}
+                    renderFooter={renderClientDetailedFooter}
+                    sortConfig={orderSortConfig}
+                    onRequestSort={requestOrderSort}
+                    emptyMessage="لا توجد طلبات مطابقة للبحث أو الفلتر"
+                    tableClassName="mb-0 text-center"
+                  />
                 )}
 
                 {/* ======================================================== */}
@@ -1399,139 +1997,17 @@ const FinancialCollectionsReport = () => {
                 {/*   الرصيد الافتتاحي, إجمالي العقد, إجمالي المستحق, المحصل... */}
                 {/* ======================================================== */}
                 {reportTarget === "client" && reportMode === "summary" && (
-                  <div className="table-responsive">
-                    <Table hover align="middle" className="mb-0 text-center">
-                      <thead className="bg-light text-secondary border-bottom">
-                        <tr>
-                          <th className="py-3">#</th>
-                          <th className="py-3 text-start px-4">اسم العميل</th>
-                          <th className="py-3">عدد الطلبات</th>
-                          <th className="py-3">الرصيد الافتتاحي 💰</th>
-                          <th className="py-3">إجمالي العقود</th>
-                          <th className="py-3">إجمالي المستحق</th>
-                          <th className="py-3">المحصل الفعلي</th>
-                          <th className="py-3">المتبقي المطلوب</th>
-                          <th className="py-3">نسبة التحصيل</th>
-                          <th className="py-3">حالة التحصيل</th>
-                          <th className="py-3 text-center">التفاصيل</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paginatedData.map((client, idx) => (
-                          <tr key={client.client_id || idx}>
-                            <td className="text-muted fw-bold">
-                              {(currentPage - 1) * itemsPerPage + idx + 1}
-                            </td>
-                            <td className="fw-semibold text-dark text-start px-4">
-                              <div className="fs-6">{client.client_name}</div>
-                              {client.client_phone && (
-                                <div className="text-muted small dir-ltr text-end" style={{ fontSize: "0.8rem" }}>
-                                  {client.client_phone}
-                                </div>
-                              )}
-                            </td>
-                            <td>
-                              <Badge bg="primary" className="px-2.5 py-1.5 rounded-pill">
-                                {client.orders_count} طلبات
-                              </Badge>
-                            </td>
-                            <td className="fw-bold text-secondary font-monospace">
-                              {(Number(client.opening_balance) || 0).toLocaleString()} ر.س
-                            </td>
-                            <td className="fw-bold text-dark font-monospace">
-                              {(client.total_contract_value || 0).toLocaleString()} ر.س
-                            </td>
-                            <td className="fw-bold text-primary font-monospace">
-                              {((client.total_due ?? ((client.total_contract_value || 0) + (Number(client.opening_balance) || 0)))).toLocaleString()} ر.س
-                            </td>
-                            <td className="fw-bold text-success font-monospace">
-                              {(client.total_collected || 0).toLocaleString()} ر.س
-                            </td>
-                            <td className="fw-bold text-danger font-monospace">
-                              {(client.total_outstanding || 0).toLocaleString()} ر.س
-                            </td>
-                            <td style={{ minWidth: "120px" }}>
-                              <div className="d-flex align-items-center gap-2 justify-content-center">
-                                <span className="small fw-bold">{client.collection_rate || 0}%</span>
-                                <div className="flex-grow-1" style={{ maxWidth: "70px" }}>
-                                  <ProgressBar
-                                    now={client.collection_rate || 0}
-                                    variant={
-                                      (client.collection_rate || 0) >= 100
-                                        ? "success"
-                                        : (client.collection_rate || 0) > 0
-                                        ? "warning"
-                                        : "danger"
-                                    }
-                                    style={{ height: "6px" }}
-                                    className="rounded-pill"
-                                  />
-                                </div>
-                              </div>
-                            </td>
-                            <td>{renderPaymentBadge(client.payment_status)}</td>
-                            <td className="text-center">
-                              {client.orders && client.orders.length > 0 && (
-                                <Button
-                                  variant="light"
-                                  size="sm"
-                                  className="rounded-circle shadow-sm border text-primary d-inline-flex align-items-center justify-content-center"
-                                  style={{ width: "36px", height: "36px" }}
-                                  onClick={() => handleViewOrderDetails(client.orders[0])}
-                                  title="عرض أول طلب للعميل"
-                                >
-                                  <i className="fa-solid fa-eye fs-6"></i>
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
-                        <tr style={{ fontSize: "0.95rem" }}>
-                          <td colSpan={2} className="text-start py-3 px-4 fw-bold text-dark">
-                            <div className="d-flex align-items-center gap-2">
-                              <i className="fa-solid fa-calculator text-primary fs-5"></i>
-                              <span>الإجمالي ({clientSummaryTotals.clientsCount} عميل)</span>
-                            </div>
-                          </td>
-                          <td className="py-3">
-                            <Badge bg="primary" className="px-2.5 py-1.5 rounded-pill">
-                              {clientSummaryTotals.ordersCount} طلبات
-                            </Badge>
-                          </td>
-                          <td className="fw-bold text-secondary py-3 font-monospace">
-                            {(clientSummaryTotals.totalOpeningBalance || 0).toLocaleString()} ر.س
-                          </td>
-                          <td className="fw-bold text-dark py-3 font-monospace">
-                            {(clientSummaryTotals.totalContract || 0).toLocaleString()} ر.س
-                          </td>
-                          <td className="fw-bold text-primary py-3 font-monospace">
-                            {(clientSummaryTotals.totalDue || 0).toLocaleString()} ر.س
-                          </td>
-                          <td className="fw-bold text-success py-3 font-monospace">
-                            {(clientSummaryTotals.totalCollected || 0).toLocaleString()} ر.س
-                          </td>
-                          <td className="fw-bold text-danger py-3 font-monospace">
-                            {(clientSummaryTotals.totalOutstanding || 0).toLocaleString()} ر.س
-                          </td>
-                          <td className="py-3 fw-bold text-primary font-monospace">
-                            {clientSummaryTotals.rate}%
-                          </td>
-                          <td className="py-3">
-                            {renderPaymentBadge(
-                              clientSummaryTotals.totalCollected >= clientSummaryTotals.totalDue && clientSummaryTotals.totalDue > 0
-                                ? "محصل بالكامل"
-                                : clientSummaryTotals.totalCollected > 0
-                                ? "محصل جزئياً"
-                                : "غير محصل"
-                            )}
-                          </td>
-                          <td className="text-muted small py-3">-</td>
-                        </tr>
-                      </tfoot>
-                    </Table>
-                  </div>
+                  <SortableTable
+                    data={paginatedData}
+                    columns={defaultClientSummaryColumns}
+                    storageKey="financial_client_summary_columns"
+                    renderCell={renderClientSummaryCell}
+                    renderFooter={renderClientSummaryFooter}
+                    sortConfig={clientSortConfig}
+                    onRequestSort={requestClientSort}
+                    emptyMessage="لا توجد بيانات عملاء مطابقة للبحث أو الفلتر"
+                    tableClassName="mb-0 text-center"
+                  />
                 )}
 
                 {/* ======================================================== */}
@@ -1540,148 +2016,17 @@ const FinancialCollectionsReport = () => {
                 {/*   عدد العملاء, إجمالي العقود, المحصل, المتبقي, حالة...    */}
                 {/* ======================================================== */}
                 {reportTarget === "marketer" && reportMode === "summary" && (
-                  <div className="table-responsive">
-                    <Table hover align="middle" className="mb-0 text-center">
-                      <thead className="bg-light text-secondary border-bottom">
-                        <tr>
-                          <th className="py-3">#</th>
-                          <th className="py-3 text-start px-4">اسم المسوق / الموظف</th>
-                          <th className="py-3">المكتب التابع له</th>
-                          <th className="py-3">عدد الطلبات</th>
-                          <th className="py-3">عدد العملاء</th>
-                          <th className="py-3">إجمالي العقود</th>
-                          <th className="py-3">المحصل الفعلي</th>
-                          <th className="py-3">المتبقي</th>
-                          <th className="py-3">نسبة التحصيل</th>
-                          <th className="py-3">حالة التحصيل</th>
-                          <th className="py-3 text-center">التفاصيل</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paginatedData.map((marketer, idx) => (
-                          <tr key={marketer.employee_id || idx}>
-                            <td className="text-muted fw-bold">
-                              {(currentPage - 1) * itemsPerPage + idx + 1}
-                            </td>
-                            <td className="fw-semibold text-dark text-start px-4">
-                              <div className="d-flex align-items-center gap-2">
-                                <div
-                                  className="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center fw-bold"
-                                  style={{ width: "34px", height: "34px", fontSize: "0.85rem" }}
-                                >
-                                  {(marketer.employee_name || "م").substring(0, 1)}
-                                </div>
-                                <div>
-                                  <div className="fw-bold">{marketer.employee_name}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td>
-                              <span className="badge bg-light text-dark border px-2.5 py-1.5 rounded-3">
-                                {marketer.office_name || "الفرع الرئيسي"}
-                              </span>
-                            </td>
-                            <td>
-                              <Badge bg="primary" className="px-2.5 py-1.5 rounded-pill">
-                                {marketer.orders_count} عقود
-                              </Badge>
-                            </td>
-                            <td>
-                              <Badge bg="secondary" className="px-2.5 py-1.5 rounded-pill">
-                                {marketer.clients_count || 0} عملاء
-                              </Badge>
-                            </td>
-                            <td className="fw-bold text-dark">
-                              {(marketer.total_contract_value || 0).toLocaleString()} ر.س
-                            </td>
-                            <td className="fw-bold text-success">
-                              {(marketer.total_collected || 0).toLocaleString()} ر.س
-                            </td>
-                            <td className="fw-bold text-danger">
-                              {(marketer.total_outstanding || 0).toLocaleString()} ر.س
-                            </td>
-                            <td style={{ minWidth: "120px" }}>
-                              <div className="d-flex align-items-center gap-2 justify-content-center">
-                                <span className="small fw-bold">{marketer.collection_rate || 0}%</span>
-                                <div className="flex-grow-1" style={{ maxWidth: "70px" }}>
-                                  <ProgressBar
-                                    now={marketer.collection_rate || 0}
-                                    variant={
-                                      (marketer.collection_rate || 0) >= 100
-                                        ? "success"
-                                        : (marketer.collection_rate || 0) > 0
-                                        ? "warning"
-                                        : "danger"
-                                    }
-                                    style={{ height: "6px" }}
-                                    className="rounded-pill"
-                                  />
-                                </div>
-                              </div>
-                            </td>
-                            <td>{renderPaymentBadge(marketer.payment_status)}</td>
-                            <td className="text-center">
-                              <Button
-                                variant="outline-primary"
-                                size="sm"
-                                className="rounded-pill px-3 py-1 fw-semibold small"
-                                onClick={() => {
-                                  setReportMode("detailed");
-                                  const key = marketer.employee_id ? `emp_${marketer.employee_id}` : `m_${idx}`;
-                                  setExpandedMarketers({ [key]: true });
-                                }}
-                                title="عرض العملاء والطلبات التفصيلية لهذا المسوق"
-                              >
-                                عرض التفاصيل
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
-                        <tr style={{ fontSize: "0.95rem" }}>
-                          <td colSpan={3} className="text-start py-3 px-4 fw-bold text-dark">
-                            <div className="d-flex align-items-center gap-2">
-                              <i className="fa-solid fa-calculator text-primary fs-5"></i>
-                              <span>الإجمالي ({marketerSummaryTotals.marketersCount} مسوق)</span>
-                            </div>
-                          </td>
-                          <td className="py-3">
-                            <Badge bg="primary" className="px-2.5 py-1.5 rounded-pill">
-                              {marketerSummaryTotals.ordersCount} عقود
-                            </Badge>
-                          </td>
-                          <td className="py-3">
-                            <Badge bg="secondary" className="px-2.5 py-1.5 rounded-pill">
-                              {marketerSummaryTotals.clientsCount} عملاء
-                            </Badge>
-                          </td>
-                          <td className="fw-bold text-dark py-3 font-monospace">
-                            {(marketerSummaryTotals.totalContract || 0).toLocaleString()} ر.س
-                          </td>
-                          <td className="fw-bold text-success py-3 font-monospace">
-                            {(marketerSummaryTotals.totalCollected || 0).toLocaleString()} ر.س
-                          </td>
-                          <td className="fw-bold text-danger py-3 font-monospace">
-                            {(marketerSummaryTotals.totalOutstanding || 0).toLocaleString()} ر.س
-                          </td>
-                          <td className="py-3 fw-bold text-primary font-monospace">
-                            {marketerSummaryTotals.rate}%
-                          </td>
-                          <td className="py-3">
-                            {renderPaymentBadge(
-                              marketerSummaryTotals.totalCollected >= marketerSummaryTotals.totalContract && marketerSummaryTotals.totalContract > 0
-                                ? "محصل بالكامل"
-                                : marketerSummaryTotals.totalCollected > 0
-                                ? "محصل جزئياً"
-                                : "غير محصل"
-                            )}
-                          </td>
-                          <td className="text-muted small py-3">-</td>
-                        </tr>
-                      </tfoot>
-                    </Table>
-                  </div>
+                  <SortableTable
+                    data={paginatedData}
+                    columns={defaultMarketerSummaryColumns}
+                    storageKey="financial_marketer_summary_columns"
+                    renderCell={renderMarketerSummaryCell}
+                    renderFooter={renderMarketerSummaryFooter}
+                    sortConfig={marketerSortConfig}
+                    onRequestSort={requestMarketerSort}
+                    emptyMessage="لا توجد بيانات مسوقين مطابقة للبحث أو الفلتر"
+                    tableClassName="mb-0 text-center"
+                  />
                 )}
 
                 {/* ======================================================== */}
@@ -1806,113 +2151,18 @@ const FinancialCollectionsReport = () => {
                                     لا توجد طلبات مسجلة تحت هذا المسوق حالياً
                                   </div>
                                 ) : (
-                                  <div className="table-responsive border rounded-3 overflow-hidden">
-                                    <Table hover align="middle" className="mb-0 text-center table-sm">
-                                      <thead className="bg-light text-secondary border-bottom">
-                                        <tr style={{ fontSize: "0.85rem" }}>
-                                          <th className="py-2.5">#</th>
-                                          <th className="py-2.5 text-start px-3">اسم العميل</th>
-                                          <th className="py-2.5">المكتب السعودي 🇸🇦</th>
-                                          <th className="py-2.5">الجنسية 🌍</th>
-                                          <th className="py-2.5">رقم التأشيرة 🎫</th>
-                                          {!hideOrderStatus && <th className="py-2.5">حالة الطلب 📌</th>}
-                                          <th className="py-2.5">إجمالي العقد</th>
-                                          <th className="py-2.5">المحصل</th>
-                                          <th className="py-2.5">المتبقي</th>
-                                          <th className="py-2.5">حالة التحصيل</th>
-                                          <th className="py-2.5">وقت إضافة الحوالة الجديدة ⏱️</th>
-                                          <th className="py-2.5">التاريخ</th>
-                                          <th className="py-2.5 text-center">التفاصيل</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {marketerOrders.map((ord, oIdx) => (
-                                          <tr key={ord.id || oIdx} style={{ fontSize: "0.88rem" }}>
-                                            <td className="fw-bold text-muted">{ord.id}</td>
-                                            <td className="fw-semibold text-dark text-start px-3">
-                                              <div>{ord.client_name}</div>
-                                              {ord.client_phone && (
-                                                <div
-                                                  className="text-muted small dir-ltr text-end"
-                                                  style={{ fontSize: "0.75rem" }}
-                                                >
-                                                  {ord.client_phone}
-                                                </div>
-                                              )}
-                                            </td>
-                                            <td>
-                                              <span className="badge bg-light text-dark border px-2 py-1 rounded">
-                                                {ord.saudi_office_name || "-"}
-                                              </span>
-                                            </td>
-                                            <td>
-                                              <span className="badge bg-light text-secondary border px-2 py-1 rounded">
-                                                {ord.nationality || "-"}
-                                              </span>
-                                            </td>
-                                            <td>
-                                              <Badge bg="secondary" className="px-2 py-1 font-monospace">
-                                                {ord.visa_number || "-"}
-                                              </Badge>
-                                            </td>
-                                            {!hideOrderStatus && <td>{renderOrderStatusBadge(ord)}</td>}
-                                            <td className="fw-bold text-dark">
-                                              {(ord.total_price || 0).toLocaleString()} ر.س
-                                            </td>
-                                            <td className="fw-bold text-success">
-                                              {(ord.paid_amount || 0).toLocaleString()} ر.س
-                                            </td>
-                                            <td className="fw-bold text-danger">
-                                              {(ord.remaining_amount || 0).toLocaleString()} ر.س
-                                            </td>
-                                            <td>{renderPaymentBadge(ord.payment_status)}</td>
-                                            <td>
-                                              <span className="badge bg-light text-dark border px-2 py-1 rounded font-monospace small">
-                                                {ord.latest_transaction_time || "-"}
-                                              </span>
-                                            </td>
-                                            <td className="text-muted small">{ord.created_at}</td>
-                                            <td className="text-center">
-                                              <Button
-                                                variant="light"
-                                                size="sm"
-                                                className="rounded-circle shadow-sm border text-primary d-inline-flex align-items-center justify-content-center"
-                                                style={{ width: "32px", height: "32px" }}
-                                                onClick={() => handleViewOrderDetails(ord)}
-                                                title="عرض تفاصيل الطلب والحساب الكامل"
-                                              >
-                                                <i className="fa-solid fa-eye fs-7"></i>
-                                              </Button>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                      <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
-                                        <tr style={{ fontSize: "0.88rem" }}>
-                                          <td colSpan={hideOrderStatus ? 5 : 6} className="text-start py-2.5 px-3 fw-bold text-dark">
-                                            <div className="d-flex align-items-center gap-1.5">
-                                              <i className="fa-solid fa-calculator text-primary"></i>
-                                              <span>إجمالي طلبات المسوق ({marketerOrders.length} طلب)</span>
-                                            </div>
-                                          </td>
-                                          <td className="fw-bold text-dark py-2.5 font-monospace">
-                                            {(marketer.total_contract_value || 0).toLocaleString()} ر.س
-                                          </td>
-                                          <td className="fw-bold text-success py-2.5 font-monospace">
-                                            {(marketer.total_collected || 0).toLocaleString()} ر.س
-                                          </td>
-                                          <td className="fw-bold text-danger py-2.5 font-monospace">
-                                            {(marketer.total_outstanding || 0).toLocaleString()} ر.س
-                                          </td>
-                                          <td className="py-2.5">
-                                            {renderPaymentBadge(marketer.payment_status)}
-                                          </td>
-                                          <td className="text-muted small py-2.5">-</td>
-                                          <td className="text-muted small py-2.5">-</td>
-                                          <td className="text-muted small py-2.5">-</td>
-                                        </tr>
-                                      </tfoot>
-                                    </Table>
+                                  <div className="border rounded-3 overflow-hidden">
+                                    <SortableTable
+                                      data={marketerOrders}
+                                      columns={defaultClientDetailedColumns}
+                                      storageKey="financial_marketer_orders_columns"
+                                      renderCell={renderClientDetailedCell}
+                                      renderFooter={(cols) =>
+                                        renderMarketerOrdersFooter(cols, marketer, marketerOrders)
+                                      }
+                                      emptyMessage="لا توجد طلبات مسجلة تحت هذا المسوق حالياً"
+                                      tableClassName="mb-0 text-center table-sm"
+                                    />
                                   </div>
                                 )}
                               </div>

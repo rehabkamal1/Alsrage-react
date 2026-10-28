@@ -18,6 +18,7 @@ import {
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
 import SortableHeader from "../../components/common/SortableHeader";
+import SortableTable from "../../components/common/SortableTable";
 import { useSortableData } from "../../hooks/useSortableData";
 import { exportToExcel } from "../../utils/excelHelper";
 import { exportToPDF } from "../../utils/pdfHelper";
@@ -204,6 +205,135 @@ const EmployeesPerformanceReport = () => {
       { header: "نسبة الإنجاز %", key: "completion_rate" },
     ];
     exportToPDF(dataToExport, columns, "تقرير_أداء_الموظفين_والمسوقين.pdf");
+  };
+
+  const tableColumns = useMemo(
+    () => [
+      { id: "name", label: "اسم الموظف / المسوق", width: "200px" },
+      { id: "office_name", label: "المكتب", width: "140px" },
+      { id: "position", label: "المسمى الوظيفي", width: "130px" },
+      { id: "total_orders", label: "عقود الفترة", width: "120px" },
+      { id: "orders_share_percentage", label: "نسبة المساهمة %", width: "150px" },
+      { id: "completed_orders", label: "المكتملة", width: "100px" },
+      { id: "active_orders", label: "النشطة", width: "100px" },
+      { id: "total_sales", label: "إجمالي المبيعات", width: "140px" },
+      { id: "completion_rate", label: "معدل الإنجاز %", width: "150px" },
+    ],
+    []
+  );
+
+  const renderCell = (emp, columnId) => {
+    switch (columnId) {
+      case "name":
+        return (
+          <td className="fw-bold text-dark text-end ps-3">
+            <div className="d-flex align-items-center gap-2">
+              <div
+                className="avatar-circle bg-primary-subtle text-primary fw-bold rounded-circle d-flex align-items-center justify-content-center"
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  fontSize: "0.9rem",
+                }}
+              >
+                {emp.name.charAt(0)}
+              </div>
+              <div>
+                <div>{emp.name}</div>
+              </div>
+            </div>
+          </td>
+        );
+      case "office_name":
+        return (
+          <td>
+            <span className="small text-muted">{emp.office_name}</span>
+          </td>
+        );
+      case "position":
+        return (
+          <td>
+            <Badge bg="secondary" className="px-2 py-1 bg-opacity-75">
+              {emp.position}
+            </Badge>
+          </td>
+        );
+      case "total_orders":
+        return (
+          <td>
+            <Button
+              variant="outline-primary"
+              size="sm"
+              className="rounded-pill px-3 fw-bold"
+              onClick={() => handleOpenOrdersModal(emp)}
+            >
+              {emp.total_orders} عقود 🔍
+            </Button>
+          </td>
+        );
+      case "orders_share_percentage":
+        return (
+          <td>
+            <div className="d-flex align-items-center gap-2 justify-content-center">
+              <ProgressBar
+                now={emp.orders_share_percentage}
+                variant="info"
+                style={{ width: "60px", height: "6px" }}
+                className="rounded-pill"
+              />
+              <span className="small fw-bold">
+                {emp.orders_share_percentage}%
+              </span>
+            </div>
+          </td>
+        );
+      case "completed_orders":
+        return (
+          <td>
+            <Badge bg="success" className="px-2 py-1">
+              {emp.completed_orders}
+            </Badge>
+          </td>
+        );
+      case "active_orders":
+        return (
+          <td>
+            <Badge bg="warning" text="dark" className="px-2 py-1">
+              {emp.active_orders}
+            </Badge>
+          </td>
+        );
+      case "total_sales":
+        return (
+          <td className="fw-bold text-success font-monospace">
+            {(emp.total_sales || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "completion_rate":
+        return (
+          <td>
+            <div className="d-flex align-items-center gap-2 justify-content-center">
+              <ProgressBar
+                now={emp.completion_rate}
+                variant={
+                  emp.completion_rate >= 80
+                    ? "success"
+                    : emp.completion_rate >= 50
+                      ? "warning"
+                      : "danger"
+                }
+                style={{ width: "60px", height: "6px" }}
+                className="rounded-pill"
+              />
+              <span className="small fw-bold">
+                {emp.completion_rate}%
+              </span>
+            </div>
+          </td>
+        );
+      default:
+        return <td>-</td>;
+    }
   };
 
   return (
@@ -468,182 +598,16 @@ const EmployeesPerformanceReport = () => {
                 <TableSkeleton rows={5} columns={9} />
               </div>
             ) : (
-              <div className="table-responsive">
-                <Table hover align="middle" className="mb-0 text-center">
-                  <thead className="bg-light text-secondary border-bottom">
-                    <tr>
-                      <SortableHeader
-                        title="اسم الموظف / المسوق"
-                        sortKey="name"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="المكتب"
-                        sortKey="office_name"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="المسمى الوظيفي"
-                        sortKey="position"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="عقود الفترة"
-                        sortKey="total_orders"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="نسبة المساهمة %"
-                        sortKey="orders_share_percentage"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                        style={{ minWidth: "150px" }}
-                      />
-                      <SortableHeader
-                        title="المكتملة"
-                        sortKey="completed_orders"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="النشطة"
-                        sortKey="active_orders"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="إجمالي المبيعات"
-                        sortKey="total_sales"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                      />
-                      <SortableHeader
-                        title="معدل الإنجاز %"
-                        sortKey="completion_rate"
-                        sortConfig={sortConfig}
-                        onRequestSort={requestSort}
-                        className="py-3"
-                        style={{ minWidth: "150px" }}
-                      />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedEmployees.length === 0 ? (
-                      <tr>
-                        <td colSpan={9} className="py-5 text-muted">
-                          لا توجد بيانات موظفين مطابقة للفلاتر المحددة
-                        </td>
-                      </tr>
-                    ) : (
-                      paginatedEmployees.map((emp, idx) => (
-                        <tr key={emp.id || idx}>
-                          <td className="fw-bold text-dark text-end ps-3">
-                            <div className="d-flex align-items-center gap-2">
-                              <div
-                                className="avatar-circle bg-primary-subtle text-primary fw-bold rounded-circle d-flex align-items-center justify-content-center"
-                                style={{
-                                  width: "36px",
-                                  height: "36px",
-                                  fontSize: "0.9rem",
-                                }}
-                              >
-                                {emp.name.charAt(0)}
-                              </div>
-                              <div>
-                                <div>{emp.name}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="small text-muted">
-                              {emp.office_name}
-                            </span>
-                          </td>
-                          <td>
-                            <Badge
-                              bg="secondary"
-                              className="px-2 py-1 bg-opacity-75"
-                            >
-                              {emp.position}
-                            </Badge>
-                          </td>
-                          <td>
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
-                              className="rounded-pill px-3 fw-bold"
-                              onClick={() => handleOpenOrdersModal(emp)}
-                            >
-                              {emp.total_orders} عقود 🔍
-                            </Button>
-                          </td>
-                          <td>
-                            <div className="d-flex align-items-center gap-2 justify-content-center">
-                              <ProgressBar
-                                now={emp.orders_share_percentage}
-                                variant="info"
-                                style={{ width: "60px", height: "6px" }}
-                                className="rounded-pill"
-                              />
-                              <span className="small fw-bold">
-                                {emp.orders_share_percentage}%
-                              </span>
-                            </div>
-                          </td>
-                          <td>
-                            <Badge bg="success" className="px-2 py-1">
-                              {emp.completed_orders}
-                            </Badge>
-                          </td>
-                          <td>
-                            <Badge
-                              bg="warning"
-                              text="dark"
-                              className="px-2 py-1"
-                            >
-                              {emp.active_orders}
-                            </Badge>
-                          </td>
-                          <td className="fw-bold text-success">
-                            {(emp.total_sales || 0).toLocaleString()} ر.س
-                          </td>
-                          <td>
-                            <div className="d-flex align-items-center gap-2 justify-content-center">
-                              <ProgressBar
-                                now={emp.completion_rate}
-                                variant={
-                                  emp.completion_rate >= 80
-                                    ? "success"
-                                    : emp.completion_rate >= 50
-                                      ? "warning"
-                                      : "danger"
-                                }
-                                style={{ width: "60px", height: "6px" }}
-                                className="rounded-pill"
-                              />
-                              <span className="small fw-bold">
-                                {emp.completion_rate}%
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </Table>
-              </div>
+              <SortableTable
+                data={paginatedEmployees}
+                columns={tableColumns}
+                storageKey="employees_performance_report_columns"
+                renderCell={renderCell}
+                sortConfig={sortConfig}
+                onRequestSort={requestSort}
+                emptyMessage="لا توجد بيانات موظفين مطابقة للفلاتر المحددة"
+                tableClassName="mb-0 text-center"
+              />
             )}
             <PaginationComponent
               currentPage={currentPage}

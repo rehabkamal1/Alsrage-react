@@ -48,7 +48,7 @@ const SortableHeader = ({
 
         const handleSort = (e) => {
             e.stopPropagation();
-            if (!isDragging && onRequestSort) {
+            if (!isDragging && onRequestSort && column.sortable !== false && column.id !== "actions") {
                 onRequestSort(column.id);
             }
         };
@@ -63,22 +63,24 @@ const SortableHeader = ({
                 title="اسحب لترتيب الأعمدة | اضغط للفرز"
                 onClick={handleSort}
             >
-                <div className="d-flex align-items-center gap-1">
+                <div className="d-flex align-items-center justify-content-center gap-1 w-100">
                     <span className="drag-handle" style={{ cursor: "grab" }}>
                         ⠿
                     </span>
                     <span>{column.label || "-"}</span>
-                    <span className="sort-icon small opacity-75 ms-1">
-                        {!isSorted && (
-                            <i className="fa-solid fa-sort text-muted opacity-50"></i>
-                        )}
-                        {direction === "asc" && (
-                            <i className="fa-solid fa-arrow-up-wide-short text-primary fw-bold"></i>
-                        )}
-                        {direction === "desc" && (
-                            <i className="fa-solid fa-arrow-down-wide-short text-primary fw-bold"></i>
-                        )}
-                    </span>
+                    {column.sortable !== false && column.id !== "actions" && (
+                        <span className="sort-icon small opacity-75 ms-1">
+                            {!isSorted && (
+                                <i className="fa-solid fa-sort text-muted opacity-50"></i>
+                            )}
+                            {direction === "asc" && (
+                                <i className="fa-solid fa-arrow-up-wide-short text-primary fw-bold"></i>
+                            )}
+                            {direction === "desc" && (
+                                <i className="fa-solid fa-arrow-down-wide-short text-primary fw-bold"></i>
+                            )}
+                        </span>
+                    )}
                 </div>
             </th>
         );

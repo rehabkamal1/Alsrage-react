@@ -5,6 +5,7 @@ import ReportFilters from "../../components/ReportFilters";
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
 import SortableHeader from "../../components/common/SortableHeader";
+import SortableTable from "../../components/common/SortableTable";
 import { useSortableData } from "../../hooks/useSortableData";
 import { exportToExcel } from "../../utils/excelHelper";
 import { exportToPDF } from "../../utils/pdfHelper";
@@ -122,6 +123,96 @@ const CompletedOrdersReport = () => {
       { header: "تاريخ الإكتمال", key: "completed_at" },
     ];
     exportToPDF(sortedOrders, columns, "تقرير_الطلبات_المكتملة.pdf");
+  };
+
+  const tableColumns = useMemo(
+    () => [
+      { id: "id", label: "#", width: "70px" },
+      { id: "visa_number", label: "رقم التأشيرة", width: "130px" },
+      { id: "client_name", label: "المندوب / العميل", width: "180px" },
+      { id: "employee_name", label: "المسوق / الموظف", width: "160px" },
+      { id: "saudi_office", label: "المكتب السعودي", width: "140px" },
+      { id: "external_office", label: "المكتب الخارجي", width: "140px" },
+      { id: "service_type", label: "نوع الخدمة", width: "130px" },
+      { id: "total_price", label: "إجمالي المبلغ", width: "130px" },
+      { id: "completion_days", label: "مدة الإنجاز", width: "110px" },
+      { id: "completed_at", label: "تاريخ الإكتمال", width: "120px" },
+      { id: "within_sla", label: "حالة SLA", width: "130px" },
+      { id: "actions", label: "الإجراءات", width: "90px", sortable: false },
+    ],
+    []
+  );
+
+  const renderCell = (order, columnId) => {
+    switch (columnId) {
+      case "id":
+        return <td className="fw-bold">{order.id}</td>;
+      case "visa_number":
+        return (
+          <td>
+            <Badge bg="secondary" className="px-2 py-1 font-monospace">
+              {order.visa_number}
+            </Badge>
+          </td>
+        );
+      case "client_name":
+        return <td className="fw-semibold text-dark">{order.client_name}</td>;
+      case "employee_name":
+        return <td className="text-secondary small">{order.employee_name}</td>;
+      case "saudi_office":
+        return <td className="text-muted">{order.saudi_office}</td>;
+      case "external_office":
+        return <td className="text-muted">{order.external_office}</td>;
+      case "service_type":
+        return (
+          <td>
+            <Badge bg="info" className="bg-opacity-10 text-info px-2 py-1">
+              {order.service_type}
+            </Badge>
+          </td>
+        );
+      case "total_price":
+        return (
+          <td className="fw-bold text-success font-monospace">
+            {(order.total_price || 0).toLocaleString()} ر.س
+          </td>
+        );
+      case "completion_days":
+        return <td className="fw-semibold">{order.completion_days} يوم</td>;
+      case "completed_at":
+        return <td className="text-muted">{order.completed_at}</td>;
+      case "within_sla":
+        return (
+          <td>
+            {order.within_sla ? (
+              <Badge bg="success" className="px-3 py-2 rounded-pill">
+                ضمن SLA ✓
+              </Badge>
+            ) : (
+              <Badge bg="danger" className="px-3 py-2 rounded-pill">
+                متأخر عن SLA ✕
+              </Badge>
+            )}
+          </td>
+        );
+      case "actions":
+        return (
+          <td className="text-center">
+            <Button
+              variant="light"
+              size="sm"
+              className="rounded-circle shadow-sm border text-primary d-inline-flex align-items-center justify-content-center"
+              style={{ width: "36px", height: "36px" }}
+              onClick={() => handleViewOrderDetails(order)}
+              title="عرض تفاصيل الطلب"
+            >
+              <i className="fa-solid fa-eye fs-6"></i>
+            </Button>
+          </td>
+        );
+      default:
+        return <td>-</td>;
+    }
   };
 
   return (
@@ -261,77 +352,16 @@ const CompletedOrdersReport = () => {
                 <h5 className="text-secondary fw-semibold">لا توجد طلبات مكتملة تطابق فلاتر البحث</h5>
               </div>
             ) : (
-              <div className="table-responsive">
-                <Table hover align="middle" className="mb-0 text-center">
-                  <thead className="bg-light text-secondary border-bottom">
-                    <tr>
-                      <SortableHeader title="#" sortKey="id" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
-                      <SortableHeader title="رقم التأشيرة" sortKey="visa_number" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
-                      <SortableHeader title="المندوب / العميل" sortKey="client_name" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
-                      <SortableHeader title="المسوق / الموظف" sortKey="employee_name" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
-                      <SortableHeader title="المكتب السعودي" sortKey="saudi_office" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
-                      <SortableHeader title="المكتب الخارجي" sortKey="external_office" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
-                      <SortableHeader title="نوع الخدمة" sortKey="service_type" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
-                      <SortableHeader title="إجمالي المبلغ" sortKey="total_price" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
-                      <SortableHeader title="مدة الإنجاز" sortKey="completion_days" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
-                      <SortableHeader title="تاريخ الإكتمال" sortKey="completed_at" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
-                      <SortableHeader title="حالة SLA" sortKey="within_sla" sortConfig={sortConfig} onRequestSort={requestSort} className="py-3" />
-                      <th className="py-3 text-center">الإجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedOrders.map((order, idx) => (
-                      <tr key={order.id || idx}>
-                        <td className="fw-bold">{order.id}</td>
-                        <td>
-                          <Badge bg="secondary" className="px-2 py-1 font-monospace">
-                            {order.visa_number}
-                          </Badge>
-                        </td>
-                        <td className="fw-semibold text-dark">{order.client_name}</td>
-                        <td className="text-secondary small">{order.employee_name}</td>
-                        <td className="text-muted">{order.saudi_office}</td>
-                        <td className="text-muted">{order.external_office}</td>
-                        <td>
-                          <Badge bg="info" className="bg-opacity-10 text-info px-2 py-1">
-                            {order.service_type}
-                          </Badge>
-                        </td>
-                        <td className="fw-bold text-success">
-                          {(order.total_price || 0).toLocaleString()} ر.س
-                        </td>
-                        <td className="fw-semibold">
-                          {order.completion_days} يوم
-                        </td>
-                        <td className="text-muted">{order.completed_at}</td>
-                        <td>
-                          {order.within_sla ? (
-                            <Badge bg="success" className="px-3 py-2 rounded-pill">
-                              ضمن SLA ✓
-                            </Badge>
-                          ) : (
-                            <Badge bg="danger" className="px-3 py-2 rounded-pill">
-                              متأخر عن SLA ✕
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="text-center">
-                          <Button
-                            variant="light"
-                            size="sm"
-                            className="rounded-circle shadow-sm border text-primary d-inline-flex align-items-center justify-content-center"
-                            style={{ width: "36px", height: "36px" }}
-                            onClick={() => handleViewOrderDetails(order)}
-                            title="عرض تفاصيل الطلب"
-                          >
-                            <i className="fa-solid fa-eye fs-6"></i>
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
+              <SortableTable
+                data={paginatedOrders}
+                columns={tableColumns}
+                storageKey="completed_orders_report_columns"
+                renderCell={renderCell}
+                sortConfig={sortConfig}
+                onRequestSort={requestSort}
+                emptyMessage="لا توجد طلبات مكتملة تطابق فلاتر البحث"
+                tableClassName="mb-0 text-center"
+              />
             )}
             <PaginationComponent
               currentPage={currentPage}

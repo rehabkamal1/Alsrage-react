@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Table } from "react-bootstrap";
 import {
   DndContext,
@@ -30,6 +30,8 @@ const SortableTable = ({
   sortConfig,
   onRequestSort,
   getRowProps,
+  renderFooter,
+  children,
 }) => {
   const internalSorting = useSortableData(data);
   const isControlled = Boolean(sortConfig && onRequestSort);
@@ -42,23 +44,53 @@ const SortableTable = ({
     : internalSorting.requestSort;
 
   const [currentColumns, setCurrentColumns] = useState(() => {
+    if (!storageKey) return columns;
     const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         const allColumnIds = columns.map((c) => c.id);
-        const existingIds = parsed.map((c) => c.id);
-        const missingIds = allColumnIds.filter(
-          (id) => !existingIds.includes(id),
-        );
-        const missingColumns = columns.filter((c) => missingIds.includes(c.id));
-        return [...parsed, ...missingColumns];
+        const validParsed = parsed.filter((c) => allColumnIds.includes(c.id));
+        const existingIds = validParsed.map((c) => c.id);
+        const missingColumns = columns.filter((c) => !existingIds.includes(c.id));
+        const colMap = new Map(columns.map((c) => [c.id, c]));
+        return [...validParsed, ...missingColumns].map((c) => ({
+          ...c,
+          ...(colMap.get(c.id) || {}),
+        }));
       } catch {
         return columns;
       }
     }
     return columns;
   });
+
+  useEffect(() => {
+    if (!storageKey) {
+      setCurrentColumns(columns);
+      return;
+    }
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const allColumnIds = columns.map((c) => c.id);
+        const validParsed = parsed.filter((c) => allColumnIds.includes(c.id));
+        const existingIds = validParsed.map((c) => c.id);
+        const missingColumns = columns.filter((c) => !existingIds.includes(c.id));
+        const colMap = new Map(columns.map((c) => [c.id, c]));
+        const updated = [...validParsed, ...missingColumns].map((c) => ({
+          ...c,
+          ...(colMap.get(c.id) || {}),
+        }));
+        setCurrentColumns(updated);
+        return;
+      } catch {
+        // fallback
+      }
+    }
+    setCurrentColumns(columns);
+  }, [columns, storageKey]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -153,6 +185,8 @@ const SortableTable = ({
               </tr>
             )}
           </tbody>
+          {renderFooter && renderFooter(currentColumns)}
+          {children}
         </Table>
       </div>
     </DndContext>
