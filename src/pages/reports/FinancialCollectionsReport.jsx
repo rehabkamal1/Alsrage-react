@@ -364,14 +364,29 @@ const FinancialCollectionsReport = () => {
     return clientsList.find((c) => String(c.id) === String(selectedClient));
   }, [selectedClient, clientsList]);
 
-  const selectedClientOpeningBalance = useMemo(() => {
-    if (!selectedClient) return 0;
-    const fromSummary = clientsSummary.find((c) => String(c.client_id) === String(selectedClient));
+  // Detect single client context either from dropdown selection or if all displayed orders belong to one client
+  const activeClientId = useMemo(() => {
+    if (selectedClient) return String(selectedClient);
+    if (filteredOrders.length > 0) {
+      const firstId = filteredOrders[0].client_id;
+      if (firstId && filteredOrders.every((o) => o.client_id === firstId)) {
+        return String(firstId);
+      }
+    }
+    return null;
+  }, [selectedClient, filteredOrders]);
+
+  const activeClientOpeningBalance = useMemo(() => {
+    if (!activeClientId) return 0;
+    const fromSummary = clientsSummary.find((c) => String(c.client_id) === String(activeClientId));
     if (fromSummary && fromSummary.opening_balance != null) {
       return Number(fromSummary.opening_balance) || 0;
     }
-    return Number(selectedClientObj?.opening_balance || 0);
-  }, [selectedClient, clientsSummary, selectedClientObj]);
+    const fromList = clientsList.find((c) => String(c.id) === String(activeClientId));
+    return Number(fromList?.opening_balance || 0);
+  }, [activeClientId, clientsSummary, clientsList]);
+
+  const selectedClientOpeningBalance = activeClientOpeningBalance;
 
   // 2. Client Summary List
   const filteredClients = useMemo(() => {
@@ -440,7 +455,12 @@ const FinancialCollectionsReport = () => {
           const q = searchQuery.toLowerCase().trim();
           const matchesName = (client.client_name || "").toLowerCase().includes(q);
           const matchesPhone = (client.client_phone || "").toLowerCase().includes(q);
-          if (!matchesName && !matchesPhone) {
+          const matchesSubOrder = (client.orders || []).some(
+            (o) =>
+              (o.visa_number || "").toLowerCase().includes(q) ||
+              String(o.id || "").includes(q)
+          );
+          if (!matchesName && !matchesPhone && !matchesSubOrder) {
             return false;
           }
         }
@@ -941,7 +961,7 @@ const FinancialCollectionsReport = () => {
   };
 
   const renderClientDetailedFooter = (cols) => {
-    const openingBal = selectedClient ? selectedClientOpeningBalance : 0;
+    const openingBal = activeClientId ? activeClientOpeningBalance : 0;
     const finalTotalPrice = clientDetailedTotals.totalPrice + openingBal;
     const finalPaid = clientDetailedTotals.paidAmount || 0;
     const finalRemaining = Math.max(0, finalTotalPrice - finalPaid);
@@ -954,7 +974,7 @@ const FinancialCollectionsReport = () => {
 
     return (
       <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
-        {selectedClient && openingBal > 0 && (
+        {activeClientId && openingBal > 0 && (
           <tr className="bg-warning bg-opacity-10" style={{ fontSize: "0.9rem" }}>
             {cols.map((col) => {
               if (col.id === "id" || col.id === cols[0]?.id) {
@@ -991,7 +1011,7 @@ const FinancialCollectionsReport = () => {
                   <div className="d-flex align-items-center gap-1">
                     <i className="fa-solid fa-calculator text-primary fs-6"></i>
                     <span>
-                      الإجمالي {selectedClient && openingBal > 0 ? "(شامل الافتتاحي)" : `(${clientDetailedTotals.count} طلب)`}
+                      الإجمالي {activeClientId && openingBal > 0 ? "(شامل الافتتاحي)" : `(${clientDetailedTotals.count} طلب)`}
                     </span>
                   </div>
                 </td>
@@ -1978,17 +1998,40 @@ const FinancialCollectionsReport = () => {
                 {/*          حالة التحصيل, التاريخ, التفاصيل                 */}
                 {/* ======================================================== */}
                 {reportTarget === "client" && reportMode === "detailed" && (
-                  <SortableTable
-                    data={paginatedData}
-                    columns={defaultClientDetailedColumns}
-                    storageKey="financial_client_detailed_columns"
-                    renderCell={renderClientDetailedCell}
-                    renderFooter={renderClientDetailedFooter}
-                    sortConfig={orderSortConfig}
-                    onRequestSort={requestOrderSort}
-                    emptyMessage="لا توجد طلبات مطابقة للبحث أو الفلتر"
-                    tableClassName="mb-0 text-center"
-                  />
+                  <>
+                    {activeClientId && activeClientOpeningBalance > 0 && (
+                      <div className="p-3 bg-warning bg-opacity-10 border-bottom d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                        <div className="d-flex align-items-center gap-2">
+                          <i className="fa-solid fa-coins text-warning fs-5"></i>
+                          <div>
+                            <span className="fw-bold text-dark me-2">
+                              الرصيد الافتتاحي للعميل ({filteredOrders[0]?.client_name}):
+                            </span>
+                            <span className="fw-bold text-dark font-monospace">
+                              {activeClientOpeningBalance.toLocaleString()} ر.س
+                            </span>
+                            <div className="small text-muted mt-0.5">
+                              إجمالي العقود المعروضة: {clientDetailedTotals.totalPrice.toLocaleString()} ر.س • إجمالي المستحق: {(clientDetailedTotals.totalPrice + activeClientOpeningBalance).toLocaleString()} ر.س • المحصل: {clientDetailedTotals.paidAmount.toLocaleString()} ر.س • المتبقي النهائي: {Math.max(0, clientDetailedTotals.totalPrice + activeClientOpeningBalance - clientDetailedTotals.paidAmount).toLocaleString()} ر.س
+                            </div>
+                          </div>
+                        </div>
+                        <Badge bg="warning" text="dark" className="px-3 py-2 rounded-pill fw-bold text-nowrap">
+                          افتتاحي: {activeClientOpeningBalance.toLocaleString()} ر.س
+                        </Badge>
+                      </div>
+                    )}
+                    <SortableTable
+                      data={paginatedData}
+                      columns={defaultClientDetailedColumns}
+                      storageKey="financial_client_detailed_columns"
+                      renderCell={renderClientDetailedCell}
+                      renderFooter={renderClientDetailedFooter}
+                      sortConfig={orderSortConfig}
+                      onRequestSort={requestOrderSort}
+                      emptyMessage="لا توجد طلبات مطابقة للبحث أو الفلتر"
+                      tableClassName="mb-0 text-center"
+                    />
+                  </>
                 )}
 
                 {/* ======================================================== */}

@@ -614,6 +614,15 @@ const OrderFormModal = ({
     : parseFloat(formData.musaned_paid) || 0;
   const priceDifference = totalPrice - musanedPaid;
 
+  const selectedClientInfo = useMemo(() => {
+    if (!formData.client_id) return null;
+    return effectiveClients?.find(
+      (c) => String(c.id) === String(formData.client_id)
+    );
+  }, [formData.client_id, effectiveClients]);
+
+  const clientOpeningBalance = Number(selectedClientInfo?.opening_balance) || 0;
+
   const getFieldError = (fieldName) => {
     if (fieldErrors[fieldName]) {
       return fieldErrors[fieldName][0];
@@ -1587,18 +1596,48 @@ const OrderFormModal = ({
                     </Col>
                   </Row>
 
-                  {(totalPrice > 0 || musanedPaid > 0) && (
+                  {clientOpeningBalance > 0 && (
+                    <div className="alert alert-warning border-0 rounded-3 my-3 p-3 d-flex align-items-center justify-content-between">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="fa-solid fa-coins text-warning fs-5"></i>
+                        <div>
+                          <div className="fw-bold">يوجد رصيد افتتاحي سابق على هذا العميل:</div>
+                          <small className="text-muted">مسجل في ملف العميل قبل هذا الطلب</small>
+                        </div>
+                      </div>
+                      <span className="fw-bold fs-5 text-dark font-monospace">
+                        {clientOpeningBalance.toLocaleString()} ر.س
+                      </span>
+                    </div>
+                  )}
+
+                  {(totalPrice > 0 || musanedPaid > 0 || clientOpeningBalance > 0) && (
                     <div
                       className={`p-3 rounded-3 mt-3 ${priceDifference >= 0 ? "bg-success bg-opacity-10" : "bg-danger bg-opacity-10"}`}
                     >
-                      <div className="d-flex justify-content-between align-items-center">
-                        <span className="fw-semibold">الرصيد المتبقي:</span>
-                        <span
-                          className={`fs-4 fw-bold ${priceDifference >= 0 ? "text-success" : "text-danger"}`}
-                        >
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <span className="fw-semibold">متبقي هذا الطلب فقط:</span>
+                        <span className="fs-5 fw-bold font-monospace">
                           {priceDifference.toFixed(2)} ر.س
                         </span>
                       </div>
+                      {clientOpeningBalance > 0 && (
+                        <>
+                          <div className="d-flex justify-content-between align-items-center mb-1 text-warning-emphasis">
+                            <span className="small fw-semibold">+ الرصيد الافتتاحي السابق:</span>
+                            <span className="fw-bold font-monospace">
+                              {clientOpeningBalance.toFixed(2)} ر.س
+                            </span>
+                          </div>
+                          <hr className="my-2 border-secondary border-opacity-25" />
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span className="fw-bold text-dark">إجمالي المتبقي المطلوب من العميل:</span>
+                            <span className="fs-4 fw-bold text-danger font-monospace">
+                              {(priceDifference + clientOpeningBalance).toFixed(2)} ر.س
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
