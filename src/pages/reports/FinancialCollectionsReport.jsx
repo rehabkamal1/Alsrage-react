@@ -75,6 +75,47 @@ const FinancialCollectionsReport = () => {
   const isStatementMode = Boolean(selectedClient || selectedEmployee);
   const hideOrderStatus = isStatementMode;
 
+  // Check if an order should be excluded from statement of account
+  // (الطلبات المستبعدة: لم يتم السداد، انتظار السداد، منتهي)
+  const isExcludedFromStatement = (order) => {
+    if (!order) return false;
+    const matchStatus = (val) => {
+      if (!val) return false;
+      const s = String(val).toLowerCase().trim();
+      return Boolean(
+        s === "لم يتم السداد" ||
+        s === "not_paid" ||
+        s === "unpaid" ||
+        s.includes("لم يتم السداد") ||
+        s === "انتظار السداد" ||
+        s === "بانتظار السداد" ||
+        s === "تم انتظار حوالة مساند" ||
+        s === "بانتظار حوالة مساند" ||
+        s === "awaiting_musaned_transfer" ||
+        s === "awaiting_payment" ||
+        s === "pending_payment" ||
+        s.includes("انتظار السداد") ||
+        s.includes("بانتظار السداد") ||
+        s.includes("حوالة مساند") ||
+        s.includes("انتظار حوالة") ||
+        s === "منتهي" ||
+        s === "منتهية" ||
+        s === "منتهي الصلاحية" ||
+        s === "expired" ||
+        s === "ended" ||
+        s === "terminated" ||
+        s.includes("منتهي") ||
+        s.includes("منتهية")
+      );
+    };
+
+    return (
+      matchStatus(order.order_status_raw || order.status) ||
+      matchStatus(order.order_status) ||
+      matchStatus(order.process_status)
+    );
+  };
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -141,6 +182,9 @@ const FinancialCollectionsReport = () => {
       if (eId) {
         params.employee_id = eId;
         params.marketer_id = eId;
+      }
+      if (cId || eId || isStatementMode) {
+        params.is_statement = 1;
       }
       if (cStatus) params.contract_status = cStatus;
 
@@ -215,6 +259,7 @@ const FinancialCollectionsReport = () => {
     if (val) {
       setReportTarget("client");
     }
+    fetchData({ client_id: val });
   };
 
   const handleEmployeeChange = (val) => {
@@ -222,6 +267,7 @@ const FinancialCollectionsReport = () => {
     if (val) {
       setReportTarget("marketer");
     }
+    fetchData({ employee_id: val, marketer_id: val });
   };
 
   const handleViewOrderDetails = (order) => {
@@ -279,6 +325,9 @@ const FinancialCollectionsReport = () => {
   // 1. Detailed Client Orders
   const filteredOrders = useMemo(() => {
     return orders.filter((ord) => {
+      if (isStatementMode && isExcludedFromStatement(ord)) {
+        return false;
+      }
       if (paymentStatusFilter !== "all" && ord.payment_status !== paymentStatusFilter) {
         return false;
       }
@@ -305,55 +354,164 @@ const FinancialCollectionsReport = () => {
       }
       return true;
     });
-  }, [orders, paymentStatusFilter, selectedSaudiOffice, selectedClient, selectedEmployee, searchQuery]);
+  }, [orders, isStatementMode, paymentStatusFilter, selectedSaudiOffice, selectedClient, selectedEmployee, searchQuery]);
 
   // 2. Client Summary List
   const filteredClients = useMemo(() => {
-    return clientsSummary.filter((client) => {
-      if (paymentStatusFilter !== "all" && client.payment_status !== paymentStatusFilter) {
-        return false;
-      }
-      if (selectedClient && String(client.client_id) !== String(selectedClient)) {
-        return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesName = (client.client_name || "").toLowerCase().includes(q);
-        const matchesPhone = (client.client_phone || "").toLowerCase().includes(q);
-        if (!matchesName && !matchesPhone) {
+    return clientsSummary
+      .map((client) => {
+        if (isStatementMode && client.orders && client.orders.length > 0) {
+          const validOrders = client.orders.filter((o) => !isExcludedFromStatement(o));
+          const totalContract = validOrders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
+          const totalCollected = validOrders.reduce((sum, o) => sum + (Number(o.paid_amount) || 0), 0);
+          const totalRemaining = validOrders.reduce((sum, o) => sum + (Number(o.remaining_amount) || 0), 0);
+          const rate = totalContract > 0 ? Number(((totalCollected / totalContract) * 100).toFixed(1)) : 0;
+          let payStatus = "غير محصل";
+          if (totalCollected >= totalContract && totalContract > 0) {
+            payStatus = "محصل بالكامل";
+          } else if (totalCollected > 0) {
+            payStatus = "محصل جزئياً";
+          }
+          return {
+            ...client,
+            orders: validOrders,
+            orders_count: validOrders.length,
+            total_contract_value: totalContract,
+            total_collected: totalCollected,
+            total_outstanding: totalRemaining,
+            collection_rate: rate,
+            payment_status: payStatus,
+          };
+        }
+        return client;
+      })
+      .filter((client) => {
+        if (isStatementMode && client.orders_count === 0 && (!client.orders || client.orders.length === 0)) {
           return false;
         }
-      }
-      return true;
-    });
-  }, [clientsSummary, paymentStatusFilter, selectedClient, searchQuery]);
+        if (paymentStatusFilter !== "all" && client.payment_status !== paymentStatusFilter) {
+          return false;
+        }
+        if (selectedClient && String(client.client_id) !== String(selectedClient)) {
+          return false;
+        }
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const matchesName = (client.client_name || "").toLowerCase().includes(q);
+          const matchesPhone = (client.client_phone || "").toLowerCase().includes(q);
+          if (!matchesName && !matchesPhone) {
+            return false;
+          }
+        }
+        return true;
+      });
+  }, [clientsSummary, isStatementMode, paymentStatusFilter, selectedClient, searchQuery]);
 
   // 3. Marketers (Summary & Detailed)
   const filteredMarketers = useMemo(() => {
-    return marketersSummary.filter((m) => {
-      if (paymentStatusFilter !== "all" && m.payment_status !== paymentStatusFilter) {
-        return false;
-      }
-      if (selectedEmployee && String(m.employee_id) !== String(selectedEmployee)) {
-        return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesName = (m.employee_name || "").toLowerCase().includes(q);
-        const matchesOffice = (m.office_name || "").toLowerCase().includes(q);
-        // Also check if any of their clients or orders match
-        const matchesSubOrder = (m.orders || []).some(
-          (o) =>
-            (o.client_name || "").toLowerCase().includes(q) ||
-            (o.visa_number || "").toLowerCase().includes(q)
-        );
-        if (!matchesName && !matchesOffice && !matchesSubOrder) {
+    return marketersSummary
+      .map((m) => {
+        if (isStatementMode && m.orders && m.orders.length > 0) {
+          const validOrders = m.orders.filter((o) => !isExcludedFromStatement(o));
+          const totalContract = validOrders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
+          const totalCollected = validOrders.reduce((sum, o) => sum + (Number(o.paid_amount) || 0), 0);
+          const totalRemaining = validOrders.reduce((sum, o) => sum + (Number(o.remaining_amount) || 0), 0);
+          const rate = totalContract > 0 ? Number(((totalCollected / totalContract) * 100).toFixed(1)) : 0;
+          let payStatus = "غير محصل";
+          if (totalCollected >= totalContract && totalContract > 0) {
+            payStatus = "محصل بالكامل";
+          } else if (totalCollected > 0) {
+            payStatus = "محصل جزئياً";
+          }
+          return {
+            ...m,
+            orders: validOrders,
+            orders_count: validOrders.length,
+            total_contract_value: totalContract,
+            total_collected: totalCollected,
+            total_outstanding: totalRemaining,
+            collection_rate: rate,
+            payment_status: payStatus,
+          };
+        }
+        return m;
+      })
+      .filter((m) => {
+        if (isStatementMode && m.orders_count === 0 && (!m.orders || m.orders.length === 0)) {
           return false;
         }
-      }
-      return true;
-    });
-  }, [marketersSummary, paymentStatusFilter, selectedEmployee, searchQuery]);
+        if (paymentStatusFilter !== "all" && m.payment_status !== paymentStatusFilter) {
+          return false;
+        }
+        if (selectedEmployee && String(m.employee_id) !== String(selectedEmployee)) {
+          return false;
+        }
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const matchesName = (m.employee_name || "").toLowerCase().includes(q);
+          const matchesOffice = (m.office_name || "").toLowerCase().includes(q);
+          // Also check if any of their clients or orders match
+          const matchesSubOrder = (m.orders || []).some(
+            (o) =>
+              (o.client_name || "").toLowerCase().includes(q) ||
+              (o.visa_number || "").toLowerCase().includes(q)
+          );
+          if (!matchesName && !matchesOffice && !matchesSubOrder) {
+            return false;
+          }
+        }
+        return true;
+      });
+  }, [marketersSummary, isStatementMode, paymentStatusFilter, selectedEmployee, searchQuery]);
+
+  // Recalculated KPIs for Statement Mode to match only included statement orders
+  const displayKpis = useMemo(() => {
+    if (!isStatementMode) return kpis;
+    const totalContract = filteredOrders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
+    const totalCollected = filteredOrders.reduce((sum, o) => sum + (Number(o.paid_amount) || 0), 0);
+    const totalOutstanding = filteredOrders.reduce((sum, o) => sum + (Number(o.remaining_amount) || 0), 0);
+    const collectionRate = totalContract > 0 ? Number(((totalCollected / totalContract) * 100).toFixed(1)) : 0;
+    return {
+      total_contract_value: totalContract,
+      total_collected: totalCollected,
+      total_outstanding: totalOutstanding,
+      collection_rate: collectionRate,
+      total_orders: filteredOrders.length,
+      total_clients: filteredClients.length,
+      total_marketers: filteredMarketers.length,
+    };
+  }, [isStatementMode, kpis, filteredOrders, filteredClients, filteredMarketers]);
+
+  // Totals for table footers
+  const clientDetailedTotals = useMemo(() => {
+    const count = filteredOrders.length;
+    const totalPrice = filteredOrders.reduce((acc, o) => acc + (Number(o.total_price) || 0), 0);
+    const paidAmount = filteredOrders.reduce((acc, o) => acc + (Number(o.paid_amount) || 0), 0);
+    const remainingAmount = filteredOrders.reduce((acc, o) => acc + (Number(o.remaining_amount) || 0), 0);
+    const rate = totalPrice > 0 ? Number(((paidAmount / totalPrice) * 100).toFixed(1)) : 0;
+    return { count, totalPrice, paidAmount, remainingAmount, rate };
+  }, [filteredOrders]);
+
+  const clientSummaryTotals = useMemo(() => {
+    const clientsCount = filteredClients.length;
+    const ordersCount = filteredClients.reduce((acc, c) => acc + (Number(c.orders_count) || 0), 0);
+    const totalContract = filteredClients.reduce((acc, c) => acc + (Number(c.total_contract_value) || 0), 0);
+    const totalCollected = filteredClients.reduce((acc, c) => acc + (Number(c.total_collected) || 0), 0);
+    const totalOutstanding = filteredClients.reduce((acc, c) => acc + (Number(c.total_outstanding) || 0), 0);
+    const rate = totalContract > 0 ? Number(((totalCollected / totalContract) * 100).toFixed(1)) : 0;
+    return { clientsCount, ordersCount, totalContract, totalCollected, totalOutstanding, rate };
+  }, [filteredClients]);
+
+  const marketerSummaryTotals = useMemo(() => {
+    const marketersCount = filteredMarketers.length;
+    const ordersCount = filteredMarketers.reduce((acc, m) => acc + (Number(m.orders_count) || 0), 0);
+    const clientsCount = filteredMarketers.reduce((acc, m) => acc + (Number(m.clients_count) || 0), 0);
+    const totalContract = filteredMarketers.reduce((acc, m) => acc + (Number(m.total_contract_value) || 0), 0);
+    const totalCollected = filteredMarketers.reduce((acc, m) => acc + (Number(m.total_collected) || 0), 0);
+    const totalOutstanding = filteredMarketers.reduce((acc, m) => acc + (Number(m.total_outstanding) || 0), 0);
+    const rate = totalContract > 0 ? Number(((totalCollected / totalContract) * 100).toFixed(1)) : 0;
+    return { marketersCount, ordersCount, clientsCount, totalContract, totalCollected, totalOutstanding, rate };
+  }, [filteredMarketers]);
 
   // Active dataset for pagination
   const currentDataset = useMemo(() => {
@@ -611,11 +769,11 @@ const FinancialCollectionsReport = () => {
                 <div>
                   <div className="text-white-50 fs-7 fw-semibold mb-1">إجمالي قيمة العقود</div>
                   <h2 className="mb-0 fw-extrabold fs-2">
-                    {(kpis.total_contract_value || 0).toLocaleString()}{" "}
+                    {(displayKpis.total_contract_value || 0).toLocaleString()}{" "}
                     <span className="fs-6 font-normal">ر.س</span>
                   </h2>
                   <div className="small text-white-50 mt-1">
-                    {kpis.total_orders || orders.length} عقود مسجلة
+                    {displayKpis.total_orders || orders.length} عقود مسجلة
                   </div>
                 </div>
                 <div
@@ -637,7 +795,7 @@ const FinancialCollectionsReport = () => {
                 <div>
                   <div className="text-white-50 fs-7 fw-semibold mb-1">المحصل الفعلي</div>
                   <h2 className="mb-0 fw-extrabold fs-2">
-                    {(kpis.total_collected || 0).toLocaleString()}{" "}
+                    {(displayKpis.total_collected || 0).toLocaleString()}{" "}
                     <span className="fs-6 font-normal">ر.س</span>
                   </h2>
                   <div className="small text-white-50 mt-1">مبالغ دخلت الحساب</div>
@@ -661,7 +819,7 @@ const FinancialCollectionsReport = () => {
                 <div>
                   <div className="text-white-50 fs-7 fw-semibold mb-1">المستحقات المتبقية</div>
                   <h2 className="mb-0 fw-extrabold fs-2">
-                    {(kpis.total_outstanding || 0).toLocaleString()}{" "}
+                    {(displayKpis.total_outstanding || 0).toLocaleString()}{" "}
                     <span className="fs-6 font-normal">ر.س</span>
                   </h2>
                   <div className="small text-white-50 mt-1">مبالغ تحت التحصيل</div>
@@ -684,9 +842,9 @@ const FinancialCollectionsReport = () => {
               <Card.Body className="p-4 d-flex justify-content-between align-items-center">
                 <div>
                   <div className="text-white-50 fs-7 fw-semibold mb-1">نسبة التحصيل العامة</div>
-                  <h2 className="mb-0 fw-extrabold fs-2">{kpis.collection_rate || 0}%</h2>
+                  <h2 className="mb-0 fw-extrabold fs-2">{displayKpis.collection_rate || 0}%</h2>
                   <div className="small text-white-50 mt-1">
-                    {kpis.total_clients || clientsSummary.length} عميل | {kpis.total_marketers || marketersSummary.length} مسوق
+                    {displayKpis.total_clients || clientsSummary.length} عميل | {displayKpis.total_marketers || marketersSummary.length} مسوق
                   </div>
                 </div>
                 <div
@@ -869,16 +1027,19 @@ const FinancialCollectionsReport = () => {
                   <i className="fa-solid fa-file-invoice-dollar fs-5"></i>
                 </div>
                 <div>
-                  <h6 className="mb-1 fw-bold text-dark d-flex align-items-center gap-2">
+                  <h6 className="mb-1 fw-bold text-dark d-flex align-items-center gap-2 flex-wrap">
                     <span>كشف حساب:</span>
                     <span className="badge bg-primary fs-7">
                       {selectedClient
                         ? `المندوب / العميل: ${clientsList.find((c) => String(c.id) === String(selectedClient))?.name || selectedClient}`
                         : `المسوق / الموظف: ${employeesList.find((e) => String(e.id) === String(selectedEmployee))?.name || selectedEmployee}`}
                     </span>
+                    <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 fs-8">
+                      مستبعد من الكشف: لم يتم السداد • انتظار السداد • منتهي
+                    </span>
                   </h6>
                   <p className="mb-0 text-muted small">
-                    اختر نوع كشف الحساب المطلوب (تم إخفاء عمود حالة الطلب تلقائياً لطباعة كشف الحساب)
+                    اختر نوع كشف الحساب المطلوب (تم إخفاء عمود حالة الطلب واستبعاد الطلبات غير المسددة أو المنتهية تلقائياً)
                   </p>
                 </div>
               </div>
@@ -1125,6 +1286,37 @@ const FinancialCollectionsReport = () => {
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
+                        <tr style={{ fontSize: "0.95rem" }}>
+                          <td colSpan={hideOrderStatus ? 5 : 6} className="text-start py-3 px-3 fw-bold text-dark">
+                            <div className="d-flex align-items-center gap-2">
+                              <i className="fa-solid fa-calculator text-primary fs-5"></i>
+                              <span>الإجمالي ({clientDetailedTotals.count} طلب)</span>
+                            </div>
+                          </td>
+                          <td className="fw-bold text-dark py-3 font-monospace">
+                            {(clientDetailedTotals.totalPrice || 0).toLocaleString()} ر.س
+                          </td>
+                          <td className="fw-bold text-success py-3 font-monospace">
+                            {(clientDetailedTotals.paidAmount || 0).toLocaleString()} ر.س
+                          </td>
+                          <td className="fw-bold text-danger py-3 font-monospace">
+                            {(clientDetailedTotals.remainingAmount || 0).toLocaleString()} ر.س
+                          </td>
+                          <td className="py-3">
+                            {renderPaymentBadge(
+                              clientDetailedTotals.paidAmount >= clientDetailedTotals.totalPrice && clientDetailedTotals.totalPrice > 0
+                                ? "محصل بالكامل"
+                                : clientDetailedTotals.paidAmount > 0
+                                ? "محصل جزئياً"
+                                : "غير محصل"
+                            )}
+                          </td>
+                          <td className="text-muted small py-3">-</td>
+                          <td className="text-muted small py-3">-</td>
+                          <td className="text-muted small py-3">-</td>
+                        </tr>
+                      </tfoot>
                     </Table>
                   </div>
                 )}
@@ -1215,6 +1407,43 @@ const FinancialCollectionsReport = () => {
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
+                        <tr style={{ fontSize: "0.95rem" }}>
+                          <td colSpan={2} className="text-start py-3 px-4 fw-bold text-dark">
+                            <div className="d-flex align-items-center gap-2">
+                              <i className="fa-solid fa-calculator text-primary fs-5"></i>
+                              <span>الإجمالي ({clientSummaryTotals.clientsCount} عميل)</span>
+                            </div>
+                          </td>
+                          <td className="py-3">
+                            <Badge bg="primary" className="px-2.5 py-1.5 rounded-pill">
+                              {clientSummaryTotals.ordersCount} طلبات
+                            </Badge>
+                          </td>
+                          <td className="fw-bold text-dark py-3 font-monospace">
+                            {(clientSummaryTotals.totalContract || 0).toLocaleString()} ر.س
+                          </td>
+                          <td className="fw-bold text-success py-3 font-monospace">
+                            {(clientSummaryTotals.totalCollected || 0).toLocaleString()} ر.س
+                          </td>
+                          <td className="fw-bold text-danger py-3 font-monospace">
+                            {(clientSummaryTotals.totalOutstanding || 0).toLocaleString()} ر.س
+                          </td>
+                          <td className="py-3 fw-bold text-primary font-monospace">
+                            {clientSummaryTotals.rate}%
+                          </td>
+                          <td className="py-3">
+                            {renderPaymentBadge(
+                              clientSummaryTotals.totalCollected >= clientSummaryTotals.totalContract && clientSummaryTotals.totalContract > 0
+                                ? "محصل بالكامل"
+                                : clientSummaryTotals.totalCollected > 0
+                                ? "محصل جزئياً"
+                                : "غير محصل"
+                            )}
+                          </td>
+                          <td className="text-muted small py-3">-</td>
+                        </tr>
+                      </tfoot>
                     </Table>
                   </div>
                 )}
@@ -1323,6 +1552,48 @@ const FinancialCollectionsReport = () => {
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
+                        <tr style={{ fontSize: "0.95rem" }}>
+                          <td colSpan={3} className="text-start py-3 px-4 fw-bold text-dark">
+                            <div className="d-flex align-items-center gap-2">
+                              <i className="fa-solid fa-calculator text-primary fs-5"></i>
+                              <span>الإجمالي ({marketerSummaryTotals.marketersCount} مسوق)</span>
+                            </div>
+                          </td>
+                          <td className="py-3">
+                            <Badge bg="primary" className="px-2.5 py-1.5 rounded-pill">
+                              {marketerSummaryTotals.ordersCount} عقود
+                            </Badge>
+                          </td>
+                          <td className="py-3">
+                            <Badge bg="secondary" className="px-2.5 py-1.5 rounded-pill">
+                              {marketerSummaryTotals.clientsCount} عملاء
+                            </Badge>
+                          </td>
+                          <td className="fw-bold text-dark py-3 font-monospace">
+                            {(marketerSummaryTotals.totalContract || 0).toLocaleString()} ر.س
+                          </td>
+                          <td className="fw-bold text-success py-3 font-monospace">
+                            {(marketerSummaryTotals.totalCollected || 0).toLocaleString()} ر.س
+                          </td>
+                          <td className="fw-bold text-danger py-3 font-monospace">
+                            {(marketerSummaryTotals.totalOutstanding || 0).toLocaleString()} ر.س
+                          </td>
+                          <td className="py-3 fw-bold text-primary font-monospace">
+                            {marketerSummaryTotals.rate}%
+                          </td>
+                          <td className="py-3">
+                            {renderPaymentBadge(
+                              marketerSummaryTotals.totalCollected >= marketerSummaryTotals.totalContract && marketerSummaryTotals.totalContract > 0
+                                ? "محصل بالكامل"
+                                : marketerSummaryTotals.totalCollected > 0
+                                ? "محصل جزئياً"
+                                : "غير محصل"
+                            )}
+                          </td>
+                          <td className="text-muted small py-3">-</td>
+                        </tr>
+                      </tfoot>
                     </Table>
                   </div>
                 )}
@@ -1530,6 +1801,31 @@ const FinancialCollectionsReport = () => {
                                           </tr>
                                         ))}
                                       </tbody>
+                                      <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
+                                        <tr style={{ fontSize: "0.88rem" }}>
+                                          <td colSpan={hideOrderStatus ? 5 : 6} className="text-start py-2.5 px-3 fw-bold text-dark">
+                                            <div className="d-flex align-items-center gap-1.5">
+                                              <i className="fa-solid fa-calculator text-primary"></i>
+                                              <span>إجمالي طلبات المسوق ({marketerOrders.length} طلب)</span>
+                                            </div>
+                                          </td>
+                                          <td className="fw-bold text-dark py-2.5 font-monospace">
+                                            {(marketer.total_contract_value || 0).toLocaleString()} ر.س
+                                          </td>
+                                          <td className="fw-bold text-success py-2.5 font-monospace">
+                                            {(marketer.total_collected || 0).toLocaleString()} ر.س
+                                          </td>
+                                          <td className="fw-bold text-danger py-2.5 font-monospace">
+                                            {(marketer.total_outstanding || 0).toLocaleString()} ر.س
+                                          </td>
+                                          <td className="py-2.5">
+                                            {renderPaymentBadge(marketer.payment_status)}
+                                          </td>
+                                          <td className="text-muted small py-2.5">-</td>
+                                          <td className="text-muted small py-2.5">-</td>
+                                          <td className="text-muted small py-2.5">-</td>
+                                        </tr>
+                                      </tfoot>
                                     </Table>
                                   </div>
                                 )}
@@ -1539,9 +1835,109 @@ const FinancialCollectionsReport = () => {
                         </Card>
                       );
                     })}
+
+                    {/* Marketer Detailed Grand Summary Card */}
+                    <Card className="border-0 shadow-sm rounded-4 bg-primary bg-opacity-10 border-top border-primary border-3 mt-3">
+                      <Card.Body className="p-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                        <div className="d-flex align-items-center gap-2">
+                          <i className="fa-solid fa-calculator text-primary fs-4"></i>
+                          <div>
+                            <h6 className="mb-0 fw-bold text-dark">الإجمالي الكلي لجميع المسوقين</h6>
+                            <div className="small text-muted">
+                              {marketerSummaryTotals.marketersCount} مسوق • {marketerSummaryTotals.ordersCount} طلب • {marketerSummaryTotals.clientsCount} عميل
+                            </div>
+                          </div>
+                        </div>
+                        <div className="d-flex flex-wrap align-items-center gap-3">
+                          <div className="text-center px-3 py-1.5 bg-white rounded-3 border shadow-none">
+                            <div className="text-muted small" style={{ fontSize: "0.75rem" }}>إجمالي العقود</div>
+                            <div className="fw-bold text-dark font-monospace">
+                              {(marketerSummaryTotals.totalContract || 0).toLocaleString()} ر.س
+                            </div>
+                          </div>
+                          <div className="text-center px-3 py-1.5 bg-white rounded-3 border shadow-none">
+                            <div className="text-muted small" style={{ fontSize: "0.75rem" }}>إجمالي المحصل</div>
+                            <div className="fw-bold text-success font-monospace">
+                              {(marketerSummaryTotals.totalCollected || 0).toLocaleString()} ر.س
+                            </div>
+                          </div>
+                          <div className="text-center px-3 py-1.5 bg-white rounded-3 border shadow-none">
+                            <div className="text-muted small" style={{ fontSize: "0.75rem" }}>إجمالي المتبقي</div>
+                            <div className="fw-bold text-danger font-monospace">
+                              {(marketerSummaryTotals.totalOutstanding || 0).toLocaleString()} ر.س
+                            </div>
+                          </div>
+                          <div className="text-center px-3 py-1.5 bg-white rounded-3 border shadow-none">
+                            <div className="text-muted small" style={{ fontSize: "0.75rem" }}>نسبة التحصيل</div>
+                            <div className="fw-bold text-primary font-monospace">{marketerSummaryTotals.rate}%</div>
+                          </div>
+                        </div>
+                      </Card.Body>
+                    </Card>
                   </div>
                 )}
               </>
+            )}
+
+            {/* Quick Totals Summary Bar Under the Table */}
+            {!loading && paginatedData.length > 0 && (
+              <div className="p-3 bg-light border-top d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                <div className="d-flex align-items-center gap-3">
+                  <div
+                    className="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center"
+                    style={{ width: "42px", height: "42px" }}
+                  >
+                    <i className="fa-solid fa-calculator fs-5"></i>
+                  </div>
+                  <div>
+                    <div className="fw-bold text-dark fs-6 d-flex align-items-center gap-2">
+                      <span>الإجمالي العام للجدول</span>
+                      <Badge bg="primary" className="rounded-pill">
+                        {reportTarget === "client"
+                          ? reportMode === "detailed"
+                            ? `${clientDetailedTotals.count} طلب`
+                            : `${clientSummaryTotals.clientsCount} عميل (${clientSummaryTotals.ordersCount} طلب)`
+                          : reportMode === "detailed"
+                          ? `${marketerSummaryTotals.marketersCount} مسوق (${marketerSummaryTotals.ordersCount} طلب)`
+                          : `${marketerSummaryTotals.marketersCount} مسوق (${marketerSummaryTotals.ordersCount} طلب)`}
+                      </Badge>
+                    </div>
+                    <div className="text-muted small">
+                      {isStatementMode ? "المبالغ المحتسبة ضمن كشف الحساب الحالي" : "إجمالي المبالغ حسب الفلاتر المحددة"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="d-flex flex-wrap align-items-center gap-3">
+                  <div className="px-3 py-1.5 bg-white rounded-3 border text-center shadow-none">
+                    <div className="text-muted small" style={{ fontSize: "0.75rem" }}>إجمالي العقود</div>
+                    <div className="fw-bold text-dark font-monospace">
+                      {(displayKpis.total_contract_value || 0).toLocaleString()} ر.س
+                    </div>
+                  </div>
+
+                  <div className="px-3 py-1.5 bg-white rounded-3 border text-center shadow-none">
+                    <div className="text-muted small" style={{ fontSize: "0.75rem" }}>المحصل الفعلي</div>
+                    <div className="fw-bold text-success font-monospace">
+                      {(displayKpis.total_collected || 0).toLocaleString()} ر.س
+                    </div>
+                  </div>
+
+                  <div className="px-3 py-1.5 bg-white rounded-3 border text-center shadow-none">
+                    <div className="text-muted small" style={{ fontSize: "0.75rem" }}>المستحقات المتبقية</div>
+                    <div className="fw-bold text-danger font-monospace">
+                      {(displayKpis.total_outstanding || 0).toLocaleString()} ر.س
+                    </div>
+                  </div>
+
+                  <div className="px-3 py-1.5 bg-white rounded-3 border text-center shadow-none">
+                    <div className="text-muted small" style={{ fontSize: "0.75rem" }}>نسبة التحصيل</div>
+                    <div className="fw-bold text-primary font-monospace">
+                      {displayKpis.collection_rate || 0}%
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Pagination Component */}

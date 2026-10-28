@@ -5,14 +5,17 @@ import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
 import SortableHeader from "../../components/common/SortableHeader";
 import { useSortableData } from "../../hooks/useSortableData";
-import { getOrderFollowUpReport, getOrder } from "../../services/apiService";
+import { getOrderFollowUpReport, getOrder, getSettingsAuthenticationStatuses } from "../../services/apiService";
 import { exportToExcel } from "../../utils/excelHelper";
 import { exportToPDF } from "../../utils/pdfHelper";
 import PaginationComponent from "../../components/common/Pagination";
 import { OrderStatusBadge } from "../../utils/statusHelper";
 
 const OrderFollowUpReport = () => {
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState({
+    authentication_statuses: [],
+  });
+  const [authStatusesList, setAuthStatusesList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeCardFilter, setActiveCardFilter] = useState("all"); // 'all', 'late', 'without_followup', 'exceeded_sla', 'within_sla'
   const [reportData, setReportData] = useState({
@@ -37,8 +40,15 @@ const OrderFollowUpReport = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await getOrderFollowUpReport(appliedFilters);
+      const params = { ...appliedFilters };
+      if (params.authentication_statuses && Array.isArray(params.authentication_statuses)) {
+        params.authentication_statuses = params.authentication_statuses.join(",");
+      }
+      const response = await getOrderFollowUpReport(params);
       setReportData(response.data || { kpis: {}, orders: [] });
+      if (response.data?.authentication_statuses && response.data.authentication_statuses.length > 0) {
+        setAuthStatusesList(response.data.authentication_statuses);
+      }
     } catch (err) {
       console.error("Failed to fetch report:", err);
       setError("حدث خطأ أثناء جلب بيانات التقرير.");
@@ -49,12 +59,70 @@ const OrderFollowUpReport = () => {
 
   useEffect(() => {
     fetchReport(filters);
-  }, []); // Initial load
+    getSettingsAuthenticationStatuses()
+      .then((res) => {
+        const list = res.data?.data || res.data || [];
+        if (list.length > 0) {
+          setAuthStatusesList((prev) => (prev.length === 0 ? list : prev));
+        } else {
+          setAuthStatusesList((prev) => (prev.length === 0 ? [
+            { key: "documented", label: "تم التوثيق", color: "#10b981" },
+            { key: "under_process", label: "قيد التوثيق", color: "#3b82f6" },
+            { key: "pending", label: "بانتظار التوثيق", color: "#f59e0b" },
+            { key: "rejected", label: "مرفوض", color: "#ef4444" },
+            { key: "cancelled", label: "ملغي", color: "#6b7280" },
+          ] : prev));
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching auth statuses:", err);
+        setAuthStatusesList((prev) => (prev.length === 0 ? [
+          { key: "documented", label: "تم التوثيق", color: "#10b981" },
+          { key: "under_process", label: "قيد التوثيق", color: "#3b82f6" },
+          { key: "pending", label: "بانتظار التوثيق", color: "#f59e0b" },
+          { key: "rejected", label: "مرفوض", color: "#ef4444" },
+          { key: "cancelled", label: "ملغي", color: "#6b7280" },
+        ] : prev));
+      });
+  }, []);
 
   const handleApplyFilters = (newFilters) => {
     setActiveCardFilter("all");
-    fetchReport(newFilters);
+    const merged = { ...filters, ...newFilters };
+    setFilters(merged);
+    fetchReport(merged);
   };
+
+  const handleToggleAuthStatus = (statusKey) => {
+    setActiveCardFilter("all");
+    setFilters((prev) => {
+      const current = prev.authentication_statuses || [];
+      const updated = current.includes(statusKey)
+        ? current.filter((s) => s !== statusKey)
+        : [...current, statusKey];
+
+      const newFilters = { ...prev, authentication_statuses: updated };
+      fetchReport(newFilters);
+      return newFilters;
+    });
+  };
+
+  const handleSelectAllAuthStatuses = () => {
+    setActiveCardFilter("all");
+    const allKeys = authStatusesList.map((s) => s.key);
+    const updated = { ...filters, authentication_statuses: allKeys };
+    setFilters(updated);
+    fetchReport(updated);
+  };
+
+  const handleClearAllAuthStatuses = () => {
+    setActiveCardFilter("all");
+    const updated = { ...filters, authentication_statuses: [] };
+    setFilters(updated);
+    fetchReport(updated);
+  };
+
+  const selectedAuthCount = (filters.authentication_statuses || []).length;
 
   // Card filter handler (toggle if already clicked)
   const handleCardClick = (filterType) => {
@@ -125,6 +193,7 @@ const OrderFollowUpReport = () => {
       { header: "العميل", format: (o) => o.client?.name || o.client_name || "-" },
       { header: "المسوق / الموظف", format: (o) => o.employee?.name || o.employee_name || "-" },
       { header: "حالة الطلب", format: (o) => o.status?.name || o.status_name || o.status || "-" },
+      { header: "حالة التوثيق", format: (o) => o.authentication_status || "-" },
       { header: "المكتب الداخلي", key: "saudi_office" },
       { header: "المكتب الخارجي", key: "external_office" },
       { header: "تاريخ العقد", key: "contract_date" },
@@ -148,6 +217,7 @@ const OrderFollowUpReport = () => {
       { header: "العميل", format: (o) => o.client?.name || o.client_name || "-" },
       { header: "المسوق / الموظف", format: (o) => o.employee?.name || o.employee_name || "-" },
       { header: "حالة الطلب", format: (o) => o.status?.name || o.status_name || o.status || "-" },
+      { header: "حالة التوثيق", format: (o) => o.authentication_status || "-" },
       { header: "آخر تحديث", key: "last_update_date" },
       { header: "أيام التأخير", key: "delay_days" },
       {
@@ -241,6 +311,102 @@ const OrderFollowUpReport = () => {
           onChange={setFilters}
           onApply={handleApplyFilters}
         />
+
+        {/* Multi-Documentation-Status Selector & Filter Bar (تحديد متعدد لحالات التوثيق) */}
+        <Card className="border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden">
+          <div className="p-3 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div className="d-flex align-items-center gap-2">
+              <i className="fa-solid fa-stamp text-info fs-5"></i>
+              <span className="fw-bold text-dark fs-6">تحديد أكثر من حالة للتوثيق (Multi-Select Documentation Status):</span>
+              {selectedAuthCount > 0 && (
+                <Badge bg="info" className="rounded-pill px-3 py-1 fs-7">
+                  تم تحديد {selectedAuthCount} من {authStatusesList.length} حالات
+                </Badge>
+              )}
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <Button
+                variant="outline-info"
+                size="sm"
+                className="rounded-3 px-3 py-1 fw-semibold fs-7"
+                onClick={handleSelectAllAuthStatuses}
+              >
+                ✓ تحديد كافة حالات التوثيق
+              </Button>
+              {selectedAuthCount > 0 && (
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  className="rounded-3 px-3 py-1 fw-semibold fs-7"
+                  onClick={handleClearAllAuthStatuses}
+                >
+                  ✕ إلغاء التحديد ({selectedAuthCount})
+                </Button>
+              )}
+            </div>
+          </div>
+          <Card.Body className="p-3">
+            {authStatusesList.length === 0 ? (
+              <div className="text-muted small py-2">جاري تحميل حالات التوثيق...</div>
+            ) : (
+              <div className="d-flex flex-wrap gap-2 align-items-center">
+                {/* Chip for "Show All" */}
+                <button
+                  type="button"
+                  className={`btn btn-sm rounded-pill px-3 py-2 fw-bold d-flex align-items-center gap-2 transition-all ${
+                    selectedAuthCount === 0
+                      ? "btn-info text-white shadow-sm"
+                      : "btn-light border text-secondary"
+                  }`}
+                  onClick={handleClearAllAuthStatuses}
+                  style={{ transition: "all 0.2s ease" }}
+                >
+                  <span>📋 عرض جميع حالات التوثيق</span>
+                  <span className={`badge rounded-circle ${selectedAuthCount === 0 ? "bg-white text-info" : "bg-secondary text-white"}`}>
+                    {reportData.kpis?.total_orders || reportData.orders?.length || 0}
+                  </span>
+                </button>
+
+                {/* Individual Multi-Select Status Chips */}
+                {authStatusesList.map((st, idx) => {
+                  const isSelected = (filters.authentication_statuses || []).includes(st.key) || (filters.authentication_statuses || []).includes(st.label);
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleToggleAuthStatus(st.key)}
+                      className="btn btn-sm rounded-pill px-3 py-2 fw-semibold d-flex align-items-center gap-2 shadow-sm border-0 position-relative"
+                      style={{
+                        backgroundColor: isSelected ? st.color || "#0284c7" : "#f8fafc",
+                        color: isSelected ? "#ffffff" : "#334155",
+                        border: isSelected ? `2px solid ${st.color || "#0284c7"}` : "1px solid #cbd5e1",
+                        boxShadow: isSelected ? `0 4px 12px ${st.color}40` : "none",
+                        transform: isSelected ? "translateY(-1px)" : "none",
+                        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      }}
+                    >
+                      <span className="d-flex align-items-center gap-1">
+                        {isSelected && <i className="fa-solid fa-check fs-8"></i>}
+                        {st.label}
+                      </span>
+                      {st.count !== undefined && (
+                        <span
+                          className="px-2 py-0.5 rounded-pill fs-8 fw-bold"
+                          style={{
+                            backgroundColor: isSelected ? "rgba(255,255,255,0.25)" : "#e2e8f0",
+                            color: isSelected ? "#ffffff" : "#475569",
+                          }}
+                        >
+                          {st.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </Card.Body>
+        </Card>
 
         {error && <Alert variant="danger">{error}</Alert>}
 
@@ -473,7 +639,7 @@ const OrderFollowUpReport = () => {
           <Card.Body className="p-0">
             {loading ? (
               <div className="p-4">
-                <TableSkeleton rows={6} columns={11} />
+                <TableSkeleton rows={6} columns={12} />
               </div>
             ) : (
               <div className="table-responsive">
@@ -504,6 +670,13 @@ const OrderFollowUpReport = () => {
                       <SortableHeader
                         title="حالة الطلب"
                         sortKey="status"
+                        sortConfig={sortConfig}
+                        onRequestSort={requestSort}
+                        className="py-3"
+                      />
+                      <SortableHeader
+                        title="حالة التوثيق"
+                        sortKey="authentication_status"
                         sortConfig={sortConfig}
                         onRequestSort={requestSort}
                         className="py-3"
@@ -572,6 +745,21 @@ const OrderFollowUpReport = () => {
                               size="sm"
                             />
                           </td>
+                          <td>
+                            {order.authentication_status ? (
+                              <span
+                                className="badge rounded-pill px-2.5 py-1 fs-8 fw-semibold shadow-sm"
+                                style={{
+                                  backgroundColor: order.authentication_status_color || "#0284c7",
+                                  color: "#ffffff",
+                                }}
+                              >
+                                {order.authentication_status}
+                              </span>
+                            ) : (
+                              <span className="text-muted">-</span>
+                            )}
+                          </td>
                           <td className="fw-semibold">
                             {order.employee?.name || order.employee_name || "-"}
                           </td>
@@ -616,7 +804,7 @@ const OrderFollowUpReport = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="11" className="text-center py-5 text-muted">
+                        <td colSpan="12" className="text-center py-5 text-muted">
                           <i className="fa-solid fa-folder-open display-6 text-muted mb-3 d-block"></i>
                           <h6 className="fw-semibold">لا توجد طلبات تطابق الفلاتر المحددة.</h6>
                           {activeCardFilter !== "all" && (
@@ -812,20 +1000,28 @@ const OrderFollowUpReport = () => {
                           {selectedOrder?.external_office?.name || selectedOrder?.external_office || "-"}
                         </div>
                       </div>
-                      <div className="col-md-4 col-6">
+                      <div className="col-md-3 col-6">
                         <div className="small text-muted">تاريخ العقد:</div>
                         <div className="fw-semibold">{selectedOrder?.contract_date || "-"}</div>
                       </div>
-                      <div className="col-md-4 col-6">
+                      <div className="col-md-3 col-6">
                         <div className="small text-muted">رقم عقد مساند:</div>
                         <div className="fw-semibold font-monospace">
                           {selectedOrder?.musaned_contract_number || "-"}
                         </div>
                       </div>
-                      <div className="col-md-4 col-6">
+                      <div className="col-md-3 col-6">
                         <div className="small text-muted">رقم عقد التوثيق:</div>
                         <div className="fw-semibold font-monospace">
                           {selectedOrder?.authentication_contract_number || "-"}
+                        </div>
+                      </div>
+                      <div className="col-md-3 col-6">
+                        <div className="small text-muted">حالة التوثيق:</div>
+                        <div className="fw-semibold">
+                          {selectedOrder?.authentication_status ||
+                            selectedOrder?.tracking?.authentication_status ||
+                            "-"}
                         </div>
                       </div>
                     </div>

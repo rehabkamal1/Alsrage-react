@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Container, Card, Row, Col, Table, Badge, Button, ProgressBar, Tabs, Tab, Form, Modal, Dropdown } from "react-bootstrap";
-import { getOfficesPerformanceReport } from "../../services/apiService";
+import { getOfficesPerformanceReport, getSettingsAuthenticationStatuses } from "../../services/apiService";
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
 import SortableHeader from "../../components/common/SortableHeader";
@@ -20,6 +20,7 @@ const OfficesPerformanceReport = () => {
   const [countries, setCountries] = useState([]);
   const [cities, setCities] = useState([]);
   const [statuses, setStatuses] = useState([]);
+  const [authStatusesList, setAuthStatusesList] = useState([]);
   const [key, setKey] = useState("saudi");
 
   // Filters State (selectedStatuses is an array for multi-select)
@@ -31,6 +32,7 @@ const OfficesPerformanceReport = () => {
     saudi_office_id: "",
     external_office_id: "",
     statuses: [], // Array of selected status keys
+    authentication_statuses: [], // Array of selected documentation status keys
   });
 
   // Active KPI Card Filter ('all', 'with_orders', 'with_revenue', 'zero_orders')
@@ -91,6 +93,31 @@ const OfficesPerformanceReport = () => {
 
   useEffect(() => {
     fetchData();
+    getSettingsAuthenticationStatuses()
+      .then((res) => {
+        const list = res.data?.data || res.data || [];
+        if (list.length > 0) {
+          setAuthStatusesList(list);
+        } else {
+          setAuthStatusesList([
+            { key: "documented", label: "تم التوثيق", color: "#10b981" },
+            { key: "under_process", label: "قيد التوثيق", color: "#3b82f6" },
+            { key: "pending", label: "بانتظار التوثيق", color: "#f59e0b" },
+            { key: "rejected", label: "مرفوض", color: "#ef4444" },
+            { key: "cancelled", label: "ملغي", color: "#6b7280" },
+          ]);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching auth statuses:", err);
+        setAuthStatusesList([
+          { key: "documented", label: "تم التوثيق", color: "#10b981" },
+          { key: "under_process", label: "قيد التوثيق", color: "#3b82f6" },
+          { key: "pending", label: "بانتظار التوثيق", color: "#f59e0b" },
+          { key: "rejected", label: "مرفوض", color: "#ef4444" },
+          { key: "cancelled", label: "ملغي", color: "#6b7280" },
+        ]);
+      });
   }, []);
 
   const fetchData = async (customFilters = null) => {
@@ -107,6 +134,11 @@ const OfficesPerformanceReport = () => {
       if (activeFilters.statuses && activeFilters.statuses.length > 0) {
         params.statuses = activeFilters.statuses.join(",");
       }
+      if (activeFilters.authentication_statuses && activeFilters.authentication_statuses.length > 0) {
+        params.authentication_statuses = activeFilters.authentication_statuses.join(",");
+      } else if (activeFilters.authentication_status) {
+        params.authentication_statuses = activeFilters.authentication_status;
+      }
 
       const res = await getOfficesPerformanceReport(params);
       if (res.data) {
@@ -120,6 +152,9 @@ const OfficesPerformanceReport = () => {
         if (!activeFilters.statuses || activeFilters.statuses.length === 0) {
           setStatuses(res.data.statuses || []);
         }
+        if (res.data.authentication_statuses && res.data.authentication_statuses.length > 0) {
+          setAuthStatusesList(res.data.authentication_statuses);
+        }
       }
     } catch (err) {
       console.error("Error fetching offices performance report:", err);
@@ -132,7 +167,7 @@ const OfficesPerformanceReport = () => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Toggle multi-status selection
+  // Toggle multi-status selection (Order Statuses)
   const handleToggleStatus = (statusKey) => {
     setFilters((prev) => {
       const current = prev.statuses || [];
@@ -159,6 +194,33 @@ const OfficesPerformanceReport = () => {
     fetchData(updated);
   };
 
+  // Toggle multi-select documentation status (Authentication Statuses)
+  const handleToggleAuthStatus = (statusKey) => {
+    setFilters((prev) => {
+      const current = prev.authentication_statuses || [];
+      const updated = current.includes(statusKey)
+        ? current.filter((s) => s !== statusKey)
+        : [...current, statusKey];
+
+      const newFilters = { ...prev, authentication_statuses: updated };
+      fetchData(newFilters);
+      return newFilters;
+    });
+  };
+
+  const handleSelectAllAuthStatuses = () => {
+    const allKeys = authStatusesList.map((s) => s.key || s.label);
+    const updated = { ...filters, authentication_statuses: allKeys };
+    setFilters(updated);
+    fetchData(updated);
+  };
+
+  const handleClearAllAuthStatuses = () => {
+    const updated = { ...filters, authentication_statuses: [] };
+    setFilters(updated);
+    fetchData(updated);
+  };
+
   const handleApplyFilters = (e) => {
     if (e) e.preventDefault();
     fetchData(filters);
@@ -173,6 +235,7 @@ const OfficesPerformanceReport = () => {
       saudi_office_id: "",
       external_office_id: "",
       statuses: [],
+      authentication_statuses: [],
     };
     setFilters(cleared);
     fetchData(cleared);
@@ -233,6 +296,7 @@ const OfficesPerformanceReport = () => {
   };
 
   const selectedCount = (filters.statuses || []).length;
+  const selectedAuthCount = (filters.authentication_statuses || []).length;
 
   const getFilterTitle = () => {
     switch (activeCardFilter) {
@@ -365,6 +429,99 @@ const OfficesPerformanceReport = () => {
                       >
                         {st.count}
                       </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </Card.Body>
+        </Card>
+
+        {/* Multi-Documentation-Status Selector & Filter Bar (تحديد متعدد لحالات التوثيق) */}
+        <Card className="border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden">
+          <div className="p-3 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div className="d-flex align-items-center gap-2">
+              <i className="fa-solid fa-stamp text-info fs-5"></i>
+              <span className="fw-bold text-dark fs-6">تحديد أكثر من حالة للتوثيق (Multi-Select Documentation Status):</span>
+              {selectedAuthCount > 0 && (
+                <Badge bg="info" className="rounded-pill px-3 py-1 fs-7">
+                  تم تحديد {selectedAuthCount} من {authStatusesList.length} حالات
+                </Badge>
+              )}
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <Button
+                variant="outline-info"
+                size="sm"
+                className="rounded-3 px-3 py-1 fw-semibold fs-7"
+                onClick={handleSelectAllAuthStatuses}
+              >
+                ✓ تحديد كافة حالات التوثيق
+              </Button>
+              {selectedAuthCount > 0 && (
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  className="rounded-3 px-3 py-1 fw-semibold fs-7"
+                  onClick={handleClearAllAuthStatuses}
+                >
+                  ✕ إلغاء التحديد ({selectedAuthCount})
+                </Button>
+              )}
+            </div>
+          </div>
+          <Card.Body className="p-3">
+            {authStatusesList.length === 0 ? (
+              <div className="text-muted small py-2">جاري تحميل حالات التوثيق...</div>
+            ) : (
+              <div className="d-flex flex-wrap gap-2 align-items-center">
+                {/* Chip for "Show All" */}
+                <button
+                  type="button"
+                  className={`btn btn-sm rounded-pill px-3 py-2 fw-bold d-flex align-items-center gap-2 transition-all ${
+                    selectedAuthCount === 0
+                      ? "btn-info text-white shadow-sm"
+                      : "btn-light border text-secondary"
+                  }`}
+                  onClick={handleClearAllAuthStatuses}
+                  style={{ transition: "all 0.2s ease" }}
+                >
+                  <span>📋 عرض جميع حالات التوثيق</span>
+                </button>
+
+                {/* Individual Multi-Select Status Chips */}
+                {authStatusesList.map((st, idx) => {
+                  const isSelected = (filters.authentication_statuses || []).includes(st.key) || (filters.authentication_statuses || []).includes(st.label);
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleToggleAuthStatus(st.key)}
+                      className="btn btn-sm rounded-pill px-3 py-2 fw-semibold d-flex align-items-center gap-2 shadow-sm border-0 position-relative"
+                      style={{
+                        backgroundColor: isSelected ? st.color || "#0284c7" : "#f8fafc",
+                        color: isSelected ? "#ffffff" : "#334155",
+                        border: isSelected ? `2px solid ${st.color || "#0284c7"}` : "1px solid #cbd5e1",
+                        boxShadow: isSelected ? `0 4px 12px ${st.color}40` : "none",
+                        transform: isSelected ? "translateY(-1px)" : "none",
+                        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      }}
+                    >
+                      <span className="d-flex align-items-center gap-1">
+                        {isSelected && <i className="fa-solid fa-check fs-8"></i>}
+                        {st.label}
+                      </span>
+                      {st.count !== undefined && (
+                        <span
+                          className="px-2 py-0.5 rounded-pill fs-8 fw-bold"
+                          style={{
+                            backgroundColor: isSelected ? "rgba(255,255,255,0.25)" : "#e2e8f0",
+                            color: isSelected ? "#ffffff" : "#475569",
+                          }}
+                        >
+                          {st.count}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -801,6 +958,7 @@ const OfficesPerformanceReport = () => {
                       <SortableHeader title="تاريخ العقد" sortKey="contract_date" sortConfig={modalSortConfig} onRequestSort={requestModalSort} />
                       <SortableHeader title="المبلغ" sortKey="total_price" sortConfig={modalSortConfig} onRequestSort={requestModalSort} />
                       <SortableHeader title="الحالة" sortKey="status" sortConfig={modalSortConfig} onRequestSort={requestModalSort} />
+                      <SortableHeader title="حالة التوثيق" sortKey="authentication_status" sortConfig={modalSortConfig} onRequestSort={requestModalSort} />
                       <th className="text-center">التفاصيل</th>
                     </tr>
                   </thead>
@@ -821,6 +979,21 @@ const OfficesPerformanceReport = () => {
                           >
                             {order.status}
                           </span>
+                        </td>
+                        <td>
+                          {order.authentication_status && order.authentication_status !== "-" ? (
+                            <span
+                              className="badge rounded-pill px-2.5 py-1 fs-8 fw-semibold shadow-sm"
+                              style={{
+                                backgroundColor: order.authentication_status_color || "#0284c7",
+                                color: "#ffffff",
+                              }}
+                            >
+                              {order.authentication_status}
+                            </span>
+                          ) : (
+                            <span className="text-muted">-</span>
+                          )}
                         </td>
                         <td className="text-center">
                           <Button

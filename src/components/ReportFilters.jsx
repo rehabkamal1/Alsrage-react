@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Form, Row, Col, Button, Card } from "react-bootstrap";
-import { getEmployees, getSaudiOffices, getExternalOffices, getSettingsOrderStatuses, getClients } from "../services/apiService";
+import { getEmployees, getSaudiOffices, getExternalOffices, getSettingsOrderStatuses, getClients, getSettingsAuthenticationStatuses } from "../services/apiService";
 
 const ReportFilters = ({ 
   config = {}, 
@@ -9,6 +9,7 @@ const ReportFilters = ({
   onApply,
   onFilter,
   statuses: propStatuses,
+  authenticationStatuses: propAuthenticationStatuses,
   employees: propEmployees,
   clients: propClients,
   saudiOffices: propSaudiOffices,
@@ -19,6 +20,7 @@ const ReportFilters = ({
   const [saudiOffices, setSaudiOffices] = useState(propSaudiOffices || []);
   const [externalOffices, setExternalOffices] = useState(propExternalOffices || []);
   const [statuses, setStatuses] = useState(propStatuses || []);
+  const [authenticationStatuses, setAuthenticationStatuses] = useState(propAuthenticationStatuses || []);
 
   useEffect(() => {
     if (propEmployees) setEmployees(propEmployees);
@@ -26,7 +28,8 @@ const ReportFilters = ({
     if (propSaudiOffices) setSaudiOffices(propSaudiOffices);
     if (propExternalOffices) setExternalOffices(propExternalOffices);
     if (propStatuses) setStatuses(propStatuses);
-  }, [propEmployees, propClients, propSaudiOffices, propExternalOffices, propStatuses]);
+    if (propAuthenticationStatuses) setAuthenticationStatuses(propAuthenticationStatuses);
+  }, [propEmployees, propClients, propSaudiOffices, propExternalOffices, propStatuses, propAuthenticationStatuses]);
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -50,6 +53,21 @@ const ReportFilters = ({
         if (config.showStatus && (!propStatuses || propStatuses.length === 0)) {
           const statusRes = await getSettingsOrderStatuses();
           setStatuses(statusRes.data?.data || statusRes.data || []);
+        }
+        if (config.showAuthenticationStatus && (!propAuthenticationStatuses || propAuthenticationStatuses.length === 0)) {
+          const authRes = await getSettingsAuthenticationStatuses();
+          const list = authRes.data?.data || authRes.data || [];
+          if (list.length > 0) {
+            setAuthenticationStatuses(list);
+          } else {
+            setAuthenticationStatuses([
+              { key: "documented", label: "تم التوثيق" },
+              { key: "under_process", label: "قيد التوثيق" },
+              { key: "pending", label: "بانتظار التوثيق" },
+              { key: "rejected", label: "مرفوض" },
+              { key: "cancelled", label: "ملغي" },
+            ]);
+          }
         }
       } catch (error) {
         console.error("Error fetching filter options:", error);
@@ -173,6 +191,25 @@ const ReportFilters = ({
                     {statuses.map((st) => (
                       <option key={st.key || st.id} value={st.key || st.id}>
                         {st.label || st.name}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            )}
+
+            {config.showAuthenticationStatus && (
+              <Col md={3}>
+                <Form.Group>
+                  <Form.Label>{config.authenticationStatusLabel || "حالة التوثيق"}</Form.Label>
+                  <Form.Select
+                    value={filters.authentication_status || ""}
+                    onChange={(e) => handleChange("authentication_status", e.target.value)}
+                  >
+                    <option value="">الكل</option>
+                    {authenticationStatuses.map((st) => (
+                      <option key={st.key || st.id} value={st.key || st.label}>
+                        {st.label}
                       </option>
                     ))}
                   </Form.Select>
