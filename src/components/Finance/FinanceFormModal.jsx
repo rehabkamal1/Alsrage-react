@@ -262,6 +262,10 @@ const FinanceFormModal = ({
     label: `${c.name || ""} - ${c.phone || ""}`,
   }));
 
+  const selectedClientObj = (clients || []).find(
+    (c) => String(c.id) === String(formData.client_id)
+  );
+
   const employeeOptions = (employees || []).map((e) => ({
     value: e.id,
     label: e.name || `موظف #${e.id}`,
@@ -447,6 +451,17 @@ const FinanceFormModal = ({
                 {getFieldError("client_id") && (
                   <div className="text-danger small mt-1">
                     {getFieldError("client_id")}
+                  </div>
+                )}
+                {selectedClientObj && Number(selectedClientObj.opening_balance) > 0 && (
+                  <div className="alert alert-warning py-2 px-3 small rounded-3 mt-2 mb-0 d-flex align-items-center gap-2">
+                    <i className="fa-solid fa-circle-exclamation fs-6 text-warning"></i>
+                    <span>
+                      <strong>تنبيه مالي:</strong> على هذا العميل رصيد افتتاحي مستحق (مديونية سابقة):{" "}
+                      <span className="fw-bold text-danger dir-ltr">
+                        {Number(selectedClientObj.opening_balance).toLocaleString()} ر.س
+                      </span>
+                    </span>
                   </div>
                 )}
               </Form.Group>

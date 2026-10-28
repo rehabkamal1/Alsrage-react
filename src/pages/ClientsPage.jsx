@@ -198,6 +198,11 @@ const ClientsPage = () => {
       { header: "رقم هاتف إضافي", key: "additional_phone" },
       { header: "المدينة", key: "city" },
       { header: "العنوان", key: "address" },
+      {
+        header: "الرصيد الافتتاحي (ر.س)",
+        key: "opening_balance",
+        format: (client) => Number(client.opening_balance || 0).toLocaleString(),
+      },
     ];
     exportToExcel(clients, columns, "العملاء.xlsx");
   };
@@ -219,6 +224,11 @@ const ClientsPage = () => {
       { header: "رقم هاتف إضافي", key: "additional_phone" },
       { header: "المدينة", key: "city" },
       { header: "العنوان", key: "address" },
+      {
+        header: "الرصيد الافتتاحي (ر.س)",
+        key: "opening_balance",
+        format: (client) => Number(client.opening_balance || 0).toLocaleString(),
+      },
     ];
     exportToPDF(clients, columns, "العملاء.pdf");
   };

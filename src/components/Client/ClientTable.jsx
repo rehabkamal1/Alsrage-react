@@ -41,6 +41,12 @@ const ClientTable = ({
                 return <td>{client.city || "-"}</td>;
             case "address":
                 return <td>{client.address || "-"}</td>;
+            case "opening_balance":
+                return (
+                    <td className="fw-bold text-dark font-monospace">
+                        {Number(client.opening_balance || 0).toLocaleString()} ر.س
+                    </td>
+                );
             case "orders":
                 return (
                     <td>

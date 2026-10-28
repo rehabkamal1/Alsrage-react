@@ -20,6 +20,7 @@ const ClientFormModal = ({
     additional_phone: "",
     city: "",
     address: "",
+    opening_balance: 0,
   });
 
   const [employees, setEmployees] = useState([]);
@@ -55,6 +56,7 @@ const ClientFormModal = ({
         additional_phone: initialData.additional_phone || "",
         city: initialData.city || "",
         address: initialData.address || "",
+        opening_balance: initialData.opening_balance ?? 0,
       });
       setEmployeeSearch(selectedEmployeeName);
     } else {
@@ -66,6 +68,7 @@ const ClientFormModal = ({
         additional_phone: "",
         city: "",
         address: "",
+        opening_balance: 0,
       });
       setEmployeeSearch("");
     }
@@ -250,6 +253,29 @@ const ClientFormModal = ({
                   placeholder="العنوان"
                   className="rounded-3"
                 />
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  💰 الرصيد الافتتاحي (مديونية سابقة على العميل) (ر.س)
+                </Form.Label>
+                <Form.Control
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  name="opening_balance"
+                  value={formData.opening_balance}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  className="rounded-3"
+                />
+                <Form.Text className="text-muted small">
+                  إذا كان على العميل مديونية أو مبالغ سابقة مستحقة، سجلها هنا ليتم احتسابها تلقائياً ضمن إجمالي المستحقات والمطالبات عند التحصيل.
+                </Form.Text>
               </Form.Group>
             </Col>
           </Row>

@@ -6,6 +6,7 @@ export const defaultColumns = [
     { id: "additional_phone", label: "رقم هاتف إضافي", width: "130px" },
     { id: "city", label: "المدينة", width: "100px" },
     { id: "address", label: "العنوان", width: "150px" },
+    { id: "opening_balance", label: "الرصيد الافتتاحي", width: "130px" },
     { id: "orders", label: "طلبات العميل", width: "130px" },
     { id: "created_at", label: "تاريخ التسجيل", width: "120px" },
     { id: "actions", label: "الإجراءات", width: "120px" },

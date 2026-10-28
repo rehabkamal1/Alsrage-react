@@ -356,18 +356,35 @@ const FinancialCollectionsReport = () => {
     });
   }, [orders, isStatementMode, paymentStatusFilter, selectedSaudiOffice, selectedClient, selectedEmployee, searchQuery]);
 
+  // Selected client object & opening balance helpers
+  const selectedClientObj = useMemo(() => {
+    if (!selectedClient) return null;
+    return clientsList.find((c) => String(c.id) === String(selectedClient));
+  }, [selectedClient, clientsList]);
+
+  const selectedClientOpeningBalance = useMemo(() => {
+    if (!selectedClient) return 0;
+    const fromSummary = clientsSummary.find((c) => String(c.client_id) === String(selectedClient));
+    if (fromSummary && fromSummary.opening_balance != null) {
+      return Number(fromSummary.opening_balance) || 0;
+    }
+    return Number(selectedClientObj?.opening_balance || 0);
+  }, [selectedClient, clientsSummary, selectedClientObj]);
+
   // 2. Client Summary List
   const filteredClients = useMemo(() => {
     return clientsSummary
       .map((client) => {
+        const openingBal = Number(client.opening_balance || 0);
         if (isStatementMode && client.orders && client.orders.length > 0) {
           const validOrders = client.orders.filter((o) => !isExcludedFromStatement(o));
           const totalContract = validOrders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
           const totalCollected = validOrders.reduce((sum, o) => sum + (Number(o.paid_amount) || 0), 0);
-          const totalRemaining = validOrders.reduce((sum, o) => sum + (Number(o.remaining_amount) || 0), 0);
-          const rate = totalContract > 0 ? Number(((totalCollected / totalContract) * 100).toFixed(1)) : 0;
+          const totalDue = totalContract + openingBal;
+          const totalRemaining = Math.max(0, totalDue - totalCollected);
+          const rate = totalDue > 0 ? Number(((totalCollected / totalDue) * 100).toFixed(1)) : 0;
           let payStatus = "غير محصل";
-          if (totalCollected >= totalContract && totalContract > 0) {
+          if (totalCollected >= totalDue && totalDue > 0) {
             payStatus = "محصل بالكامل";
           } else if (totalCollected > 0) {
             payStatus = "محصل جزئياً";
@@ -376,17 +393,39 @@ const FinancialCollectionsReport = () => {
             ...client,
             orders: validOrders,
             orders_count: validOrders.length,
+            opening_balance: openingBal,
             total_contract_value: totalContract,
+            total_due: totalDue,
             total_collected: totalCollected,
             total_outstanding: totalRemaining,
             collection_rate: rate,
             payment_status: payStatus,
           };
         }
-        return client;
+        const totalContract = Number(client.total_contract_value || 0);
+        const totalDue = Number(client.total_due ?? (totalContract + openingBal));
+        const totalCollected = Number(client.total_collected || 0);
+        const totalRemaining = Number(client.total_outstanding ?? Math.max(0, totalDue - totalCollected));
+        const rate = totalDue > 0 ? Number(((totalCollected / totalDue) * 100).toFixed(1)) : 0;
+        let payStatus = "غير محصل";
+        if (totalCollected >= totalDue && totalDue > 0) {
+          payStatus = "محصل بالكامل";
+        } else if (totalCollected > 0) {
+          payStatus = "محصل جزئياً";
+        }
+        return {
+          ...client,
+          opening_balance: openingBal,
+          total_contract_value: totalContract,
+          total_due: totalDue,
+          total_collected: totalCollected,
+          total_outstanding: totalRemaining,
+          collection_rate: rate,
+          payment_status: payStatus,
+        };
       })
       .filter((client) => {
-        if (isStatementMode && client.orders_count === 0 && (!client.orders || client.orders.length === 0)) {
+        if (isStatementMode && client.orders_count === 0 && (!client.orders || client.orders.length === 0) && (!client.opening_balance || Number(client.opening_balance) === 0)) {
           return false;
         }
         if (paymentStatusFilter !== "all" && client.payment_status !== paymentStatusFilter) {
@@ -467,9 +506,10 @@ const FinancialCollectionsReport = () => {
   // Recalculated KPIs for Statement Mode to match only included statement orders
   const displayKpis = useMemo(() => {
     if (!isStatementMode) return kpis;
-    const totalContract = filteredOrders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
+    const clientOpening = selectedClient ? selectedClientOpeningBalance : 0;
+    const totalContract = filteredOrders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0) + clientOpening;
     const totalCollected = filteredOrders.reduce((sum, o) => sum + (Number(o.paid_amount) || 0), 0);
-    const totalOutstanding = filteredOrders.reduce((sum, o) => sum + (Number(o.remaining_amount) || 0), 0);
+    const totalOutstanding = Math.max(0, totalContract - totalCollected);
     const collectionRate = totalContract > 0 ? Number(((totalCollected / totalContract) * 100).toFixed(1)) : 0;
     return {
       total_contract_value: totalContract,
@@ -480,7 +520,7 @@ const FinancialCollectionsReport = () => {
       total_clients: filteredClients.length,
       total_marketers: filteredMarketers.length,
     };
-  }, [isStatementMode, kpis, filteredOrders, filteredClients, filteredMarketers]);
+  }, [isStatementMode, kpis, selectedClient, selectedClientOpeningBalance, filteredOrders, filteredClients, filteredMarketers]);
 
   // Totals for table footers
   const clientDetailedTotals = useMemo(() => {
@@ -495,11 +535,16 @@ const FinancialCollectionsReport = () => {
   const clientSummaryTotals = useMemo(() => {
     const clientsCount = filteredClients.length;
     const ordersCount = filteredClients.reduce((acc, c) => acc + (Number(c.orders_count) || 0), 0);
+    const totalOpeningBalance = filteredClients.reduce((acc, c) => acc + (Number(c.opening_balance) || 0), 0);
     const totalContract = filteredClients.reduce((acc, c) => acc + (Number(c.total_contract_value) || 0), 0);
+    const totalDue = filteredClients.reduce(
+      (acc, c) => acc + (Number(c.total_due) || (Number(c.total_contract_value) || 0) + (Number(c.opening_balance) || 0)),
+      0
+    );
     const totalCollected = filteredClients.reduce((acc, c) => acc + (Number(c.total_collected) || 0), 0);
     const totalOutstanding = filteredClients.reduce((acc, c) => acc + (Number(c.total_outstanding) || 0), 0);
-    const rate = totalContract > 0 ? Number(((totalCollected / totalContract) * 100).toFixed(1)) : 0;
-    return { clientsCount, ordersCount, totalContract, totalCollected, totalOutstanding, rate };
+    const rate = totalDue > 0 ? Number(((totalCollected / totalDue) * 100).toFixed(1)) : 0;
+    return { clientsCount, ordersCount, totalOpeningBalance, totalContract, totalDue, totalCollected, totalOutstanding, rate };
   }, [filteredClients]);
 
   const marketerSummaryTotals = useMemo(() => {
@@ -557,7 +602,9 @@ const FinancialCollectionsReport = () => {
         { header: "اسم العميل", key: "client_name" },
         { header: "الهاتف", key: "client_phone" },
         { header: "عدد الطلبات", key: "orders_count" },
+        { header: "الرصيد الافتتاحي (ر.س)", key: "opening_balance" },
         { header: "إجمالي العقود (ر.س)", key: "total_contract_value" },
+        { header: "إجمالي المستحق (ر.س)", key: "total_due" },
         { header: "المبلغ المحصل (ر.س)", key: "total_collected" },
         { header: "المبلغ المتبقي (ر.س)", key: "total_outstanding" },
         { header: "نسبة التحصيل %", key: "collection_rate" },
@@ -654,7 +701,9 @@ const FinancialCollectionsReport = () => {
       const columns = [
         { header: "اسم العميل", key: "client_name" },
         { header: "عدد الطلبات", key: "orders_count" },
+        { header: "الرصيد الافتتاحي", key: "opening_balance" },
         { header: "إجمالي العقود", key: "total_contract_value" },
+        { header: "إجمالي المستحق", key: "total_due" },
         { header: "المحصل", key: "total_collected" },
         { header: "المتبقي", key: "total_outstanding" },
         { header: "حالة التحصيل", key: "payment_status" },
@@ -1034,6 +1083,11 @@ const FinancialCollectionsReport = () => {
                         ? `المندوب / العميل: ${clientsList.find((c) => String(c.id) === String(selectedClient))?.name || selectedClient}`
                         : `المسوق / الموظف: ${employeesList.find((e) => String(e.id) === String(selectedEmployee))?.name || selectedEmployee}`}
                     </span>
+                    {selectedClient && selectedClientOpeningBalance > 0 && (
+                      <span className="badge bg-warning text-dark border border-warning fs-7">
+                        💰 الرصيد الافتتاحي (مديونية سابقة): {selectedClientOpeningBalance.toLocaleString()} ر.س
+                      </span>
+                    )}
                     <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 fs-8">
                       مستبعد من الكشف: لم يتم السداد • انتظار السداد • منتهي
                     </span>
@@ -1287,25 +1341,43 @@ const FinancialCollectionsReport = () => {
                         ))}
                       </tbody>
                       <tfoot className="table-light border-top border-2 border-primary border-opacity-25 align-middle">
+                        {selectedClient && selectedClientOpeningBalance > 0 && (
+                          <tr className="bg-warning bg-opacity-10" style={{ fontSize: "0.9rem" }}>
+                            <td colSpan={hideOrderStatus ? 5 : 6} className="text-start py-2 px-3 fw-bold text-dark">
+                              <i className="fa-solid fa-coins text-warning me-2"></i>
+                              <span>الرصيد الافتتاحي المستحق على العميل (مديونية سابقة):</span>
+                            </td>
+                            <td className="fw-bold text-dark py-2 font-monospace">
+                              {selectedClientOpeningBalance.toLocaleString()} ر.س
+                            </td>
+                            <td className="text-muted small py-2">-</td>
+                            <td className="fw-bold text-danger py-2 font-monospace">
+                              {selectedClientOpeningBalance.toLocaleString()} ر.س
+                            </td>
+                            <td colSpan={4} className="text-muted small py-2"></td>
+                          </tr>
+                        )}
                         <tr style={{ fontSize: "0.95rem" }}>
                           <td colSpan={hideOrderStatus ? 5 : 6} className="text-start py-3 px-3 fw-bold text-dark">
                             <div className="d-flex align-items-center gap-2">
                               <i className="fa-solid fa-calculator text-primary fs-5"></i>
-                              <span>الإجمالي ({clientDetailedTotals.count} طلب)</span>
+                              <span>
+                                الإجمالي الكلي {selectedClient && selectedClientOpeningBalance > 0 ? "(شامل الرصيد الافتتاحي)" : `(${clientDetailedTotals.count} طلب)`}
+                              </span>
                             </div>
                           </td>
                           <td className="fw-bold text-dark py-3 font-monospace">
-                            {(clientDetailedTotals.totalPrice || 0).toLocaleString()} ر.س
+                            {(clientDetailedTotals.totalPrice + (selectedClient ? selectedClientOpeningBalance : 0)).toLocaleString()} ر.س
                           </td>
                           <td className="fw-bold text-success py-3 font-monospace">
                             {(clientDetailedTotals.paidAmount || 0).toLocaleString()} ر.س
                           </td>
                           <td className="fw-bold text-danger py-3 font-monospace">
-                            {(clientDetailedTotals.remainingAmount || 0).toLocaleString()} ر.س
+                            {Math.max(0, (clientDetailedTotals.totalPrice + (selectedClient ? selectedClientOpeningBalance : 0)) - clientDetailedTotals.paidAmount).toLocaleString()} ر.س
                           </td>
                           <td className="py-3">
                             {renderPaymentBadge(
-                              clientDetailedTotals.paidAmount >= clientDetailedTotals.totalPrice && clientDetailedTotals.totalPrice > 0
+                              clientDetailedTotals.paidAmount >= (clientDetailedTotals.totalPrice + (selectedClient ? selectedClientOpeningBalance : 0)) && (clientDetailedTotals.totalPrice + (selectedClient ? selectedClientOpeningBalance : 0)) > 0
                                 ? "محصل بالكامل"
                                 : clientDetailedTotals.paidAmount > 0
                                 ? "محصل جزئياً"
@@ -1324,7 +1396,7 @@ const FinancialCollectionsReport = () => {
                 {/* ======================================================== */}
                 {/* 2. VIEW: CLIENT SUMMARY REPORT                          */}
                 {/* Existing summary columns: العميل, عدد الطلبات,             */}
-                {/*   إجمالي العقد, المحصل, المتبقي, حالة التحصيل, نسبة...     */}
+                {/*   الرصيد الافتتاحي, إجمالي العقد, إجمالي المستحق, المحصل... */}
                 {/* ======================================================== */}
                 {reportTarget === "client" && reportMode === "summary" && (
                   <div className="table-responsive">
@@ -1334,9 +1406,11 @@ const FinancialCollectionsReport = () => {
                           <th className="py-3">#</th>
                           <th className="py-3 text-start px-4">اسم العميل</th>
                           <th className="py-3">عدد الطلبات</th>
+                          <th className="py-3">الرصيد الافتتاحي 💰</th>
                           <th className="py-3">إجمالي العقود</th>
+                          <th className="py-3">إجمالي المستحق</th>
                           <th className="py-3">المحصل الفعلي</th>
-                          <th className="py-3">المتبقي</th>
+                          <th className="py-3">المتبقي المطلوب</th>
                           <th className="py-3">نسبة التحصيل</th>
                           <th className="py-3">حالة التحصيل</th>
                           <th className="py-3 text-center">التفاصيل</th>
@@ -1361,13 +1435,19 @@ const FinancialCollectionsReport = () => {
                                 {client.orders_count} طلبات
                               </Badge>
                             </td>
-                            <td className="fw-bold text-dark">
+                            <td className="fw-bold text-secondary font-monospace">
+                              {(Number(client.opening_balance) || 0).toLocaleString()} ر.س
+                            </td>
+                            <td className="fw-bold text-dark font-monospace">
                               {(client.total_contract_value || 0).toLocaleString()} ر.س
                             </td>
-                            <td className="fw-bold text-success">
+                            <td className="fw-bold text-primary font-monospace">
+                              {((client.total_due ?? ((client.total_contract_value || 0) + (Number(client.opening_balance) || 0)))).toLocaleString()} ر.س
+                            </td>
+                            <td className="fw-bold text-success font-monospace">
                               {(client.total_collected || 0).toLocaleString()} ر.س
                             </td>
-                            <td className="fw-bold text-danger">
+                            <td className="fw-bold text-danger font-monospace">
                               {(client.total_outstanding || 0).toLocaleString()} ر.س
                             </td>
                             <td style={{ minWidth: "120px" }}>
@@ -1420,8 +1500,14 @@ const FinancialCollectionsReport = () => {
                               {clientSummaryTotals.ordersCount} طلبات
                             </Badge>
                           </td>
+                          <td className="fw-bold text-secondary py-3 font-monospace">
+                            {(clientSummaryTotals.totalOpeningBalance || 0).toLocaleString()} ر.س
+                          </td>
                           <td className="fw-bold text-dark py-3 font-monospace">
                             {(clientSummaryTotals.totalContract || 0).toLocaleString()} ر.س
+                          </td>
+                          <td className="fw-bold text-primary py-3 font-monospace">
+                            {(clientSummaryTotals.totalDue || 0).toLocaleString()} ر.س
                           </td>
                           <td className="fw-bold text-success py-3 font-monospace">
                             {(clientSummaryTotals.totalCollected || 0).toLocaleString()} ر.س
@@ -1434,7 +1520,7 @@ const FinancialCollectionsReport = () => {
                           </td>
                           <td className="py-3">
                             {renderPaymentBadge(
-                              clientSummaryTotals.totalCollected >= clientSummaryTotals.totalContract && clientSummaryTotals.totalContract > 0
+                              clientSummaryTotals.totalCollected >= clientSummaryTotals.totalDue && clientSummaryTotals.totalDue > 0
                                 ? "محصل بالكامل"
                                 : clientSummaryTotals.totalCollected > 0
                                 ? "محصل جزئياً"
