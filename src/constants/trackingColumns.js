@@ -17,6 +17,6 @@ export const trackingColumns = [
   { id: "authentication_status", label: "حالة التوثيق", width: "150px" },
   { id: "authorization_status", label: "حالة التفويض", width: "150px" },
   { id: "priority_level", label: "درجة الأهمية", width: "150px" },
-  { id: "attachments", label: "الصور", width: "150px" },
+  { id: "attachments", label: "المرفقات", width: "150px" },
   { id: "actions", label: "إجراءات", width: "100px" },
 ];

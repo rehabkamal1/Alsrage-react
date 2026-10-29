@@ -44,6 +44,7 @@ const validationFieldLabels = {
   saudi_office_id: "المكتب السعودي",
   external_office_id: "المكتب الخارجي",
   visa_number: "رقم التأشيرة",
+  musaned_contract_number: "رقم عقد مساند",
   nationality: "الجنسية",
   arrival_destination: "جهة الوصول",
   id_number: "رقم الهوية",

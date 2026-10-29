@@ -307,8 +307,8 @@ const TrackingTable = ({
       case "attachments":
         return (
           <td className="align-middle">
-            <div className="d-flex flex-wrap gap-1 mb-1">
-              {item.attachments?.map((att) => (
+            <div className="d-flex flex-wrap justify-content-center align-items-center gap-1 mb-1">
+              {(item.attachments || []).slice(0, 3).map((att) => (
                 <div
                   key={att.id}
                   style={{
@@ -317,36 +317,56 @@ const TrackingTable = ({
                     alignItems: "center",
                   }}
                 >
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="p-0 text-decoration-none text-primary"
-                    style={{ fontSize: "0.78rem" }}
-                    onClick={() => {
-                      setSelectedImage(att.file_path);
-                      setSelectedImageTitle(att.title);
-                      setShowImageModal(true);
-                    }}
-                    title={att.title}
-                  >
-                    📷{" "}
-                    {att.title?.length > 12
-                      ? att.title.substring(0, 12) + "…"
-                      : att.title}
-                  </Button>
+                  {att.mime_type?.startsWith("image/") ? (
+                    <Button
+                      variant="link"
+                      className="p-0"
+                      onClick={() => {
+                        setSelectedImage(att.file_path);
+                        setSelectedImageTitle(att.title || att.file_name);
+                        setShowImageModal(true);
+                      }}
+                      title={att.title || att.file_name}
+                      aria-label={`عرض ${att.title || att.file_name || "المرفق"}`}
+                    >
+                      <Image
+                        src={att.file_path}
+                        alt={att.title || att.file_name || "مرفق"}
+                        rounded
+                        style={{
+                          width: 40,
+                          height: 40,
+                          objectFit: "cover",
+                          border: "1px solid #dee2e6",
+                        }}
+                      />
+                    </Button>
+                  ) : (
+                    <a
+                      href={att.file_path}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="badge bg-light text-dark border text-decoration-none"
+                      title={att.title || att.file_name}
+                    >
+                      {att.mime_type === "application/pdf" ? "PDF" : "ملف"}
+                    </a>
+                  )}
                   <button
                     onClick={() => handleDeleteImage(att.id)}
                     disabled={deleting}
-                    title="حذف الصورة"
+                    title="حذف المرفق"
                     style={{
-                      marginRight: "4px",
-                      width: "18px",
-                      height: "18px",
+                      position: "absolute",
+                      top: -5,
+                      right: -5,
+                      width: 18,
+                      height: 18,
                       borderRadius: "50%",
                       background: "#dc3545",
                       border: "none",
                       color: "#fff",
-                      fontSize: "12px",
+                      fontSize: 12,
                       fontWeight: "bold",
                       lineHeight: 1,
                       cursor: "pointer",
@@ -360,6 +380,11 @@ const TrackingTable = ({
                   </button>
                 </div>
               ))}
+              {(item.attachments?.length || 0) > 3 && (
+                <span className="badge bg-secondary">
+                  +{item.attachments.length - 3}
+                </span>
+              )}
             </div>
             <Button
               variant="outline-primary"
@@ -368,7 +393,7 @@ const TrackingTable = ({
               style={{ fontSize: "0.75rem" }}
               onClick={() => openUploadModal(item.id)}
             >
-              + صورة
+              + مرفق
             </Button>
           </td>
         );

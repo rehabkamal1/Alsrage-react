@@ -99,7 +99,7 @@ export const getOrderTrackingByOrderId = (orderId) =>
 export const getSingleOrderTracking = (id) => api.get(`/order-tracking/${id}`);
 export const createOrderTracking = (data) => api.post("/order-tracking", data);
 export const updateOrderTracking = (id, data) =>
-  api.put(`/order-tracking/${id}`, data);
+  api.post(`/order-tracking/${id}?_method=PUT`, data);
 export const deleteOrderTracking = (id) => api.delete(`/order-tracking/${id}`);
 
 // =============== Transactions ===============

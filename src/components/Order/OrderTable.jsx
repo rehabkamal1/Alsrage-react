@@ -208,6 +208,54 @@ const OrderTable = ({
       case "musaned_contract_number":
         return <td>{order.musaned_contract_number || "-"}</td>;
 
+      case "attachments": {
+        const attachments = order.attachments || [];
+        return (
+          <td>
+            {attachments.length ? (
+              <div className="d-flex justify-content-center align-items-center gap-1">
+                {attachments.slice(0, 3).map((attachment) => (
+                  <a
+                    key={attachment.id}
+                    href={attachment.file_path}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={attachment.title || attachment.file_name}
+                    aria-label={`عرض ${attachment.title || attachment.file_name || "المرفق"}`}
+                  >
+                    {attachment.mime_type?.startsWith("image/") ? (
+                      <img
+                        src={attachment.file_path}
+                        alt={attachment.title || attachment.file_name || "مرفق"}
+                        className="rounded border"
+                        style={{
+                          width: 40,
+                          height: 40,
+                          objectFit: "cover",
+                        }}
+                      />
+                    ) : (
+                      <span className="badge bg-light text-dark border">
+                        {attachment.mime_type === "application/pdf"
+                          ? "PDF"
+                          : "ملف"}
+                      </span>
+                    )}
+                  </a>
+                ))}
+                {attachments.length > 3 && (
+                  <span className="badge bg-secondary">
+                    +{attachments.length - 3}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span className="text-muted">-</span>
+            )}
+          </td>
+        );
+      }
+
       case "total_price":
         return (
           <td>

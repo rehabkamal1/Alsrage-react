@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Modal,
   Button,
@@ -57,6 +57,32 @@ const OrderFormModal = ({
   const [arrivalDestinationOptions, setArrivalDestinationOptions] = useState(
     [],
   );
+  const [formData, setFormData] = useState({
+    client_id: "",
+    employee_id: "",
+    visa_holder_name: "",
+    visa_holder_phone: "",
+    saudi_office_id: "",
+    external_office_id: "",
+    visa_number: "",
+    service_type: "",
+    id_number: "",
+    musaned_contract_number: "",
+    nationality: "",
+    arrival_destination: "",
+    profession: "",
+    passport_number: "",
+    birth_date: "",
+    contract_date: "",
+    total_price: "",
+    musaned_paid: "",
+    is_paid_by_office: false,
+    status: "",
+    order_status: "",
+    notes: "",
+    visa_image: null,
+    contract_image: null,
+  });
 
   const [showQuickEmployee, setShowQuickEmployee] = useState(false);
   const [newEmpName, setNewEmpName] = useState("");
@@ -77,17 +103,6 @@ const OrderFormModal = ({
         })
         .catch((err) =>
           console.error("Error fetching local saudi offices:", err),
-        );
-
-      getExternalOffices({ all: 1, per_page: 500 })
-        .then((res) => {
-          const list = res.data?.data || res.data || [];
-          if (Array.isArray(list) && list.length > 0) {
-            setLocalExternalOffices(list);
-          }
-        })
-        .catch((err) =>
-          console.error("Error fetching local external offices:", err),
         );
 
       getClients({ all: 1, per_page: 500 })
@@ -135,6 +150,35 @@ const OrderFormModal = ({
   }, [show]);
 
   useEffect(() => {
+    if (!show || !formData.nationality) {
+      setLocalExternalOffices([]);
+      return;
+    }
+
+    let active = true;
+    getExternalOffices({
+      all: 1,
+      per_page: 500,
+      nationality: formData.nationality,
+    })
+      .then((res) => {
+        if (active) {
+          const list = res.data?.data || res.data || [];
+          setLocalExternalOffices(Array.isArray(list) ? list : []);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          console.error("Error fetching external offices by nationality:", err);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [show, formData.nationality]);
+
+  useEffect(() => {
     if (Array.isArray(saudiOffices) && saudiOffices.length > 0) {
       setLocalSaudiOffices(saudiOffices);
     }
@@ -162,36 +206,19 @@ const OrderFormModal = ({
     localSaudiOffices.length > 0 ? localSaudiOffices : saudiOffices;
   const effectiveExternalOffices =
     localExternalOffices.length > 0 ? localExternalOffices : externalOffices;
+  const selectedNationality = nationalityOptions.find(
+    (option) => option.value === formData.nationality,
+  );
+  const externalOfficeCountries = [
+    formData.nationality,
+    selectedNationality?.label,
+  ].filter(Boolean);
+  const nationalityExternalOffices = effectiveExternalOffices.filter((office) =>
+    externalOfficeCountries.includes(String(office.country || "").trim()),
+  );
   const effectiveClients = localClients.length > 0 ? localClients : clients;
   const effectiveEmployees =
     localEmployees.length > 0 ? localEmployees : employees;
-
-  const [formData, setFormData] = useState({
-    client_id: "",
-    employee_id: "",
-    visa_holder_name: "",
-    visa_holder_phone: "",
-    saudi_office_id: "",
-    external_office_id: "",
-    visa_number: "",
-    service_type: "",
-    id_number: "",
-    musaned_contract_number: "",
-    nationality: "",
-    arrival_destination: "",
-    profession: "",
-    passport_number: "",
-    birth_date: "",
-    contract_date: "",
-    total_price: "",
-    musaned_paid: "",
-    is_paid_by_office: false,
-    status: "",
-    order_status: "",
-    notes: "",
-    visa_image: null,
-    contract_image: null,
-  });
 
   const [previewImages, setPreviewImages] = useState({
     visa_image: null,
@@ -812,7 +839,7 @@ const OrderFormModal = ({
                               value: "__ADD_NEW__",
                               label: "➕ إضافة مكتب خارجي جديد...",
                             },
-                            ...(effectiveExternalOffices || []).map(
+                            ...nationalityExternalOffices.map(
                               (office) => ({
                                 value: office.id,
                                 label: office.name,
@@ -820,14 +847,14 @@ const OrderFormModal = ({
                             ),
                           ]}
                           value={
-                            (effectiveExternalOffices || []).find(
+                            nationalityExternalOffices.find(
                               (o) =>
                                 String(o.id) ===
                                 String(formData.external_office_id),
                             )
                               ? {
                                   value: formData.external_office_id,
-                                  label: (effectiveExternalOffices || []).find(
+                                  label: nationalityExternalOffices.find(
                                     (o) =>
                                       String(o.id) ===
                                       String(formData.external_office_id),
@@ -837,6 +864,10 @@ const OrderFormModal = ({
                           }
                           onChange={(option) => {
                             if (option?.value === "__ADD_NEW__") {
+                              setNewExternalOfficeCountry(
+                                selectedNationality?.label ||
+                                  formData.nationality,
+                              );
                               setShowQuickExternalOffice(true);
                               return;
                             }
@@ -845,8 +876,15 @@ const OrderFormModal = ({
                               external_office_id: option ? option.value : "",
                             }));
                           }}
-                          placeholder="اختر المكتب الخارجي..."
-                          noOptionsMessage={() => "لا توجد خيارات"}
+                          placeholder={
+                            formData.nationality
+                              ? "اختر المكتب الخارجي..."
+                              : "اختر الجنسية أولاً..."
+                          }
+                          noOptionsMessage={() =>
+                            "لا توجد مكاتب خارجية لهذه الجنسية"
+                          }
+                          isDisabled={!formData.nationality}
                           isClearable
                           isRtl
                           styles={{
@@ -1195,13 +1233,20 @@ const OrderFormModal = ({
                                 }
                               : null
                           }
-                          onChange={(option) =>
+                          onChange={(option) => {
                             setFormData((prev) => ({
                               ...prev,
                               nationality: option ? option.value : "",
                               arrival_destination: "",
-                            }))
-                          }
+                              external_office_id: "",
+                            }));
+                            if (fieldErrors.external_office_id) {
+                              setFieldErrors((prev) => ({
+                                ...prev,
+                                external_office_id: undefined,
+                              }));
+                            }
+                          }}
                           placeholder="اختر أو ابحث عن الجنسية..."
                           isClearable
                           isSearchable
@@ -1650,6 +1695,58 @@ const OrderFormModal = ({
                     الهوية، إلخ...)
                   </div>
 
+                  {isEdit && initialData?.attachments?.length > 0 && (
+                    <div className="mb-4">
+                      <h6 className="fw-bold mb-3">المرفقات الحالية</h6>
+                      <div className="d-flex flex-wrap gap-3">
+                        {initialData.attachments.map((attachment) => (
+                          <a
+                            key={attachment.id}
+                            href={attachment.file_path}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="d-flex flex-column align-items-center gap-1 text-decoration-none"
+                            title={attachment.title || attachment.file_name}
+                          >
+                            {attachment.mime_type?.startsWith("image/") ? (
+                              <img
+                                src={attachment.file_path}
+                                alt={
+                                  attachment.title ||
+                                  attachment.file_name ||
+                                  "مرفق"
+                                }
+                                className="rounded border"
+                                style={{
+                                  width: 100,
+                                  height: 100,
+                                  objectFit: "cover",
+                                }}
+                              />
+                            ) : (
+                              <span
+                                className="d-flex align-items-center justify-content-center rounded border bg-light text-dark fw-bold"
+                                style={{ width: 100, height: 100 }}
+                              >
+                                {attachment.mime_type === "application/pdf"
+                                  ? "PDF"
+                                  : "ملف"}
+                              </span>
+                            )}
+                            <span
+                              className="small text-dark text-truncate"
+                              style={{ maxWidth: 120 }}
+                            >
+                              {attachment.title ||
+                                attachment.file_name ||
+                                "مرفق"}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {attachmentRows.map((row, index) => (
                     <div
                       key={`attachment-${index}`}
@@ -1954,8 +2051,8 @@ const OrderFormModal = ({
             <Form.Control
               type="text"
               value={newExternalOfficeCountry}
-              onChange={(e) => setNewExternalOfficeCountry(e.target.value)}
-              placeholder="أدخل الدولة"
+              placeholder="الجنسية المحددة"
+              readOnly
               className="rounded-3"
             />
           </Form.Group>

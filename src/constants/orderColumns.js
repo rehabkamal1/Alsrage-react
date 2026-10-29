@@ -9,6 +9,7 @@ export const defaultColumns = [
   { id: "visa_number", label: "رقم التأشيرة", width: "120px" },
   { id: "service_type", label: "نوع الخدمة", width: "130px" },
   { id: "musaned_contract_number", label: "رقم عقد مساند", width: "140px" },
+  { id: "attachments", label: "المرفقات", width: "150px" },
   { id: "total_price", label: "إجمالي السعر", width: "120px" },
   { id: "musaned_paid", label: "سداد مساند", width: "120px" },
   { id: "price_difference", label: "الرصيد المتبقي", width: "130px" },

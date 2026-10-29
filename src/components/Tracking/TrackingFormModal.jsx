@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Row, Col } from "react-bootstrap";
+import { Modal, Button, Form, Row, Col, Tab, Tabs } from "react-bootstrap";
 import Select from "react-select";
 import { showSuccess, showError } from "../../utils/swalHelper";
+import "../../styles/FormModal.css";
 
 const formatDateForInput = (val) => {
   if (!val) return "";
@@ -55,6 +56,10 @@ const TrackingFormModal = ({
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [validated, setValidated] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [activeTab, setActiveTab] = useState("details");
+  const [attachmentRows, setAttachmentRows] = useState([
+    { title: "", file: null },
+  ]);
 
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
@@ -115,6 +120,8 @@ const TrackingFormModal = ({
     }
     setValidated(false);
     setFieldErrors({});
+    setActiveTab("details");
+    setAttachmentRows([{ title: "", file: null }]);
   }, [initialData, show, orders]);
 
   useEffect(() => {
@@ -156,7 +163,38 @@ const TrackingFormModal = ({
       setValidated(true);
       return;
     }
-    onSubmit(formData);
+    const submitData = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        submitData.append(key, value);
+      }
+    });
+    attachmentRows.forEach((row, index) => {
+      if (row.file) {
+        submitData.append(`attachment_files[${index}]`, row.file);
+        submitData.append(
+          `attachment_titles[${index}]`,
+          row.title || row.file.name,
+        );
+      }
+    });
+    onSubmit(submitData);
+  };
+
+  const updateAttachmentRow = (index, field, value) => {
+    setAttachmentRows((previous) =>
+      previous.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, [field]: value } : row,
+      ),
+    );
+  };
+
+  const addAttachmentRow = () => {
+    setAttachmentRows((previous) => [...previous, { title: "", file: null }]);
+  };
+
+  const removeAttachmentRow = (index) => {
+    setAttachmentRows((previous) => previous.filter((_, i) => i !== index));
   };
 
   const getFieldError = (fieldName) => fieldErrors[fieldName]?.[0];
@@ -218,6 +256,14 @@ const TrackingFormModal = ({
 
         <Form onSubmit={handleSubmit} noValidate validated={validated}>
           <Modal.Body className="px-4">
+            <Tabs
+              activeKey={activeTab}
+              onSelect={(key) => key && setActiveTab(key)}
+              className="mb-4 custom-tabs"
+              fill
+            >
+              <Tab eventKey="details" title="بيانات المتابعة">
+                <div className="pt-3">
             <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
@@ -227,12 +273,12 @@ const TrackingFormModal = ({
                   <Select
                     options={orders.map((o) => ({
                       value: o.id,
-                      label: `#${o.id} - ${o.visa_holder_name || o.client?.visa_holder_name || ""} - ${o.visa_number || ""}`,
+                      label: `#${o.id} - ${o.visa_holder_name || o.client?.visa_holder_name || ""} - ${o.visa_number || ""} - عقد مساند: ${o.musaned_contract_number || "-"}`,
                     }))}
                     value={getSelectedOption(
                       orders.map((o) => ({
                         value: o.id,
-                        label: `#${o.id} - ${o.visa_holder_name || o.client?.visa_holder_name || ""} - ${o.visa_number || ""}`,
+                        label: `#${o.id} - ${o.visa_holder_name || o.client?.visa_holder_name || ""} - ${o.visa_number || ""} - عقد مساند: ${o.musaned_contract_number || "-"}`,
                       })),
                       formData.order_id,
                     )}
@@ -392,17 +438,23 @@ const TrackingFormModal = ({
                   </strong>
                 </div>
                 <Row>
-                  <Col xs={4}>
+                  <Col xs={6} md={3}>
                     <small className="text-muted d-block">التأشيرة</small>
                     <strong>{displayOrder.visa_number || "-"}</strong>
                   </Col>
-                  <Col xs={4}>
+                  <Col xs={6} md={3}>
                     <small className="text-muted d-block">الهوية</small>
                     <strong>{displayOrder.id_number || "-"}</strong>
                   </Col>
-                  <Col xs={4}>
+                  <Col xs={6} md={3}>
                     <small className="text-muted d-block">الجواز</small>
                     <strong>{displayOrder.passport_number || "-"}</strong>
+                  </Col>
+                  <Col xs={6} md={3}>
+                    <small className="text-muted d-block">رقم عقد مساند</small>
+                    <strong>
+                      {displayOrder.musaned_contract_number || "-"}
+                    </strong>
                   </Col>
                 </Row>
               </div>
@@ -671,6 +723,139 @@ const TrackingFormModal = ({
                 </Form.Group>
               </Col>
             </Row>
+                </div>
+              </Tab>
+              <Tab eventKey="attachments" title="الصور والمرفقات">
+                <div className="pt-3">
+                  <div className="alert alert-info border-0 rounded-3 small">
+                    يمكنك إضافة صور أو ملفات للمتابعة، وستبقى المرفقات الحالية محفوظة عند التعديل.
+                  </div>
+
+                  {isEdit && initialData?.attachments?.length > 0 && (
+                    <div className="mb-4">
+                      <h6 className="fw-bold mb-3">المرفقات الحالية</h6>
+                      <div className="d-flex flex-wrap gap-3">
+                        {initialData.attachments.map((attachment) => (
+                          <a
+                            key={attachment.id}
+                            href={attachment.file_path}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="d-flex flex-column align-items-center gap-1 text-decoration-none"
+                            title={attachment.title || attachment.file_name}
+                          >
+                            {attachment.mime_type?.startsWith("image/") ? (
+                              <img
+                                src={attachment.file_path}
+                                alt={attachment.title || attachment.file_name || "مرفق"}
+                                className="rounded border"
+                                style={{
+                                  width: 100,
+                                  height: 100,
+                                  objectFit: "cover",
+                                }}
+                              />
+                            ) : (
+                              <span
+                                className="d-flex align-items-center justify-content-center rounded border bg-light text-dark fw-bold"
+                                style={{ width: 100, height: 100 }}
+                              >
+                                {attachment.mime_type === "application/pdf"
+                                  ? "PDF"
+                                  : "ملف"}
+                              </span>
+                            )}
+                            <span
+                              className="small text-dark text-truncate"
+                              style={{ maxWidth: 120 }}
+                            >
+                              {attachment.title || attachment.file_name || "مرفق"}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {attachmentRows.map((row, index) => (
+                    <div
+                      key={`tracking-attachment-${index}`}
+                      className="p-4 mb-3 border rounded-4 bg-white shadow-sm position-relative"
+                    >
+                      <div
+                        className="position-absolute top-0 start-0 w-100 bg-primary bg-opacity-25"
+                        style={{ height: 4 }}
+                      />
+                      <Row className="align-items-end g-3">
+                        <Col md={5}>
+                          <Form.Group>
+                            <Form.Label className="fw-bold small">
+                              عنوان المرفق
+                            </Form.Label>
+                            <Form.Control
+                              type="text"
+                              value={row.title}
+                              onChange={(event) =>
+                                updateAttachmentRow(index, "title", event.target.value)
+                              }
+                              placeholder="مثال: صورة الجواز"
+                              className="rounded-3"
+                            />
+                          </Form.Group>
+                        </Col>
+                        <Col md={5}>
+                          <Form.Group>
+                            <Form.Label className="fw-bold small">
+                              اختيار الصورة أو الملف
+                            </Form.Label>
+                            <Form.Control
+                              type="file"
+                              accept="image/*,application/pdf"
+                              onChange={(event) =>
+                                updateAttachmentRow(
+                                  index,
+                                  "file",
+                                  event.target.files?.[0] || null,
+                                )
+                              }
+                              className="rounded-3"
+                            />
+                          </Form.Group>
+                        </Col>
+                        <Col md={2}>
+                          <Button
+                            variant="link"
+                            className="w-100 text-danger text-decoration-none fw-semibold"
+                            disabled={
+                              attachmentRows.length === 1 &&
+                              !row.file &&
+                              !row.title
+                            }
+                            onClick={() => removeAttachmentRow(index)}
+                          >
+                            إزالة
+                          </Button>
+                        </Col>
+                      </Row>
+                      {row.file && (
+                        <div className="mt-3 p-2 rounded-3 bg-success bg-opacity-10 small text-success fw-bold">
+                          تم اختيار: {row.file.name}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  <Button
+                    variant="outline-dark"
+                    onClick={addAttachmentRow}
+                    className="w-100 py-2 rounded-3"
+                    style={{ borderStyle: "dashed" }}
+                  >
+                    + إضافة مرفق جديد
+                  </Button>
+                </div>
+              </Tab>
+            </Tabs>
           </Modal.Body>
 
           <Modal.Footer className="border-0 pb-4 px-4">

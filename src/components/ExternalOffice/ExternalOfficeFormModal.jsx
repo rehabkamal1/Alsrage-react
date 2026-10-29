@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
+import { getSettingsNationalities } from "../../services/apiService";
 import "../../styles/FormModal.css";
 
 const ExternalOfficeFormModal = ({
@@ -22,6 +23,38 @@ const ExternalOfficeFormModal = ({
 
   const [validated, setValidated] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [nationalityOptions, setNationalityOptions] = useState([]);
+  const [loadingNationalities, setLoadingNationalities] = useState(false);
+
+  useEffect(() => {
+    if (!show) return;
+
+    let active = true;
+    setLoadingNationalities(true);
+    getSettingsNationalities()
+      .then((response) => {
+        if (active) {
+          setNationalityOptions(
+            (response.data?.data || []).filter(
+              (nationality) =>
+                nationality.is_active !== false && nationality.is_active !== 0,
+            ),
+          );
+        }
+      })
+      .catch((fetchError) => {
+        console.error("Error fetching nationalities for external office:", fetchError);
+      })
+      .finally(() => {
+        if (active) {
+          setLoadingNationalities(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [show]);
 
   useEffect(() => {
     if (initialData) {
@@ -91,8 +124,23 @@ const ExternalOfficeFormModal = ({
       setValidated(true);
       return;
     }
-    onSubmit(formData);
+    const selectedNationality = nationalityOptions.find(
+      (nationality) =>
+        nationality.key === formData.country ||
+        nationality.label === formData.country,
+    );
+    onSubmit({
+      ...formData,
+      country: selectedNationality?.label || formData.country,
+    });
   };
+
+  const selectedNationalityValue =
+    nationalityOptions.find(
+      (nationality) =>
+        nationality.key === formData.country ||
+        nationality.label === formData.country,
+    )?.key || formData.country;
 
   const getFieldError = (fieldName, index = null) => {
     if (index !== null) {
@@ -123,15 +171,35 @@ const ExternalOfficeFormModal = ({
                 <Form.Label className="fw-semibold small text-secondary">
                   الدولة <span className="text-danger">*</span>
                 </Form.Label>
-                <Form.Control
-                  type="text"
+                <Form.Select
                   name="country"
-                  value={formData.country}
-                  onChange={handleChange}
+                  value={selectedNationalityValue}
+                  onChange={(event) =>
+                    setFormData((previous) => ({
+                      ...previous,
+                      country:
+                        nationalityOptions.find(
+                          (nationality) =>
+                            nationality.key === event.target.value,
+                        )?.label || event.target.value,
+                    }))
+                  }
                   required
                   isInvalid={!!getFieldError("country")}
                   className="rounded-3"
-                />
+                  disabled={loadingNationalities}
+                >
+                  <option value="">
+                    {loadingNationalities
+                      ? "جاري تحميل الجنسيات..."
+                      : "اختر الجنسية"}
+                  </option>
+                  {nationalityOptions.map((nationality) => (
+                    <option key={nationality.key} value={nationality.key}>
+                      {nationality.label}
+                    </option>
+                  ))}
+                </Form.Select>
                 <Form.Control.Feedback type="invalid">
                   {getFieldError("country") || "يرجى إدخال الدولة"}
                 </Form.Control.Feedback>
