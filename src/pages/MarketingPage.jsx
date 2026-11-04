@@ -4,6 +4,7 @@ import RefreshButton from "../components/common/RefreshButton";
 import DateFilterBar from "../components/common/DateFilterBar";
 import api, {
   getMarketingLeads,
+  fetchAllPages,
   createMarketingLead,
   updateMarketingLead,
   deleteMarketingLead,
@@ -72,7 +73,6 @@ const MarketingPage = () => {
     sortDirection,
     fromDate,
     toDate,
-    currentPage,
   ]);
 
   const fetchAllData = async () => {
@@ -108,17 +108,10 @@ const MarketingPage = () => {
         to_date: toDate,
         sort_field: sortField,
         sort_direction: sortDirection,
-        per_page: 1000,
-        page: 1,
       };
-      const response = await getMarketingLeads(params);
-      const leadsData = response.data.data || [];
+      const leadsData = await fetchAllPages(getMarketingLeads, params);
       setAllLeads(leadsData);
-
-      const start = (currentPage - 1) * itemsPerPage;
-      const end = start + itemsPerPage;
-      const paginatedData = leadsData.slice(start, end);
-      setLeads(paginatedData);
+      setLeads(leadsData);
     } catch (error) {
       console.error("Error fetching leads:", error);
     } finally {
@@ -266,7 +259,8 @@ const MarketingPage = () => {
   };
 
   const totalPages = Math.ceil(allLeads.length / itemsPerPage);
-  const currentData = leads;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentData = allLeads.slice(startIndex, startIndex + itemsPerPage);
 
   if (initialLoading) {
     return (

@@ -14,6 +14,7 @@ import {
   getSettingsOrderStatuses,
   getSettingsOrderProcessStatuses,
   getSettingsServiceTypes,
+  fetchAllPages,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import OrderFormModal from "../components/Order/OrderFormModal";
@@ -50,6 +51,9 @@ const CompletedOrdersPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
+  const itemsPerPage = 15;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const displayedOrders = orders.slice(startIndex, startIndex + itemsPerPage);
 
   useEffect(() => {
     fetchInitialData();
@@ -57,7 +61,7 @@ const CompletedOrdersPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [currentPage, filters, searchQuery, fromDate, toDate]);
+  }, [filters, searchQuery, fromDate, toDate]);
 
   const fetchInitialData = async () => {
     try {
@@ -71,7 +75,7 @@ const CompletedOrdersPage = () => {
       ] = await Promise.all([
         getSaudiOffices({ all: 1, per_page: 500 }),
         getExternalOffices({ all: 1, per_page: 500 }),
-        getEmployees({ per_page: 200 }),
+        fetchAllPages(getEmployees),
         getSettingsOrderStatuses(),
         getSettingsOrderProcessStatuses(),
         getSettingsServiceTypes(),
@@ -91,7 +95,7 @@ const CompletedOrdersPage = () => {
           : [];
       setExternalOffices(externalList);
 
-      setEmployees(employeesRes.data?.data || employeesRes.data || []);
+      setEmployees(employeesRes);
       setOrderStatuses(statusRes.data?.data || []);
 
       const activeOrderStatuses = (
@@ -115,20 +119,17 @@ const CompletedOrdersPage = () => {
     setLoading(true);
     try {
       const params = {
-        page: currentPage,
         search: searchQuery,
         ...filters,
         tracking_status: "certified",
-        per_page: 15,
       };
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
 
-      const response = await getOrders(params);
-
-      setOrders(response.data.data);
-      setTotalPages(response.data.meta?.last_page || 1);
-      setTotalOrders(response.data.meta?.total || 0);
+      const allOrders = await fetchAllPages(getOrders, params);
+      setOrders(allOrders);
+      setTotalPages(Math.ceil(allOrders.length / itemsPerPage));
+      setTotalOrders(allOrders.length);
     } catch (error) {
       console.error("Error fetching completed orders:", error);
       showError(
@@ -420,7 +421,7 @@ const CompletedOrdersPage = () => {
             ) : (
               <>
                 <OrderTable
-                  orders={orders}
+                  orders={displayedOrders}
                   onEdit={handleEditOrder}
                   onDelete={handleDeleteOrder}
                   onStatusChange={handleStatusChange}

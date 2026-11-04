@@ -3,7 +3,12 @@ import { Button } from "react-bootstrap";
 import SortableTable from "../common/SortableTable";
 import { defaultColumns } from "../../constants/externalColumns";
 
-const ExternalOfficeTable = ({ offices, onEdit, onDelete }) => {
+const ExternalOfficeTable = ({
+    offices,
+    onEdit,
+    onDelete,
+    rowNumberOffset = 0,
+}) => {
     const renderCell = (office, columnId, index) => {
         switch (columnId) {
             case "index":
@@ -133,6 +138,7 @@ const ExternalOfficeTable = ({ offices, onEdit, onDelete }) => {
             columns={defaultColumns}
             storageKey="external_office_columns_order"
             renderCell={renderCell}
+            rowNumberOffset={rowNumberOffset}
             emptyMessage="لا يوجد مكاتب خارجية مضافين بعد"
             tableClassName="text-center"
         />

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import Select from "react-select";
 import "../../styles/FormModal.css";
-import { getEmployees } from "../../services/apiService";
+import { fetchAllPages, getEmployees } from "../../services/apiService";
 
 const ClientFormModal = ({
   show,
@@ -33,12 +33,10 @@ const ClientFormModal = ({
 
   const fetchEmployees = async () => {
     try {
-      const response = await getEmployees({
-        per_page: 200,
+      const list = await fetchAllPages(getEmployees, {
         sort_by: "name",
         sort_dir: "asc",
       });
-      const list = response.data?.data || response.data || [];
       setEmployees(list);
     } catch (error) {
       console.error("Error fetching employees:", error);

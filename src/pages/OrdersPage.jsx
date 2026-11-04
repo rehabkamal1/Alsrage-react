@@ -14,8 +14,10 @@ import {
   getSettingsOrderStatuses,
   getSettingsOrderProcessStatuses,
   getSettingsServiceTypes,
+  getSettingsNationalities,
   searchClients,
   quickCreateClient,
+  fetchAllPages,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import OrderFormModal from "../components/Order/OrderFormModal";
@@ -42,6 +44,7 @@ const OrdersPage = ({
   const [orderStatuses, setOrderStatuses] = useState([]);
   const [orderProcessStatuses, setOrderProcessStatuses] = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
+  const [nationalityOptions, setNationalityOptions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -59,6 +62,7 @@ const OrdersPage = ({
     status: "",
     order_status: "",
     service_type: "",
+    nationality: "",
     sort_by: "id",
     sort_dir: "desc",
     is_paid_by_office: "",
@@ -75,14 +79,12 @@ const OrdersPage = ({
 
   useEffect(() => {
     fetchAllData();
-  }, [currentPage, debouncedSearch, filters, fromDate, toDate]);
+  }, [debouncedSearch, filters, fromDate, toDate]);
 
   const fetchAllData = async () => {
     setLoading(true);
     try {
       const params = {
-        page: currentPage,
-        per_page: itemsPerPage,
         search: debouncedSearch || undefined,
         status: filters.status || undefined,
         order_status: filters.order_status || undefined,
@@ -90,6 +92,7 @@ const OrdersPage = ({
         sort_by: filters.sort_by,
         sort_dir: filters.sort_dir,
         is_paid_by_office: filters.is_paid_by_office || undefined,
+        nationality: filters.nationality || undefined,
         tracking_status: trackingStatus || undefined,
       };
 
@@ -105,19 +108,20 @@ const OrdersPage = ({
         orderStatusesResult,
         orderProcessStatusesResult,
         serviceTypesResult,
+        nationalitiesResult,
       ] = await Promise.allSettled([
-        getOrders(params),
-        getClients({ per_page: 200, sort_by: "name", sort_dir: "asc" }),
+        fetchAllPages(getOrders, params),
+        fetchAllPages(getClients, { sort_by: "name", sort_dir: "asc" }),
         getSaudiOffices({ all: 1, per_page: 500 }),
         getExternalOffices({ all: 1, per_page: 500 }),
-        getEmployees({
-          per_page: 200,
+        fetchAllPages(getEmployees, {
           sort_by: "name",
           sort_dir: "asc",
         }),
         getSettingsOrderStatuses(),
         getSettingsOrderProcessStatuses(),
         getSettingsServiceTypes(),
+        getSettingsNationalities(),
       ]);
 
       if (ordersResult.status === "rejected") {
@@ -125,16 +129,13 @@ const OrdersPage = ({
       }
 
       const ordersRes = ordersResult.value;
-      setOrders(ordersRes.data?.data || []);
-      setTotalPages(ordersRes.data?.meta?.last_page || 1);
-      setTotalOrders(
-        ordersRes.data?.meta?.total ||
-          (ordersRes.data?.data || []).length,
-      );
+      setOrders(ordersRes);
+      setTotalPages(Math.ceil(ordersRes.length / itemsPerPage));
+      setTotalOrders(ordersRes.length);
 
       const failedLookups = [];
       if (clientsResult.status === "fulfilled") {
-        setClients(clientsResult.value.data?.data || []);
+        setClients(clientsResult.value);
       } else {
         failedLookups.push("المندوبين");
         console.error("Error fetching clients:", clientsResult.reason);
@@ -169,9 +170,7 @@ const OrdersPage = ({
       }
 
       if (employeesResult.status === "fulfilled") {
-        setEmployees(
-          employeesResult.value.data?.data || employeesResult.value.data || [],
-        );
+        setEmployees(employeesResult.value);
       } else {
         failedLookups.push("الموظفين");
         console.error("Error fetching employees:", employeesResult.reason);
@@ -206,6 +205,22 @@ const OrdersPage = ({
       } else {
         failedLookups.push("أنواع الخدمات");
         console.error("Error fetching service types:", serviceTypesResult.reason);
+      }
+
+      if (nationalitiesResult.status === "fulfilled") {
+        const nationalities =
+          nationalitiesResult.value.data?.data ||
+          nationalitiesResult.value.data ||
+          [];
+        setNationalityOptions(
+          Array.isArray(nationalities) ? nationalities : [],
+        );
+      } else {
+        failedLookups.push("الجنسيات");
+        console.error(
+          "Error fetching nationalities:",
+          nationalitiesResult.reason,
+        );
       }
 
       if (failedLookups.length > 0) {
@@ -243,6 +258,7 @@ const OrdersPage = ({
       status: "",
       order_status: "",
       service_type: "",
+      nationality: "",
       sort_by: "id",
       sort_dir: "desc",
       is_paid_by_office: "",
@@ -482,6 +498,9 @@ const OrdersPage = ({
     exportToPDF(orders, columns, "الطلبات.pdf");
   };
 
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const displayedOrders = orders.slice(startIndex, startIndex + itemsPerPage);
+
   if (initialLoading) {
     return (
       <div
@@ -580,6 +599,7 @@ const OrdersPage = ({
           serviceTypeOptions={serviceTypes}
           statusOptions={orderStatuses}
           orderStatusOptions={orderProcessStatuses}
+          nationalityOptions={nationalityOptions}
           loading={loading}
         />
 
@@ -592,7 +612,7 @@ const OrdersPage = ({
             ) : (
               <>
                 <OrderTable
-                  orders={orders}
+                  orders={displayedOrders}
                   onEdit={handleEditOrder}
                   onDelete={handleDeleteOrder}
                   onStatusChange={handleStatusChange}

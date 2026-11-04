@@ -3,7 +3,12 @@ import { Button, Badge } from "react-bootstrap";
 import SortableTable from "../common/SortableTable";
 import { defaultColumns } from "../../constants/saudiOfficeColumns";
 
-const SaudiOfficeTable = ({ offices, onEdit, onDelete }) => {
+const SaudiOfficeTable = ({
+    offices,
+    onEdit,
+    onDelete,
+    rowNumberOffset = 0,
+}) => {
     const getWhatsAppLink = (mobile) => {
         if (!mobile) return null;
         const cleanNumber = mobile.replace(/\D/g, "");
@@ -127,6 +132,7 @@ const SaudiOfficeTable = ({ offices, onEdit, onDelete }) => {
             columns={defaultColumns}
             storageKey="saudi_office_columns_order"
             renderCell={renderCell}
+            rowNumberOffset={rowNumberOffset}
             emptyMessage="لا يوجد مكاتب سعودية مضافين بعد"
             tableClassName="text-center"
         />

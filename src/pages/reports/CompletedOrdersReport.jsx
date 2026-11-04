@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Container, Card, Row, Col, Table, Badge, Button, Spinner } from "react-bootstrap";
-import { getCompletedOrdersReport, getEmployees, getSaudiOffices, getExternalOffices, getClients } from "../../services/apiService";
+import { fetchAllPages, getCompletedOrdersReport, getEmployees, getSaudiOffices, getExternalOffices, getClients } from "../../services/apiService";
 import ReportFilters from "../../components/ReportFilters";
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
@@ -64,13 +64,13 @@ const CompletedOrdersReport = () => {
   const fetchFilterOptions = async () => {
     try {
       const [empRes, clientRes, saudiRes, extRes] = await Promise.all([
-        getEmployees({ per_page: 200 }),
-        getClients({ per_page: 500 }),
+        fetchAllPages(getEmployees),
+        fetchAllPages(getClients),
         getSaudiOffices({ all: 1, per_page: 500 }),
         getExternalOffices({ all: 1, per_page: 500 }),
       ]);
-      setEmployees(empRes.data?.data || empRes.data || []);
-      setClients(clientRes.data?.data || clientRes.data || []);
+      setEmployees(empRes);
+      setClients(clientRes);
       setSaudiOffices(Array.isArray(saudiRes.data?.data) ? saudiRes.data.data : Array.isArray(saudiRes.data) ? saudiRes.data : []);
       setExternalOffices(Array.isArray(extRes.data?.data) ? extRes.data.data : Array.isArray(extRes.data) ? extRes.data : []);
     } catch (err) {

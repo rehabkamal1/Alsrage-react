@@ -8,6 +8,7 @@ import {
   updateClient,
   deleteClient,
   getSettingsOrderStatuses,
+  fetchAllPages,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import ClientFormModal from "../components/Client/ClientFormModal";
@@ -52,7 +53,7 @@ const ClientsPage = () => {
   useEffect(() => {
     fetchClients();
     fetchSettings();
-  }, [currentPage, searchQuery, filters, fromDate, toDate]);
+  }, [searchQuery, filters, fromDate, toDate]);
 
   const fetchSettings = async () => {
     try {
@@ -71,8 +72,6 @@ const ClientsPage = () => {
     }
     try {
       const params = {
-        page: currentPage,
-        per_page: itemsPerPage,
         search: searchQuery || undefined,
         client_type: filters.client_type || undefined,
         sort_by: filters.sort_by,
@@ -81,9 +80,9 @@ const ClientsPage = () => {
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
 
-      const response = await getClients(params);
-      setClients(response.data.data || []);
-      setTotalPages(response.data.meta?.last_page || 1);
+      const allClients = await fetchAllPages(getClients, params);
+      setClients(allClients);
+      setTotalPages(Math.ceil(allClients.length / itemsPerPage));
     } catch (error) {
       console.error("Error fetching clients:", error);
     } finally {
@@ -233,6 +232,9 @@ const ClientsPage = () => {
     exportToPDF(clients, columns, "العملاء.pdf");
   };
 
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const displayedClients = clients.slice(startIndex, startIndex + itemsPerPage);
+
   if (initialLoading) {
     return (
       <div
@@ -331,7 +333,7 @@ const ClientsPage = () => {
             ) : (
               <>
                 <ClientTable
-                  clients={clients}
+                  clients={displayedClients}
                   onEdit={handleEditClient}
                   onDelete={handleDeleteClient}
                   onViewOrders={handleShowOrders}

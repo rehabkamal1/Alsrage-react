@@ -1,11 +1,15 @@
 import React from "react";
 import { Form, InputGroup, Button, Spinner } from "react-bootstrap";
+import Select from "react-select";
 
 const ExternalOfficeSearchBar = ({
     searchQuery,
     onSearch,
     onClear,
     loading,
+    nationality,
+    nationalityOptions = [],
+    onNationalityChange,
 }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -44,6 +48,36 @@ const ExternalOfficeSearchBar = ({
                     )}
                 </Button>
             </InputGroup>
+            <div className="mt-3" style={{ maxWidth: "360px" }}>
+                <Select
+                    options={[
+                        { value: "", label: "كل الجنسيات" },
+                        ...nationalityOptions.map((option) => ({
+                            value: option.key || option.value,
+                            label: option.label,
+                        })),
+                    ]}
+                    value={
+                        nationality
+                            ? {
+                                  value: nationality,
+                                  label:
+                                      nationalityOptions.find(
+                                          (option) =>
+                                              (option.key || option.value) ===
+                                              nationality,
+                                      )?.label || nationality,
+                              }
+                            : { value: "", label: "كل الجنسيات" }
+                    }
+                    onChange={(option) =>
+                        onNationalityChange(option?.value || "")
+                    }
+                    isClearable
+                    isRtl
+                    placeholder="اختر الجنسية"
+                />
+            </div>
         </Form>
     );
 };

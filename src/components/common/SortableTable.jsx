@@ -32,6 +32,7 @@ const SortableTable = ({
   getRowProps,
   renderFooter,
   children,
+  rowNumberOffset = 0,
 }) => {
   const internalSorting = useSortableData(data);
   const isControlled = Boolean(sortConfig && onRequestSort);
@@ -164,7 +165,11 @@ const SortableTable = ({
                     {...extraProps}
                   >
                     {currentColumns.map((column) => {
-                      const cell = renderCell(item, column.id, index);
+                      const cell = renderCell(
+                        item,
+                        column.id,
+                        rowNumberOffset + index,
+                      );
                       return React.isValidElement(cell)
                         ? React.cloneElement(cell, {
                             key: column.id,

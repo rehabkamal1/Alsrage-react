@@ -14,6 +14,7 @@ import {
 import {
   getEmployeesPerformanceReport,
   getSaudiOffices,
+  fetchAllPages,
 } from "../../services/apiService";
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
@@ -83,8 +84,7 @@ const EmployeesPerformanceReport = () => {
 
   const fetchSaudiOffices = async () => {
     try {
-      const res = await getSaudiOffices();
-      const officesData = res.data?.data || res.data || [];
+      const officesData = await fetchAllPages(getSaudiOffices);
       if (Array.isArray(officesData)) {
         setSaudiOffices(officesData);
       }

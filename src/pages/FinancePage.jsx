@@ -11,6 +11,7 @@ import api, {
   getClients,
   getEmployees,
   getOrders,
+  fetchAllPages,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import FinanceTable from "../components/Finance/FinanceTable";
@@ -69,7 +70,6 @@ const FinancePage = () => {
     sortField,
     sortDirection,
     searchQuery,
-    currentPage,
     fromDate,
     toDate,
     refreshKey,
@@ -78,14 +78,14 @@ const FinancePage = () => {
   const fetchAllData = async () => {
     setInitialLoading(true);
     try {
-      const [ordersRes, clientsRes, employeesRes] = await Promise.all([
-        getOrders({ per_page: 1000 }),
-        getClients({ per_page: 500 }),
-        getEmployees({ per_page: 500 }),
+      const [ordersData, clientsData, employeesData] = await Promise.all([
+        fetchAllPages(getOrders),
+        fetchAllPages(getClients),
+        fetchAllPages(getEmployees),
       ]);
-      setOrders(ordersRes.data.data || []);
-      setClients(clientsRes.data.data || []);
-      setEmployees(employeesRes.data.data || []);
+      setOrders(ordersData);
+      setClients(clientsData);
+      setEmployees(employeesData);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -116,14 +116,12 @@ const FinancePage = () => {
     }
   };
 
-  const fetchTransactions = async (page = currentPage) => {
+  const fetchTransactions = async () => {
     setLoading(true);
     try {
       const params = {
         sort_field: sortField,
         sort_direction: sortDirection,
-        per_page: 1000,
-        page: 1,
       };
       if (searchQuery) params.search = searchQuery;
       if (filters.type) params.type = filters.type;
@@ -133,12 +131,9 @@ const FinancePage = () => {
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
 
-      const response = await getTransactions(params);
-      const data = response.data.data || [];
+      const data = await fetchAllPages(getTransactions, params);
       setAllTransactions(data);
-      const start = (page - 1) * itemsPerPage;
-      const end = start + itemsPerPage;
-      setTransactions(data.slice(start, end));
+      setTransactions(data);
     } catch (error) {
       console.error("Error fetching transactions:", error);
     } finally {
@@ -311,7 +306,11 @@ const FinancePage = () => {
   };
 
   const totalPages = Math.ceil(allTransactions.length / itemsPerPage);
-  const currentData = transactions;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentData = allTransactions.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
 
   if (initialLoading) {
     return (

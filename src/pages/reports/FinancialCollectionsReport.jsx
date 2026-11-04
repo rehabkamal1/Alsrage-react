@@ -18,6 +18,7 @@ import {
   getSaudiOffices,
   getEmployees,
   getClients,
+  fetchAllPages,
 } from "../../services/apiService";
 import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
@@ -145,8 +146,8 @@ const FinancialCollectionsReport = () => {
     try {
       const [saudiRes, empRes, clientRes] = await Promise.allSettled([
         getSaudiOffices({ all: 1, per_page: 500 }),
-        getEmployees({ all: 1, per_page: 500 }),
-        getClients({ all: 1, per_page: 500 }),
+        fetchAllPages(getEmployees),
+        fetchAllPages(getClients),
       ]);
 
       if (saudiRes.status === "fulfilled") {
@@ -154,11 +155,11 @@ const FinancialCollectionsReport = () => {
         if (Array.isArray(data)) setSaudiOffices(data);
       }
       if (empRes.status === "fulfilled") {
-        const data = empRes.value.data?.data || empRes.value.data || [];
+        const data = empRes.value;
         if (Array.isArray(data) && data.length > 0) setEmployeesList(data);
       }
       if (clientRes.status === "fulfilled") {
-        const data = clientRes.value.data?.data || clientRes.value.data || [];
+        const data = clientRes.value;
         if (Array.isArray(data) && data.length > 0) setClientsList(data);
       }
     } catch (err) {

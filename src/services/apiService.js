@@ -12,6 +12,35 @@ const api = axios.create({
   },
 });
 
+export const fetchAllPages = async (
+  fetchPage,
+  params = {},
+  perPage = 100,
+) => {
+  const firstResponse = await fetchPage({ ...params, page: 1, per_page: perPage });
+  const getPageData = (response) => {
+    const data = response.data?.data ?? response.data;
+    if (!Array.isArray(data)) {
+      throw new Error("Invalid paginated API response: expected an array");
+    }
+    return data;
+  };
+
+  const results = [...getPageData(firstResponse)];
+  const lastPage = Number(
+    firstResponse.data?.meta?.last_page ??
+      firstResponse.data?.last_page ??
+      1,
+  );
+
+  for (let page = 2; page <= lastPage; page += 1) {
+    const response = await fetchPage({ ...params, page, per_page: perPage });
+    results.push(...getPageData(response));
+  }
+
+  return results;
+};
+
 api.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {

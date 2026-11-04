@@ -3,11 +3,11 @@ import { Badge, Button } from "react-bootstrap";
 import SortableTable from "../common/SortableTable";
 import { defaultColumns } from "../../constants/employeeColumns";
 
-const EmployeeTable = ({ employees, onEdit, onDelete }) => {
-  const renderCell = (employee, columnId) => {
+const EmployeeTable = ({ employees, onEdit, onDelete, rowNumberOffset = 0 }) => {
+  const renderCell = (employee, columnId, index) => {
     switch (columnId) {
       case "index":
-        return <td>{employees.indexOf(employee) + 1}</td>;
+        return <td>{index + 1}</td>;
       case "name":
         return <td className="fw-semibold">{employee.name}</td>;
       case "username":
@@ -68,6 +68,7 @@ const EmployeeTable = ({ employees, onEdit, onDelete }) => {
       columns={defaultColumns}
       storageKey="employee_columns_order"
       renderCell={renderCell}
+      rowNumberOffset={rowNumberOffset}
       emptyMessage="لا يوجد موظفين مضافين بعد"
       tableClassName="text-center"
     />

@@ -4,9 +4,11 @@ import RefreshButton from "../components/common/RefreshButton";
 import DateFilterBar from "../components/common/DateFilterBar";
 import {
     getExternalOffices,
+    fetchAllPages,
     createExternalOffice,
     updateExternalOffice,
     deleteExternalOffice,
+    getSettingsNationalities,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import ExternalOfficeFormModal from "../components/ExternalOffice/ExternalOfficeFormModal";
@@ -32,6 +34,8 @@ const ExternalOfficesPage = ({ user }) => {
     const [showModal, setShowModal] = useState(false);
     const [editingOffice, setEditingOffice] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [nationality, setNationality] = useState("");
+    const [nationalityOptions, setNationalityOptions] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [submitError, setSubmitError] = useState(null);
     const [fromDate, setFromDate] = useState("");
@@ -40,7 +44,21 @@ const ExternalOfficesPage = ({ user }) => {
 
     useEffect(() => {
         fetchOffices();
-    }, [fromDate, toDate]);
+    }, [fromDate, toDate, nationality]);
+
+    useEffect(() => {
+        const fetchNationalities = async () => {
+            try {
+                const response = await getSettingsNationalities();
+                const options = response.data?.data || response.data || [];
+                setNationalityOptions(Array.isArray(options) ? options : []);
+            } catch (error) {
+                console.error("Error fetching nationalities:", error);
+            }
+        };
+
+        fetchNationalities();
+    }, []);
 
     useEffect(() => {
         if (searchQuery.trim()) {
@@ -66,9 +84,10 @@ const ExternalOfficesPage = ({ user }) => {
             const params = {};
             if (fromDate) params.from_date = fromDate;
             if (toDate) params.to_date = toDate;
-            const response = await getExternalOffices(params);
-            setOffices(response.data.data || []);
-            setFilteredOffices(response.data.data || []);
+            if (nationality) params.nationality = nationality;
+            const allOffices = await fetchAllPages(getExternalOffices, params);
+            setOffices(allOffices);
+            setFilteredOffices(allOffices);
         } catch (error) {
             console.error("Error fetching offices:", error);
         } finally {
@@ -84,6 +103,11 @@ const ExternalOfficesPage = ({ user }) => {
 
     const handleSearch = (query) => {
         setSearchQuery(query);
+    };
+
+    const handleNationalityChange = (value) => {
+        setNationality(value);
+        setCurrentPage(1);
     };
 
     const handleClearSearch = () => {
@@ -279,6 +303,9 @@ const ExternalOfficesPage = ({ user }) => {
                     onSearch={handleSearch}
                     onClear={handleClearSearch}
                     loading={loading}
+                    nationality={nationality}
+                    nationalityOptions={nationalityOptions}
+                    onNationalityChange={handleNationalityChange}
                 />
 
                 <Card className="shadow-sm border-0 rounded-4">
@@ -295,6 +322,7 @@ const ExternalOfficesPage = ({ user }) => {
                                     onDelete={
                                         canDelete ? handleDeleteOffice : null
                                     }
+                                    rowNumberOffset={startIndex}
                                 />
                                 {totalPages > 1 && (
                                     <PaginationComponent

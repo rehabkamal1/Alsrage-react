@@ -4,6 +4,7 @@ import RefreshButton from "../components/common/RefreshButton";
 import DateFilterBar from "../components/common/DateFilterBar";
 import {
     getSaudiOffices,
+    fetchAllPages,
     createSaudiOffice,
     updateSaudiOffice,
     deleteSaudiOffice,
@@ -75,9 +76,9 @@ const SaudiOfficesPage = ({ user }) => {
             const params = {};
             if (fromDate) params.from_date = fromDate;
             if (toDate) params.to_date = toDate;
-            const response = await getSaudiOffices(params);
-            setOffices(response.data.data || []);
-            setFilteredOffices(response.data.data || []);
+            const allOffices = await fetchAllPages(getSaudiOffices, params);
+            setOffices(allOffices);
+            setFilteredOffices(allOffices);
         } catch (error) {
             console.error("Error fetching offices:", error);
         } finally {
@@ -323,6 +324,7 @@ const SaudiOfficesPage = ({ user }) => {
                                     onDelete={
                                         canDelete ? handleDeleteOffice : null
                                     }
+                                    rowNumberOffset={startIndex}
                                 />
                                 {totalPages > 1 && (
                                     <PaginationComponent

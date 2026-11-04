@@ -7,6 +7,7 @@ import {
   createEmployee,
   updateEmployee,
   deleteEmployee,
+  fetchAllPages,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import EmployeeFormModal from "../components/Employee/EmployeeFormModal";
@@ -37,7 +38,7 @@ const EmployeesPage = () => {
 
   useEffect(() => {
     fetchEmployees();
-  }, [currentPage, searchQuery, filters, fromDate, toDate]);
+  }, [searchQuery, filters, fromDate, toDate]);
 
   const fetchEmployees = async () => {
     if (initialLoading) {
@@ -47,8 +48,6 @@ const EmployeesPage = () => {
     }
     try {
       const params = {
-        page: currentPage,
-        per_page: itemsPerPage,
         search: searchQuery || undefined,
         sort_by: filters.sort_by,
         sort_dir: filters.sort_dir,
@@ -56,12 +55,9 @@ const EmployeesPage = () => {
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
 
-      const response = await getEmployees(params);
-      const employeeList = response.data?.data ?? response.data ?? [];
-      setEmployees(Array.isArray(employeeList) ? employeeList : []);
-      setTotalPages(
-        response.data?.meta?.last_page ?? response.data?.last_page ?? 1,
-      );
+      const employeeList = await fetchAllPages(getEmployees, params);
+      setEmployees(employeeList);
+      setTotalPages(Math.ceil(employeeList.length / itemsPerPage));
     } catch (error) {
       console.error("Error fetching employees:", error);
     } finally {
@@ -177,6 +173,12 @@ const EmployeesPage = () => {
     exportToPDF(employees, columns, "الموظفين.pdf");
   };
 
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const displayedEmployees = employees.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
+
   if (initialLoading) {
     return (
       <div
@@ -275,9 +277,10 @@ const EmployeesPage = () => {
             ) : (
               <>
                 <EmployeeTable
-                  employees={employees}
+                  employees={displayedEmployees}
                   onEdit={handleEditEmployee}
                   onDelete={handleDeleteEmployee}
+                  rowNumberOffset={(currentPage - 1) * itemsPerPage}
                 />
                 {totalPages > 1 && (
                   <PaginationComponent

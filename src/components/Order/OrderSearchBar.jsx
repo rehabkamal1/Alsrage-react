@@ -12,6 +12,7 @@ const OrderSearchBar = ({
     serviceTypeOptions = [],
     statusOptions = [],
     orderStatusOptions = [],
+    nationalityOptions = [],
     isCompletedPage = false,
 }) => {
     const handleSubmit = (e) => {
@@ -60,6 +61,41 @@ const OrderSearchBar = ({
                 </Button>
             </InputGroup>
             <div className="d-flex flex-wrap gap-2 mt-3">
+                <div className="flex-grow-1" style={{ minWidth: "160px" }}>
+                    <Select
+                        options={[
+                            { value: "", label: "كل الجنسيات" },
+                            ...nationalityOptions.map((nationality) => ({
+                                value: nationality.key || nationality.value,
+                                label: nationality.label,
+                            })),
+                        ]}
+                        value={
+                            filters.nationality
+                                ? {
+                                      value: filters.nationality,
+                                      label:
+                                          nationalityOptions.find(
+                                              (nationality) =>
+                                                  (nationality.key ||
+                                                      nationality.value) ===
+                                                  filters.nationality,
+                                          )?.label || filters.nationality,
+                                  }
+                                : { value: "", label: "كل الجنسيات" }
+                        }
+                        onChange={(option) =>
+                            onFilterChange(
+                                "nationality",
+                                option ? option.value : "",
+                            )
+                        }
+                        styles={customStyles}
+                        placeholder="الجنسية"
+                        isClearable
+                        isRtl
+                    />
+                </div>
                 {!isCompletedPage && (
                     <div className="flex-grow-1" style={{ minWidth: "160px" }}>
                         <Select

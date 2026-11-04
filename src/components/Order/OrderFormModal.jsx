@@ -23,6 +23,7 @@ import {
   getSettingsNationalities,
   getSettingsProfessions,
   getSettingsArrivalDestinations,
+  fetchAllPages,
 } from "../../services/apiService";
 import "../../styles/FormModal.css";
 
@@ -105,18 +106,16 @@ const OrderFormModal = ({
           console.error("Error fetching local saudi offices:", err),
         );
 
-      getClients({ all: 1, per_page: 500 })
-        .then((res) => {
-          const list = res.data?.data || res.data || [];
+      fetchAllPages(getClients)
+        .then((list) => {
           if (Array.isArray(list) && list.length > 0) {
             setLocalClients(list);
           }
         })
         .catch((err) => console.error("Error fetching local clients:", err));
 
-      getEmployees({ all: 1, per_page: 500 })
-        .then((res) => {
-          const list = res.data?.data || res.data || [];
+      fetchAllPages(getEmployees)
+        .then((list) => {
           if (Array.isArray(list) && list.length > 0) {
             setLocalEmployees(list);
           }
@@ -156,14 +155,11 @@ const OrderFormModal = ({
     }
 
     let active = true;
-    getExternalOffices({
-      all: 1,
-      per_page: 500,
+    fetchAllPages(getExternalOffices, {
       nationality: formData.nationality,
     })
-      .then((res) => {
+      .then((list) => {
         if (active) {
-          const list = res.data?.data || res.data || [];
           setLocalExternalOffices(Array.isArray(list) ? list : []);
         }
       })

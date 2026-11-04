@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Form, Row, Col, Button, Card } from "react-bootstrap";
-import { getEmployees, getSaudiOffices, getExternalOffices, getSettingsOrderStatuses, getClients, getSettingsAuthenticationStatuses } from "../services/apiService";
+import { fetchAllPages, getEmployees, getSaudiOffices, getExternalOffices, getSettingsOrderStatuses, getClients, getSettingsAuthenticationStatuses } from "../services/apiService";
 
 const ReportFilters = ({ 
   config = {}, 
@@ -35,20 +35,16 @@ const ReportFilters = ({
     const fetchOptions = async () => {
       try {
         if ((config.showMarketer || config.showEmployee) && (!propEmployees || propEmployees.length === 0)) {
-          const empRes = await getEmployees();
-          setEmployees(empRes.data?.data || empRes.data || []);
+          setEmployees(await fetchAllPages(getEmployees));
         }
         if ((config.showClient || config.showDelegate) && (!propClients || propClients.length === 0)) {
-          const clientRes = await getClients({ per_page: 500 });
-          setClients(clientRes.data?.data || clientRes.data || []);
+          setClients(await fetchAllPages(getClients));
         }
         if (config.showSaudiOffice && (!propSaudiOffices || propSaudiOffices.length === 0)) {
-          const saudiRes = await getSaudiOffices();
-          setSaudiOffices(saudiRes.data?.data || saudiRes.data || []);
+          setSaudiOffices(await fetchAllPages(getSaudiOffices));
         }
         if (config.showExternalOffice && (!propExternalOffices || propExternalOffices.length === 0)) {
-          const extRes = await getExternalOffices();
-          setExternalOffices(extRes.data?.data || extRes.data || []);
+          setExternalOffices(await fetchAllPages(getExternalOffices));
         }
         if (config.showStatus && (!propStatuses || propStatuses.length === 0)) {
           const statusRes = await getSettingsOrderStatuses();

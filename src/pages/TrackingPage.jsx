@@ -13,6 +13,7 @@ import api, {
   getSaudiOffices,
   getClients,
   getEmployees,
+  fetchAllPages,
 } from "../services/apiService";
 import { showSuccess, showError, showConfirm } from "../utils/swalHelper";
 import TrackingFormModal from "../components/Tracking/TrackingFormModal";
@@ -76,7 +77,6 @@ const TrackingPage = () => {
     sortField,
     sortDirection,
     searchQuery,
-    currentPage,
     orders,
     fromDate,
     toDate,
@@ -93,20 +93,18 @@ const TrackingPage = () => {
         employeesRes,
         serviceTypesRes,
       ] = await Promise.all([
-        getOrders({ per_page: 1000 }),
-        getExternalOffices({ all: 1, per_page: 500 }),
-        getSaudiOffices({ all: 1, per_page: 500 }),
-        getClients({ per_page: 500 }),
-        getEmployees({ per_page: 500 }),
+        fetchAllPages(getOrders),
+        fetchAllPages(getExternalOffices),
+        fetchAllPages(getSaudiOffices),
+        fetchAllPages(getClients),
+        fetchAllPages(getEmployees),
         api.get("/settings/service-types"),
       ]);
-      setOrders(ordersRes.data.data || []);
-      setExternalOffices(
-        externalOfficesRes.data.data || externalOfficesRes.data || [],
-      );
-      setSaudiOffices(saudiOfficesRes.data.data || saudiOfficesRes.data || []);
-      setClients(clientsRes.data.data || []);
-      setEmployees(employeesRes.data.data || []);
+      setOrders(ordersRes);
+      setExternalOffices(externalOfficesRes);
+      setSaudiOffices(saudiOfficesRes);
+      setClients(clientsRes);
+      setEmployees(employeesRes);
       setServiceTypes(serviceTypesRes.data.data || serviceTypesRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -232,20 +230,13 @@ const TrackingPage = () => {
         to_date: toDate,
         sort_field: sortField,
         sort_direction: sortDirection,
-        per_page: 1000,
-        page: 1,
       };
-      const response = await getOrderTracking(params);
-      const trackingData = response.data.data || [];
+      const trackingData = await fetchAllPages(getOrderTracking, params);
 
       const enrichedData = enrichTrackingWithOrderData(trackingData);
       setAllTrackingData(enrichedData);
-
-      const start = (currentPage - 1) * itemsPerPage;
-      const end = start + itemsPerPage;
-      const paginatedData = enrichedData.slice(start, end);
-      setTracking(paginatedData);
-      setFilteredTracking(paginatedData);
+      setTracking(enrichedData);
+      setFilteredTracking(enrichedData);
     } catch (error) {
       console.error("Error fetching tracking:", error);
     } finally {
@@ -442,7 +433,8 @@ const TrackingPage = () => {
   };
 
   const totalPages = Math.ceil(allTrackingData.length / itemsPerPage);
-  const currentData = tracking;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentData = allTrackingData.slice(startIndex, startIndex + itemsPerPage);
 
   if (initialLoading) {
     return (
