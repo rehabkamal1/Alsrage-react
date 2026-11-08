@@ -316,6 +316,9 @@ const TrackingPage = () => {
       await fetchTracking();
     } catch (error) {
       setSubmitError(error.response?.data);
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
       showError(
         "خطأ!",
         error.response?.data?.message || "حدث خطأ أثناء العملية",

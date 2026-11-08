@@ -6,8 +6,13 @@ import "../../styles/FormModal.css";
 
 const formatDateForInput = (val) => {
   if (!val) return "";
-  if (val.includes("T")) return val.split("T")[0];
-  return val.substring(0, 10);
+  const dateValue =
+    val instanceof Date
+      ? Number.isNaN(val.getTime())
+        ? ""
+        : `${val.getFullYear()}-${String(val.getMonth() + 1).padStart(2, "0")}-${String(val.getDate()).padStart(2, "0")}`
+      : String(val);
+  return dateValue.match(/^\d{4}-\d{2}-\d{2}/)?.[0] || "";
 };
 
 const workflowStatusOptions = [
@@ -166,7 +171,15 @@ const TrackingFormModal = ({
     const submitData = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
-        submitData.append(key, value);
+        const normalizedValue =
+          typeof value === "boolean"
+            ? value
+              ? "1"
+              : "0"
+            : key.endsWith("_date")
+              ? formatDateForInput(value)
+              : value;
+        submitData.append(key, normalizedValue);
       }
     });
     attachmentRows.forEach((row, index) => {
