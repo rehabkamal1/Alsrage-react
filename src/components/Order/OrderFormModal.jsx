@@ -31,6 +31,26 @@ const API_URL =
   import.meta.env.VITE_API_URL || "https://alserage.alfanar-rec.com";
 const EMPTY_ARRAY = [];
 
+const isMusanedPaidStatus = (status, statusOptions) => {
+  const normalize = (value) => String(value || "").trim().toLowerCase();
+  const isPaidStatusLabel = (value) => {
+    const normalized = normalize(value);
+    return (
+      (normalized.includes("مساند") && normalized.includes("سداد")) ||
+      (normalized.includes("musaned") &&
+        (normalized.includes("paid") || normalized.includes("payment")))
+    );
+  };
+  if (isPaidStatusLabel(status)) return true;
+  const selectedStatus = statusOptions.find(
+    (option) => String(option.key || option.id) === String(status),
+  );
+  return (
+    isPaidStatusLabel(selectedStatus?.label) ||
+    isPaidStatusLabel(selectedStatus?.key)
+  );
+};
+
 const OrderFormModal = ({
   show,
   onHide,
@@ -84,6 +104,9 @@ const OrderFormModal = ({
     visa_image: null,
     contract_image: null,
   });
+  const needsMusanedContractNumber =
+    isMusanedPaidStatus(formData.status, statusOptions) &&
+    !String(formData.musaned_contract_number || "").trim();
 
   const [showQuickEmployee, setShowQuickEmployee] = useState(false);
   const [newEmpName, setNewEmpName] = useState("");
@@ -1393,6 +1416,12 @@ const OrderFormModal = ({
                         <Form.Label className="fw-semibold small text-secondary">
                           رقم عقد مساند
                         </Form.Label>
+                        {needsMusanedContractNumber && (
+                          <div className="text-warning small mb-2">
+                            <i className="fa-solid fa-bell me-1"></i>
+                            تذكير: يرجى إدخال رقم عقد مساند بعد السداد
+                          </div>
+                        )}
                         <Form.Control
                           type="text"
                           name="musaned_contract_number"
@@ -1469,6 +1498,15 @@ const OrderFormModal = ({
                             }),
                           }}
                         />
+                        {needsMusanedContractNumber && (
+                          <div
+                            className="text-warning small mt-2"
+                            role="status"
+                          >
+                            <i className="fa-solid fa-bell me-1"></i>
+                            تذكير: يرجى إدخال رقم عقد مساند في خانة رقم العقد
+                          </div>
+                        )}
                         {getFieldError("status") && (
                           <div className="text-danger small mt-1">
                             {getFieldError("status")}

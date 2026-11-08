@@ -1334,6 +1334,15 @@ tr:hover td {
     overflow: visible !important;
   }
 
+  .sortable-header .drag-handle,
+  .sortable-header .sort-icon {
+    display: none !important;
+  }
+
+  .sortable-header {
+    cursor: default !important;
+  }
+
   table {
     width: 100% !important;
     border-collapse: collapse !important;

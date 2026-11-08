@@ -308,12 +308,26 @@ const OrderTable = ({
       case "status":
         return (
           <td>
-            {renderStatusDropdown(
-              order,
-              "status",
-              statusOptions,
-              onStatusChange,
-            )}
+            <div className="d-flex align-items-center justify-content-center gap-2">
+              {renderStatusDropdown(
+                order,
+                "status",
+                statusOptions,
+                onStatusChange,
+              )}
+              {order.needs_musaned_contract_number && (
+                <Button
+                  variant="link"
+                  className="p-0 text-warning"
+                  onClick={() => onEdit(order)}
+                  disabled={!canEdit}
+                  title="تذكير: أضف رقم عقد مساند"
+                  aria-label="تذكير: أضف رقم عقد مساند"
+                >
+                  <i className="fa-solid fa-bell fs-5"></i>
+                </Button>
+              )}
+            </div>
           </td>
         );
 
