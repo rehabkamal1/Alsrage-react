@@ -18,6 +18,7 @@ import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
+import { useDebounce } from "../hooks/useDebounce";
 
 const ExternalOfficesPage = ({ user }) => {
     const isAdmin = user?.role === "admin";
@@ -34,13 +35,14 @@ const ExternalOfficesPage = ({ user }) => {
     const [showModal, setShowModal] = useState(false);
     const [editingOffice, setEditingOffice] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const debouncedSearch = useDebounce(searchQuery, 400);
     const [nationality, setNationality] = useState("");
     const [nationalityOptions, setNationalityOptions] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [submitError, setSubmitError] = useState(null);
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
-    const itemsPerPage = 8;
+    const [itemsPerPage, setItemsPerPage] = useState(8);
 
     useEffect(() => {
         fetchOffices();
@@ -61,14 +63,14 @@ const ExternalOfficesPage = ({ user }) => {
     }, []);
 
     useEffect(() => {
-        if (searchQuery.trim()) {
+        if (debouncedSearch.trim()) {
             const filtered = offices.filter((office) => {
                 const nameMatch = office.name
                     ?.toLowerCase()
-                    .includes(searchQuery.toLowerCase());
+                    .includes(debouncedSearch.toLowerCase());
                 const countryMatch = office.country
                     ?.toLowerCase()
-                    .includes(searchQuery.toLowerCase());
+                    .includes(debouncedSearch.toLowerCase());
                 return nameMatch || countryMatch;
             });
             setFilteredOffices(filtered);
@@ -76,7 +78,7 @@ const ExternalOfficesPage = ({ user }) => {
             setFilteredOffices(offices);
         }
         setCurrentPage(1);
-    }, [searchQuery, offices]);
+    }, [debouncedSearch, offices]);
 
     const fetchOffices = async () => {
         setInitialLoading(true);
@@ -173,18 +175,25 @@ const ExternalOfficesPage = ({ user }) => {
 
     const handleExport = () => {
         const columns = [
+            {
+                header: "#",
+                format: (_, index) => index + 1,
+            },
             { header: "الدولة", key: "country" },
             { header: "اسم المكتب", key: "name" },
             {
-                header: "أسماء الموظفين",
+                header: "اسم الموظف",
                 format: (office) =>
-                    office.contacts?.map((c) => c.name).join("، ") || "-",
+                    office.contacts?.map((contact) =>
+                        [
+                            contact.name,
+                            contact.phone,
+                            contact.commission ? `العمولة: ${contact.commission}` : null,
+                        ].filter(Boolean).join(" - "),
+                    ).filter(Boolean).join("، ") || "-",
             },
-            {
-                header: "أرقام التواصل",
-                format: (office) =>
-                    office.contacts?.map((c) => c.phone).join("، ") || "-",
-            },
+            { header: "رقم الهاتف", key: "phone" },
+            { header: "جروب الواتساب", key: "whatsapp_link" },
             { header: "ملاحظات", key: "notes" },
         ];
         exportToExcel(filteredOffices, columns, "المكاتب_الخارجية.xlsx");
@@ -192,18 +201,25 @@ const ExternalOfficesPage = ({ user }) => {
 
     const handleExportPDF = () => {
         const columns = [
+            {
+                header: "#",
+                format: (_, index) => index + 1,
+            },
             { header: "الدولة", key: "country" },
             { header: "اسم المكتب", key: "name" },
             {
-                header: "أسماء الموظفين",
+                header: "اسم الموظف",
                 format: (office) =>
-                    office.contacts?.map((c) => c.name).join("، ") || "-",
+                    office.contacts?.map((contact) =>
+                        [
+                            contact.name,
+                            contact.phone,
+                            contact.commission ? `العمولة: ${contact.commission}` : null,
+                        ].filter(Boolean).join(" - "),
+                    ).filter(Boolean).join("، ") || "-",
             },
-            {
-                header: "أرقام التواصل",
-                format: (office) =>
-                    office.contacts?.map((c) => c.phone).join("، ") || "-",
-            },
+            { header: "رقم الهاتف", key: "phone" },
+            { header: "جروب الواتساب", key: "whatsapp_link" },
             { header: "ملاحظات", key: "notes" },
         ];
         exportToPDF(filteredOffices, columns, "المكاتب_الخارجية.pdf");
@@ -324,13 +340,17 @@ const ExternalOfficesPage = ({ user }) => {
                                     }
                                     rowNumberOffset={startIndex}
                                 />
-                                {totalPages > 1 && (
-                                    <PaginationComponent
-                                        currentPage={currentPage}
-                                        totalPages={totalPages}
-                                        onPageChange={setCurrentPage}
-                                    />
-                                )}
+                                <PaginationComponent
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={setCurrentPage}
+                                    totalItems={filteredOffices.length}
+                                    pageSize={itemsPerPage}
+                                    onPageSizeChange={(size) => {
+                                        setItemsPerPage(size);
+                                        setCurrentPage(1);
+                                    }}
+                                />
                             </>
                         )}
                     </Card.Body>

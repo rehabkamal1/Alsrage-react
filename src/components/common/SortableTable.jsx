@@ -183,9 +183,13 @@ const SortableTable = ({
               <tr>
                 <td
                   colSpan={currentColumns.length}
-                  className="text-center py-5 text-muted"
+                  className="text-center py-5"
                 >
-                  {emptyMessage}
+                  <div className="table-empty-state">
+                    <i className="fa-regular fa-folder-open" aria-hidden="true" />
+                    <strong>{emptyMessage}</strong>
+                    <span>يمكنك تعديل الفلاتر أو إضافة عنصر جديد.</span>
+                  </div>
                 </td>
               </tr>
             )}

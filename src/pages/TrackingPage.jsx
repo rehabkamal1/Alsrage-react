@@ -23,8 +23,16 @@ import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
+import { useDebounce } from "../hooks/useDebounce";
 
-const TrackingPage = () => {
+const TrackingPage = ({ user }) => {
+  const isAdmin = user?.role === "admin";
+  const hasPermission = (permission) =>
+    isAdmin || user?.permissions?.includes(permission) || false;
+  const canCreate = hasPermission("create_tracking");
+  const canEdit = hasPermission("edit_tracking");
+  const canDelete = hasPermission("delete_tracking");
+
   const [tracking, setTracking] = useState([]);
   const [filteredTracking, setFilteredTracking] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -43,6 +51,7 @@ const TrackingPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingTracking, setEditingTracking] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 500);
   const [currentPage, setCurrentPage] = useState(1);
   const [submitError, setSubmitError] = useState(null);
   const [fromDate, setFromDate] = useState("");
@@ -61,7 +70,7 @@ const TrackingPage = () => {
   const [sortField, setSortField] = useState("id");
   const [sortDirection, setSortDirection] = useState("desc");
   const [allTrackingData, setAllTrackingData] = useState([]);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchAllData();
@@ -76,7 +85,7 @@ const TrackingPage = () => {
     filters,
     sortField,
     sortDirection,
-    searchQuery,
+    debouncedSearch,
     orders,
     fromDate,
     toDate,
@@ -217,7 +226,7 @@ const TrackingPage = () => {
     setLoading(true);
     try {
       const params = {
-        search: searchQuery,
+        search: debouncedSearch,
         priority_level: filters.priority_level,
         passport_status: filters.passport_status,
         transfer_status: filters.transfer_status,
@@ -347,93 +356,68 @@ const TrackingPage = () => {
     }
   };
 
-  const handleExportExcel = () => {
-    const exportData =
-      allTrackingData.length > 0 ? allTrackingData : filteredTracking;
-    const columns = [
-      { header: "رقم الطلب", key: "order_number" },
-      { header: "صاحب التأشيرة", key: "visa_holder_name" },
-      { header: "رقم التأشيرة", key: "visa_number" },
-      { header: "رقم المندوب", key: "delegate_phone" },
-      { header: "المكتب السعودي", key: "saudi_office_name" },
-      { header: "المكتب الخارجي", key: "external_office_name" },
+  const getTrackingExportColumns = () => {
+    const getStatusLabel = (options, value) =>
+      options?.find((option) => option.value === value)?.label || value || "-";
+    return [
+      { header: "# الطلب", key: "order_number" },
+      {
+        header: "صاحب التأشيرة",
+        format: (item) =>
+          [
+            item.visa_holder_name,
+            item.saudi_office_name && `سعودي: ${item.saudi_office_name}`,
+            item.external_office_name && `خارجي: ${item.external_office_name}`,
+          ].filter(Boolean).join(" - ") || "-",
+      },
+      { header: "التأشيرة", key: "visa_number" },
+      { header: "الهوية", key: "id_number" },
+      { header: "رقم المندوب", format: (item) => item.delegate_phone || item.sponsor_number || "-" },
+      { header: "رقم الجواز", key: "passport_number" },
+      { header: "رقم التفويض", key: "authorization_number" },
+      { header: "رقم التوثيق", key: "authentication_number" },
+      { header: "تاريخ التوثيق", key: "authentication_date" },
+      { header: "تاريخ التصديق", key: "certification_date" },
+      { header: "آخر إجراء", key: "last_action_date" },
+      {
+        header: "المكتب الخارجي",
+        format: (item) =>
+          [item.external_office_name, item.external_office_country].filter(Boolean).join(" - ") || "-",
+      },
       {
         header: "حالة ترشيح الجواز",
-        key: "passport_status",
-        format: (item) => {
-          const found = passportStatuses?.find(
-            (s) => s.value === item.passport_status,
-          );
-          return found?.label || item.passport_status || "-";
-        },
+        format: (item) => getStatusLabel(passportStatuses, item.passport_status),
       },
       {
         header: "حالة التحويل",
-        key: "transfer_status",
-        format: (item) => {
-          const found = transferStatuses?.find(
-            (s) => s.value === item.transfer_status,
-          );
-          return found?.label || item.transfer_status || "-";
-        },
+        format: (item) => getStatusLabel(transferStatuses, item.transfer_status),
+      },
+      {
+        header: "حالة التوثيق",
+        format: (item) => getStatusLabel(authenticationStatuses, item.authentication_status),
+      },
+      {
+        header: "حالة التفويض",
+        format: (item) => getStatusLabel(authorizationStatuses, item.authorization_status),
       },
       {
         header: "درجة الأهمية",
-        key: "priority_level",
-        format: (item) => {
-          const found = priorityLevels?.find(
-            (p) => p.value === item.priority_level,
-          );
-          return found?.label || item.priority_level || "-";
-        },
+        format: (item) => getStatusLabel(priorityLevels, item.priority_level),
+      },
+      {
+        header: "المرفقات",
+        format: (item) =>
+          item.attachments?.map((attachment) => attachment.title || attachment.file_name)
+            .filter(Boolean).join("، ") || "-",
       },
     ];
-    exportToExcel(exportData, columns, "متابعة_الطلبات.xlsx");
   };
 
-  const handleExportPDF = () => {
-    const exportData =
-      allTrackingData.length > 0 ? allTrackingData : filteredTracking;
-    const columns = [
-      { header: "رقم الطلب", key: "order_number" },
-      { header: "صاحب التأشيرة", key: "visa_holder_name" },
-      { header: "رقم التأشيرة", key: "visa_number" },
-      { header: "رقم المندوب", key: "delegate_phone" },
-      { header: "المكتب السعودي", key: "saudi_office_name" },
-      { header: "المكتب الخارجي", key: "external_office_name" },
-      {
-        header: "حالة ترشيح الجواز",
-        key: "passport_status",
-        format: (item) => {
-          const found = passportStatuses?.find(
-            (s) => s.value === item.passport_status,
-          );
-          return found?.label || item.passport_status || "-";
-        },
-      },
-      {
-        header: "حالة التحويل",
-        key: "transfer_status",
-        format: (item) => {
-          const found = transferStatuses?.find(
-            (s) => s.value === item.transfer_status,
-          );
-          return found?.label || item.transfer_status || "-";
-        },
-      },
-      {
-        header: "درجة الأهمية",
-        key: "priority_level",
-        format: (item) => {
-          const found = priorityLevels?.find(
-            (p) => p.value === item.priority_level,
-          );
-          return found?.label || item.priority_level || "-";
-        },
-      },
-    ];
-    exportToPDF(exportData, columns, "متابعة_الطلبات.pdf");
-  };
+  const handleExportExcel = () =>
+    exportToExcel(allTrackingData, getTrackingExportColumns(), "متابعة_الطلبات.xlsx");
+
+  const handleExportPDF = () =>
+    exportToPDF(allTrackingData, getTrackingExportColumns(), "متابعة_الطلبات.pdf");
 
   const totalPages = Math.ceil(allTrackingData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -451,9 +435,11 @@ const TrackingPage = () => {
         <Container fluid>
           <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <h1 className="h3 mb-0 fw-bold">متابعة الطلبات</h1>
-            <Button variant="dark" disabled>
-              + متابعة جديدة
-            </Button>
+            {canCreate && (
+              <Button variant="dark" disabled>
+                + متابعة جديدة
+              </Button>
+            )}
           </div>
           <Card className="shadow-sm border-0 rounded-4">
             <Card.Body className="p-0">
@@ -502,14 +488,16 @@ const TrackingPage = () => {
               <i className="fa-solid fa-file-pdf fs-5"></i>
               <span>بي دي اف</span>
             </Button>
-            <Button
-              variant="dark"
-              onClick={handleAddTracking}
-              className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
-            >
-              <i className="fa-solid fa-plus"></i>
-              <span>متابعة جديدة</span>
-            </Button>
+            {canCreate && (
+              <Button
+                variant="dark"
+                onClick={handleAddTracking}
+                className="d-flex align-items-center gap-2 rounded-3 shadow px-3 py-2"
+              >
+                <i className="fa-solid fa-plus"></i>
+                <span>متابعة جديدة</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -559,6 +547,8 @@ const TrackingPage = () => {
                     onEdit={handleEditTracking}
                     onDelete={handleDeleteTracking}
                     onRefresh={fetchTracking}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
                     priorityLevels={priorityLevels}
                     passportStatuses={passportStatuses}
                     transferStatuses={transferStatuses}
@@ -567,15 +557,17 @@ const TrackingPage = () => {
                     externalOffices={externalOffices}
                   />
                 </div>
-                {totalPages > 1 && (
-                  <div className="d-flex justify-content-center py-3">
-                    <PaginationComponent
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={setCurrentPage}
-                    />
-                  </div>
-                )}
+                <PaginationComponent
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={allTrackingData.length}
+                  pageSize={itemsPerPage}
+                  onPageSizeChange={(size) => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1);
+                  }}
+                />
               </>
             )}
           </Card.Body>
@@ -591,6 +583,8 @@ const TrackingPage = () => {
         }}
         onSubmit={handleSubmit}
         initialData={editingTracking}
+        canCreate={canCreate}
+        canEdit={canEdit}
         orders={orders}
         priorityLevels={priorityLevels}
         passportStatuses={passportStatuses}

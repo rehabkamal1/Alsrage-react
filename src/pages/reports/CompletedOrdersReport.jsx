@@ -21,6 +21,7 @@ const CompletedOrdersReport = () => {
     sla_compliance_rate: 100,
   });
   const [orders, setOrders] = useState([]);
+  const [reportMeta, setReportMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [filters, setFilters] = useState({});
 
   const [employees, setEmployees] = useState([]);
@@ -41,33 +42,29 @@ const CompletedOrdersReport = () => {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(15);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [filters]);
 
-  const totalPages = Math.ceil(sortedOrders.length / itemsPerPage);
-  const paginatedOrders = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return sortedOrders.slice(start, start + itemsPerPage);
-  }, [sortedOrders, currentPage, itemsPerPage]);
+  const totalPages = reportMeta.last_page;
 
   useEffect(() => {
     fetchFilterOptions();
   }, []);
 
   useEffect(() => {
-    fetchReportData(filters);
-  }, [filters]);
+    fetchReportData(filters, currentPage);
+  }, [filters, currentPage, itemsPerPage]);
 
   const fetchFilterOptions = async () => {
     try {
       const [empRes, clientRes, saudiRes, extRes] = await Promise.all([
         fetchAllPages(getEmployees),
         fetchAllPages(getClients),
-        getSaudiOffices({ all: 1, per_page: 500 }),
-        getExternalOffices({ all: 1, per_page: 500 }),
+        getSaudiOffices({ all: 1, per_page: 100 }),
+        getExternalOffices({ all: 1, per_page: 100 }),
       ]);
       setEmployees(empRes);
       setClients(clientRes);
@@ -78,19 +75,45 @@ const CompletedOrdersReport = () => {
     }
   };
 
-  const fetchReportData = async (filterParams = {}) => {
+  const fetchReportData = async (filterParams = {}, page = 1) => {
     setLoading(true);
     try {
-      const res = await getCompletedOrdersReport(filterParams);
+      const res = await getCompletedOrdersReport({
+        ...filterParams,
+        page,
+        per_page: itemsPerPage,
+      });
       if (res.data) {
         setKpis(res.data.kpis || {});
-        setOrders(res.data.orders || []);
+        setOrders(res.data.data || res.data.orders || []);
+        setReportMeta(res.data.meta || { current_page: 1, last_page: 1, total: 0 });
       }
     } catch (err) {
       console.error("Failed to fetch completed orders report:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchAllFilteredOrders = async () => {
+    const allOrders = [];
+    let page = 1;
+    let lastPage = 1;
+
+    do {
+      const response = await getCompletedOrdersReport({
+        ...filters,
+        page,
+        per_page: 100,
+      });
+      const payload = response.data || {};
+      const pageOrders = payload.data || payload.orders || [];
+      allOrders.push(...pageOrders);
+      lastPage = Math.max(1, Number(payload.meta?.last_page) || 1);
+      page += 1;
+    } while (page <= lastPage);
+
+    return allOrders;
   };
 
   const handleExportExcel = () => {
@@ -105,8 +128,12 @@ const CompletedOrdersReport = () => {
       { header: "المبلغ (ر.س)", key: "total_price" },
       { header: "مدة الإنجاز (يوم)", key: "completion_days" },
       { header: "تاريخ الإكتمال", key: "completed_at" },
+      {
+        header: "حالة SLA",
+        format: (order) => order.within_sla ? "ضمن SLA" : "متأخر عن SLA",
+      },
     ];
-    exportToExcel(sortedOrders, columns, "تقرير_الطلبات_المكتملة.xlsx");
+    exportToExcel(fetchAllFilteredOrders(), columns, "تقرير_الطلبات_المكتملة.xlsx");
   };
 
   const handleExportPDF = () => {
@@ -121,8 +148,12 @@ const CompletedOrdersReport = () => {
       { header: "المبلغ (ر.س)", key: "total_price" },
       { header: "مدة الإنجاز (يوم)", key: "completion_days" },
       { header: "تاريخ الإكتمال", key: "completed_at" },
+      {
+        header: "حالة SLA",
+        format: (order) => order.within_sla ? "ضمن SLA" : "متأخر عن SLA",
+      },
     ];
-    exportToPDF(sortedOrders, columns, "تقرير_الطلبات_المكتملة.pdf");
+    exportToPDF(fetchAllFilteredOrders(), columns, "تقرير_الطلبات_المكتملة.pdf");
   };
 
   const tableColumns = useMemo(
@@ -353,7 +384,7 @@ const CompletedOrdersReport = () => {
               </div>
             ) : (
               <SortableTable
-                data={paginatedOrders}
+                data={sortedOrders}
                 columns={tableColumns}
                 storageKey="completed_orders_report_columns"
                 renderCell={renderCell}
@@ -367,6 +398,12 @@ const CompletedOrdersReport = () => {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
+              totalItems={reportMeta.total}
+              pageSize={itemsPerPage}
+              onPageSizeChange={(size) => {
+                setItemsPerPage(size);
+                setCurrentPage(1);
+              }}
             />
           </Card.Body>
         </Card>

@@ -1,5 +1,8 @@
 import axios from "axios";
-import { showValidationErrors } from "../utils/swalHelper";
+import {
+  showRetryableError,
+  showValidationErrors,
+} from "../utils/swalHelper";
 
 // ─────────────────────────────────────────────
 //  Axios instance pointing to Laravel API
@@ -20,6 +23,26 @@ api.interceptors.response.use(
     if (error.response?.status === 422 && error.response.data?.errors) {
       showValidationErrors(error.response.data.errors);
     }
+
+    if (
+      (error.response?.status >= 500 || !error.response) &&
+      error.config &&
+      !error.config._manualRetry
+    ) {
+      const requestConfig = error.config;
+      const message = error.response
+        ? "حدثت مشكلة في الخادم. يمكنك المحاولة مرة أخرى."
+        : "تعذر الاتصال بالخادم. تحقق من اتصال الإنترنت ثم أعد المحاولة.";
+
+      return showRetryableError(message, () => {
+        requestConfig._manualRetry = true;
+        return api.request(requestConfig);
+      }).then(
+        (response) => response ?? Promise.reject(error),
+        () => Promise.reject(error),
+      );
+    }
+
     return Promise.reject(error);
   },
 );
@@ -52,6 +75,7 @@ export const registerUser = async (payload) => {
 // ─────────────────────────────────────────────
 //  Token & User helpers
 // ─────────────────────────────────────────────
+// localStorage is accessible to injected scripts; token lifetime is limited server-side.
 export const saveToken = (token) => {
   localStorage.setItem("auth_token", token);
 };

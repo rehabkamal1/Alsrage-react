@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
  * @param {number} intervalMs - Interval in milliseconds (default: 12000ms = 12s)
  * @param {boolean} enabled - Whether polling is active (default: true)
  */
-export const useAutoRefresh = (callback, intervalMs = 12000, enabled = true) => {
+export const useAutoRefresh = (callback, intervalMs = 60000, enabled = true) => {
   const savedCallback = useRef(callback);
 
   useEffect(() => {

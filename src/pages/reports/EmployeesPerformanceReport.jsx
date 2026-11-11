@@ -62,7 +62,7 @@ const EmployeesPerformanceReport = () => {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -159,7 +159,6 @@ const EmployeesPerformanceReport = () => {
       completed_orders: emp.completed_orders,
       active_orders: emp.active_orders,
       total_sales: emp.total_sales,
-      sales_share: `${emp.sales_share_percentage}%`,
       completion_rate: `${emp.completion_rate}%`,
     }));
 
@@ -168,12 +167,11 @@ const EmployeesPerformanceReport = () => {
       { header: "المكتب التابع له", key: "office_name" },
       { header: "المسمى الوظيفي", key: "position" },
       { header: "عقود الفترة", key: "total_orders" },
-      { header: "نسبة التغطية من العقود %", key: "orders_share" },
+      { header: "نسبة المساهمة %", key: "orders_share" },
       { header: "العقود المكتملة", key: "completed_orders" },
       { header: "العقود النشطة", key: "active_orders" },
       { header: "إجمالي المبيعات (ر.س)", key: "total_sales" },
-      { header: "نسبة المبيعات %", key: "sales_share" },
-      { header: "نسبة الإنجاز %", key: "completion_rate" },
+      { header: "معدل الإنجاز %", key: "completion_rate" },
     ];
     exportToExcel(dataToExport, columns, "تقرير_أداء_الموظفين_والمسوقين.xlsx");
   };
@@ -187,8 +185,7 @@ const EmployeesPerformanceReport = () => {
       orders_share: `${emp.orders_share_percentage}%`,
       completed_orders: emp.completed_orders,
       active_orders: emp.active_orders,
-      total_sales: `${(emp.total_sales || 0).toLocaleString()} ر.س`,
-      sales_share: `${emp.sales_share_percentage}%`,
+      total_sales: emp.total_sales,
       completion_rate: `${emp.completion_rate}%`,
     }));
 
@@ -197,12 +194,11 @@ const EmployeesPerformanceReport = () => {
       { header: "المكتب التابع له", key: "office_name" },
       { header: "المسمى الوظيفي", key: "position" },
       { header: "عقود الفترة", key: "total_orders" },
-      { header: "نسبة التغطية من العقود %", key: "orders_share" },
+      { header: "نسبة المساهمة %", key: "orders_share" },
       { header: "العقود المكتملة", key: "completed_orders" },
       { header: "العقود النشطة", key: "active_orders" },
       { header: "إجمالي المبيعات (ر.س)", key: "total_sales" },
-      { header: "نسبة المبيعات %", key: "sales_share" },
-      { header: "نسبة الإنجاز %", key: "completion_rate" },
+      { header: "معدل الإنجاز %", key: "completion_rate" },
     ];
     exportToPDF(dataToExport, columns, "تقرير_أداء_الموظفين_والمسوقين.pdf");
   };
@@ -613,6 +609,12 @@ const EmployeesPerformanceReport = () => {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
+              totalItems={sortedEmployees.length}
+              pageSize={itemsPerPage}
+              onPageSizeChange={(size) => {
+                setItemsPerPage(size);
+                setCurrentPage(1);
+              }}
             />
           </Card.Body>
         </Card>

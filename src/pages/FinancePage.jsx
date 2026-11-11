@@ -22,6 +22,7 @@ import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
 import { getUser } from "../services/authService";
+import { useDebounce } from "../hooks/useDebounce";
 
 const FinancePage = () => {
   const [transactions, setTransactions] = useState([]);
@@ -35,6 +36,7 @@ const FinancePage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 400);
   const [currentPage, setCurrentPage] = useState(1);
   const [submitError, setSubmitError] = useState(null);
   const [fromDate, setFromDate] = useState("");
@@ -49,7 +51,7 @@ const FinancePage = () => {
   const [sortField, setSortField] = useState("id");
   const [sortDirection, setSortDirection] = useState("desc");
   const [allTransactions, setAllTransactions] = useState([]);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const user = getUser();
   const isAdmin = user?.role === "admin";
@@ -69,7 +71,7 @@ const FinancePage = () => {
     filters,
     sortField,
     sortDirection,
-    searchQuery,
+    debouncedSearch,
     fromDate,
     toDate,
     refreshKey,
@@ -123,7 +125,7 @@ const FinancePage = () => {
         sort_field: sortField,
         sort_direction: sortDirection,
       };
-      if (searchQuery) params.search = searchQuery;
+      if (debouncedSearch) params.search = debouncedSearch;
       if (filters.type) params.type = filters.type;
       if (filters.payment_method) {
         params.payment_method = filters.payment_method;
@@ -186,7 +188,7 @@ const FinancePage = () => {
     setShowModal(true);
   };
 
-  const handleSubmit = async (formData) => {
+  const handleSubmit = async (formData, idempotencyKey) => {
     setLoading(true);
     setSubmitError(null);
     try {
@@ -194,7 +196,7 @@ const FinancePage = () => {
         await updateTransaction(editingTransaction.id, formData);
         showSuccess("تم التحديث!", "تم تحديث الحوالة بنجاح");
       } else {
-        await createTransaction(formData);
+        await createTransaction(formData, idempotencyKey);
         showSuccess("تمت الإضافة!", "تم إضافة الحوالة بنجاح");
       }
       setShowModal(false);
@@ -209,6 +211,7 @@ const FinancePage = () => {
         "خطأ!",
         error.response?.data?.message || "حدث خطأ أثناء العملية",
       );
+      return { idempotencyConflict: error.response?.status === 409 };
     } finally {
       setLoading(false);
     }
@@ -248,10 +251,9 @@ const FinancePage = () => {
   };
 
   const handleExportExcel = () => {
-    const exportData =
-      allTransactions.length > 0 ? allTransactions : transactions;
+    const exportData = allTransactions;
     const columns = [
-      { header: "رقم الحوالة", key: "id" },
+      { header: "#", key: "id" },
       { header: "الموظف المسؤول", key: "employee_name" },
       {
         header: "نوع المعاملة",
@@ -277,10 +279,9 @@ const FinancePage = () => {
   };
 
   const handleExportPDF = () => {
-    const exportData =
-      allTransactions.length > 0 ? allTransactions : transactions;
+    const exportData = allTransactions;
     const columns = [
-      { header: "رقم الحوالة", key: "id" },
+      { header: "#", key: "id" },
       { header: "الموظف المسؤول", key: "employee_name" },
       {
         header: "نوع المعاملة",
@@ -431,15 +432,17 @@ const FinancePage = () => {
                     bankNames={bankNames}
                   />
                 </div>
-                {totalPages > 1 && (
-                  <div className="d-flex justify-content-center py-3">
-                    <PaginationComponent
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={setCurrentPage}
-                    />
-                  </div>
-                )}
+                <PaginationComponent
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={allTransactions.length}
+                  pageSize={itemsPerPage}
+                  onPageSizeChange={(size) => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1);
+                  }}
+                />
               </>
             )}
           </Card.Body>

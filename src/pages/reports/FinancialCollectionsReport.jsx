@@ -24,11 +24,16 @@ import RefreshButton from "../../components/common/RefreshButton";
 import TableSkeleton from "../../components/common/TableSkeleton";
 import { exportToExcel } from "../../utils/excelHelper";
 import { exportToPDF } from "../../utils/pdfHelper";
+import { createTableExportColumns } from "../../utils/exportShared";
 import PaginationComponent from "../../components/common/Pagination";
 import OrderDetailsModal from "../../components/Order/OrderDetailsModal";
-import { OrderStatusBadge } from "../../utils/statusHelper";
+import {
+  getOrderStatusConfig,
+  OrderStatusBadge,
+} from "../../utils/statusHelper";
 import SortableTable from "../../components/common/SortableTable";
 import { useSortableData } from "../../hooks/useSortableData";
+import { useDebounce } from "../../hooks/useDebounce";
 
 const FinancialCollectionsReport = () => {
   const [loading, setLoading] = useState(true);
@@ -45,6 +50,7 @@ const FinancialCollectionsReport = () => {
 
   // Raw data from API
   const [orders, setOrders] = useState([]);
+  const [reportMeta, setReportMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [clientsSummary, setClientsSummary] = useState([]);
   const [marketersSummary, setMarketersSummary] = useState([]);
   const [saudiOffices, setSaudiOffices] = useState([]);
@@ -66,6 +72,7 @@ const FinancialCollectionsReport = () => {
   const [contractStatusFilter, setContractStatusFilter] = useState("musaned_paid");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 400);
 
   // Expandable state for Marketer Detailed view
   const [expandedMarketers, setExpandedMarketers] = useState({});
@@ -121,7 +128,7 @@ const FinancialCollectionsReport = () => {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(15);
 
   // Reset pagination on tab/filter changes
   useEffect(() => {
@@ -130,7 +137,7 @@ const FinancialCollectionsReport = () => {
     reportTarget,
     reportMode,
     paymentStatusFilter,
-    searchQuery,
+    debouncedSearch,
     selectedSaudiOffice,
     selectedClient,
     selectedEmployee,
@@ -145,7 +152,7 @@ const FinancialCollectionsReport = () => {
   const fetchInitialOptions = async () => {
     try {
       const [saudiRes, empRes, clientRes] = await Promise.allSettled([
-        getSaudiOffices({ all: 1, per_page: 500 }),
+        getSaudiOffices({ all: 1, per_page: 100 }),
         fetchAllPages(getEmployees),
         fetchAllPages(getClients),
       ]);
@@ -171,6 +178,8 @@ const FinancialCollectionsReport = () => {
     setLoading(true);
     try {
       const params = {};
+      params.page = overrideParams?.page ?? currentPage;
+      params.per_page = overrideParams?.per_page ?? itemsPerPage;
       const dFrom = overrideParams && "date_from" in overrideParams ? overrideParams.date_from : dateFrom;
       const dTo = overrideParams && "date_to" in overrideParams ? overrideParams.date_to : dateTo;
       const offId = overrideParams && "saudi_office_id" in overrideParams ? overrideParams.saudi_office_id : selectedSaudiOffice;
@@ -194,7 +203,8 @@ const FinancialCollectionsReport = () => {
       const res = await getFinancialCollectionsReport(params);
       if (res.data) {
         setKpis(res.data.kpis || {});
-        setOrders(res.data.orders || []);
+        setOrders(res.data.data || res.data.orders || []);
+        setReportMeta(res.data.meta || { current_page: 1, last_page: 1, total: 0 });
         setClientsSummary(res.data.clients_summary || []);
         setMarketersSummary(res.data.marketers_summary || []);
 
@@ -235,7 +245,8 @@ const FinancialCollectionsReport = () => {
 
   const handleApplyFilter = (e) => {
     if (e) e.preventDefault();
-    fetchData();
+    setCurrentPage(1);
+    fetchData({ page: 1 });
   };
 
   const handleResetFilter = () => {
@@ -247,6 +258,7 @@ const FinancialCollectionsReport = () => {
     setContractStatusFilter("musaned_paid");
     setPaymentStatusFilter("all");
     setSearchQuery("");
+    setCurrentPage(1);
     fetchData({
       date_from: "",
       date_to: "",
@@ -254,6 +266,7 @@ const FinancialCollectionsReport = () => {
       client_id: "",
       employee_id: "",
       contract_status: "musaned_paid",
+      page: 1,
     });
   };
 
@@ -321,6 +334,23 @@ const FinancialCollectionsReport = () => {
     );
   };
 
+  const getPaymentStatusLabel = (status) => {
+    if (status === "محصل بالكامل") return "محصل بالكامل ✓";
+    if (status === "محصل جزئياً") return "محصل جزئياً ⏳";
+    return "غير محصل ✕";
+  };
+
+  const detailedExportOverrides = {
+    client_name: (order) =>
+      [order.client_name, order.client_phone].filter(Boolean).join(" - "),
+    order_status: (order) =>
+      getOrderStatusConfig(
+        order.order_status || order.status,
+        order.order_status_color,
+      ).label,
+    payment_status: (order) => getPaymentStatusLabel(order.payment_status),
+  };
+
   // -------------------------------------------------------------
   // Filtered Datasets based on local search & payment status filter
   // -------------------------------------------------------------
@@ -343,8 +373,8 @@ const FinancialCollectionsReport = () => {
       if (selectedEmployee && String(ord.employee_id) !== String(selectedEmployee)) {
         return false;
       }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
+      if (debouncedSearch.trim()) {
+        const q = debouncedSearch.toLowerCase().trim();
         const matchesClient = (ord.client_name || "").toLowerCase().includes(q);
         const matchesVisa = (ord.visa_number || "").toLowerCase().includes(q);
         const matchesId = String(ord.id || "").includes(q);
@@ -357,7 +387,7 @@ const FinancialCollectionsReport = () => {
       }
       return true;
     });
-  }, [orders, isStatementMode, paymentStatusFilter, selectedSaudiOffice, selectedClient, selectedEmployee, searchQuery]);
+  }, [orders, isStatementMode, paymentStatusFilter, selectedSaudiOffice, selectedClient, selectedEmployee, debouncedSearch]);
 
   // Selected client object & opening balance helpers
   const selectedClientObj = useMemo(() => {
@@ -452,8 +482,8 @@ const FinancialCollectionsReport = () => {
         if (selectedClient && String(client.client_id) !== String(selectedClient)) {
           return false;
         }
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase().trim();
+        if (debouncedSearch.trim()) {
+          const q = debouncedSearch.toLowerCase().trim();
           const matchesName = (client.client_name || "").toLowerCase().includes(q);
           const matchesPhone = (client.client_phone || "").toLowerCase().includes(q);
           const matchesSubOrder = (client.orders || []).some(
@@ -467,7 +497,7 @@ const FinancialCollectionsReport = () => {
         }
         return true;
       });
-  }, [clientsSummary, isStatementMode, paymentStatusFilter, selectedClient, searchQuery]);
+  }, [clientsSummary, isStatementMode, paymentStatusFilter, selectedClient, debouncedSearch]);
 
   // 3. Marketers (Summary & Detailed)
   const filteredMarketers = useMemo(() => {
@@ -508,8 +538,8 @@ const FinancialCollectionsReport = () => {
         if (selectedEmployee && String(m.employee_id) !== String(selectedEmployee)) {
           return false;
         }
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase().trim();
+        if (debouncedSearch.trim()) {
+          const q = debouncedSearch.toLowerCase().trim();
           const matchesName = (m.employee_name || "").toLowerCase().includes(q);
           const matchesOffice = (m.office_name || "").toLowerCase().includes(q);
           // Also check if any of their clients or orders match
@@ -524,7 +554,7 @@ const FinancialCollectionsReport = () => {
         }
         return true;
       });
-  }, [marketersSummary, isStatementMode, paymentStatusFilter, selectedEmployee, searchQuery]);
+  }, [marketersSummary, isStatementMode, paymentStatusFilter, selectedEmployee, debouncedSearch]);
 
   // Recalculated KPIs for Statement Mode to match only included statement orders
   const displayKpis = useMemo(() => {
@@ -665,68 +695,130 @@ const FinancialCollectionsReport = () => {
     }
   }, [reportTarget, reportMode, sortedOrders, sortedClients, sortedMarketers]);
 
-  const totalPages = Math.ceil(currentDataset.length / itemsPerPage);
+  const isDetailedOrders = reportTarget === "client" && reportMode === "detailed";
+  const totalPages = isDetailedOrders
+    ? reportMeta.last_page
+    : Math.ceil(currentDataset.length / itemsPerPage);
   const paginatedData = useMemo(() => {
+    if (isDetailedOrders) return currentDataset;
     const start = (currentPage - 1) * itemsPerPage;
     return currentDataset.slice(start, start + itemsPerPage);
-  }, [currentDataset, currentPage, itemsPerPage]);
+  }, [currentDataset, currentPage, itemsPerPage, isDetailedOrders]);
+
+  const fetchAllFilteredFinancialOrders = async () => {
+    const allOrders = [];
+    let page = 1;
+    let lastPage = 1;
+
+    do {
+      const params = { page, per_page: 100 };
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+      if (selectedSaudiOffice) params.saudi_office_id = selectedSaudiOffice;
+      if (selectedClient) params.client_id = selectedClient;
+      if (selectedEmployee) {
+        params.employee_id = selectedEmployee;
+        params.marketer_id = selectedEmployee;
+      }
+      if (selectedClient || selectedEmployee || isStatementMode) {
+        params.is_statement = 1;
+      }
+      if (contractStatusFilter) params.contract_status = contractStatusFilter;
+
+      const response = await getFinancialCollectionsReport(params);
+      const payload = response.data || {};
+      allOrders.push(...(payload.data || payload.orders || []));
+      lastPage = Math.max(1, Number(payload.meta?.last_page) || 1);
+      page += 1;
+    } while (page <= lastPage);
+
+    const query = debouncedSearch.trim().toLowerCase();
+    const filtered = allOrders.filter((order) => {
+      if (isStatementMode && isExcludedFromStatement(order)) return false;
+      if (
+        paymentStatusFilter !== "all" &&
+        order.payment_status !== paymentStatusFilter
+      ) return false;
+      if (
+        selectedSaudiOffice &&
+        String(order.saudi_office_id) !== String(selectedSaudiOffice)
+      ) return false;
+      if (selectedClient && String(order.client_id) !== String(selectedClient)) {
+        return false;
+      }
+      if (
+        selectedEmployee &&
+        String(order.employee_id) !== String(selectedEmployee)
+      ) return false;
+      if (
+        query &&
+        ![
+          order.client_name,
+          order.visa_number,
+          order.id,
+          order.employee_name,
+          order.saudi_office_name,
+          order.nationality,
+        ].some((value) => String(value || "").toLowerCase().includes(query))
+      ) return false;
+      return true;
+    });
+
+    if (!orderSortConfig.key) return filtered;
+    const direction = orderSortConfig.direction === "desc" ? -1 : 1;
+    return filtered.sort((a, b) => {
+      const left = a[orderSortConfig.key];
+      const right = b[orderSortConfig.key];
+      if (left == null) return 1;
+      if (right == null) return -1;
+      return String(left).localeCompare(String(right), undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }) * direction;
+    });
+  };
 
   // -------------------------------------------------------------
   // Export Handlers
   // -------------------------------------------------------------
   const handleExportExcel = () => {
     if (reportTarget === "client" && reportMode === "detailed") {
-      const columns = [
-        { header: "رقم الطلب", key: "id" },
-        { header: "اسم العميل", key: "client_name" },
-        { header: "المكتب السعودي", key: "saudi_office_name" },
-        { header: "الجنسية", key: "nationality" },
-        { header: "رقم التأشيرة", key: "visa_number" },
-        ...(!hideOrderStatus ? [{ header: "حالة الطلب", key: "order_status" }] : []),
-        { header: "إجمالي العقد (ر.س)", key: "total_price" },
-        { header: "المبلغ المحصل (ر.س)", key: "paid_amount" },
-        { header: "المبلغ المتبقي (ر.س)", key: "remaining_amount" },
-        { header: "حالة التحصيل", key: "payment_status" },
-        { header: "وقت إضافة الحوالة الجديدة", key: "latest_transaction_time" },
-        { header: "التاريخ", key: "created_at" },
-      ];
+      const columns = createTableExportColumns(
+        defaultClientDetailedColumns,
+        "financial_client_detailed_columns",
+        detailedExportOverrides,
+      );
       exportToExcel(
-        filteredOrders,
+        fetchAllFilteredFinancialOrders(),
         columns,
         isStatementMode ? "كشف_حساب_تفصيلي_للعميل.xlsx" : "التقرير_المالي_التفصيلي_للعملاء.xlsx"
       );
     } else if (reportTarget === "client" && reportMode === "summary") {
-      const columns = [
-        { header: "اسم العميل", key: "client_name" },
-        { header: "الهاتف", key: "client_phone" },
-        { header: "عدد الطلبات", key: "orders_count" },
-        { header: "الرصيد الافتتاحي (ر.س)", key: "opening_balance" },
-        { header: "إجمالي العقود (ر.س)", key: "total_contract_value" },
-        { header: "إجمالي المستحق (ر.س)", key: "total_due" },
-        { header: "المبلغ المحصل (ر.س)", key: "total_collected" },
-        { header: "المبلغ المتبقي (ر.س)", key: "total_outstanding" },
-        { header: "نسبة التحصيل %", key: "collection_rate" },
-        { header: "حالة التحصيل", key: "payment_status" },
-      ];
+      const columns = createTableExportColumns(
+        defaultClientSummaryColumns,
+        "financial_client_summary_columns",
+        {
+          index: (_client, rowIndex) => rowIndex + 1,
+          payment_status: (client) => getPaymentStatusLabel(client.payment_status),
+        },
+      );
       exportToExcel(
-        filteredClients,
+        sortedClients,
         columns,
         isStatementMode ? "كشف_حساب_إجمالي_للعميل.xlsx" : "التقرير_المالي_الإجمالي_للعملاء.xlsx"
       );
     } else if (reportTarget === "marketer" && reportMode === "summary") {
-      const columns = [
-        { header: "اسم المسوق / الموظف", key: "employee_name" },
-        { header: "المكتب التابع له", key: "office_name" },
-        { header: "عدد الطلبات", key: "orders_count" },
-        { header: "عدد العملاء", key: "clients_count" },
-        { header: "إجمالي العقود (ر.س)", key: "total_contract_value" },
-        { header: "المبلغ المحصل (ر.س)", key: "total_collected" },
-        { header: "المبلغ المتبقي (ر.س)", key: "total_outstanding" },
-        { header: "نسبة التحصيل %", key: "collection_rate" },
-        { header: "حالة التحصيل", key: "payment_status" },
-      ];
+      const columns = createTableExportColumns(
+        defaultMarketerSummaryColumns,
+        "financial_marketer_summary_columns",
+        {
+          index: (_marketer, rowIndex) => rowIndex + 1,
+          payment_status: (marketer) =>
+            getPaymentStatusLabel(marketer.payment_status),
+        },
+      );
       exportToExcel(
-        filteredMarketers,
+        sortedMarketers,
         columns,
         isStatementMode ? "كشف_حساب_إجمالي_للمسوق.xlsx" : "التقرير_المالي_الإجمالي_للمسوقين.xlsx"
       );
@@ -753,19 +845,12 @@ const FinancialCollectionsReport = () => {
         });
       });
       const columns = [
-        { header: "المسوق / الموظف", key: "marketer_name" },
-        { header: "رقم الطلب", key: "id" },
-        { header: "اسم العميل", key: "client_name" },
-        { header: "المكتب السعودي", key: "saudi_office_name" },
-        { header: "الجنسية", key: "nationality" },
-        { header: "رقم التأشيرة", key: "visa_number" },
-        ...(!hideOrderStatus ? [{ header: "حالة الطلب", key: "order_status" }] : []),
-        { header: "إجمالي العقد (ر.س)", key: "total_price" },
-        { header: "المحصل (ر.س)", key: "paid_amount" },
-        { header: "المتبقي (ر.س)", key: "remaining_amount" },
-        { header: "حالة التحصيل", key: "payment_status" },
-        { header: "وقت إضافة الحوالة الجديدة", key: "latest_transaction_time" },
-        { header: "التاريخ", key: "created_at" },
+        { header: "اسم المسوق / الموظف", key: "marketer_name" },
+        ...createTableExportColumns(
+          defaultClientDetailedColumns,
+          "financial_client_detailed_columns",
+          detailedExportOverrides,
+        ),
       ];
       exportToExcel(
         flatList,
@@ -777,52 +862,42 @@ const FinancialCollectionsReport = () => {
 
   const handleExportPDF = () => {
     if (reportTarget === "client" && reportMode === "detailed") {
-      const columns = [
-        { header: "رقم الطلب", key: "id" },
-        { header: "اسم العميل", key: "client_name" },
-        { header: "المكتب السعودي", key: "saudi_office_name" },
-        { header: "الجنسية", key: "nationality" },
-        { header: "رقم التأشيرة", key: "visa_number" },
-        ...(!hideOrderStatus ? [{ header: "حالة الطلب", key: "order_status" }] : []),
-        { header: "إجمالي العقد", key: "total_price" },
-        { header: "المحصل", key: "paid_amount" },
-        { header: "المتبقي", key: "remaining_amount" },
-        { header: "حالة التحصيل", key: "payment_status" },
-        { header: "وقت إضافة الحوالة", key: "latest_transaction_time" },
-      ];
+      const columns = createTableExportColumns(
+        defaultClientDetailedColumns,
+        "financial_client_detailed_columns",
+        detailedExportOverrides,
+      );
       exportToPDF(
-        filteredOrders,
+        fetchAllFilteredFinancialOrders(),
         columns,
         isStatementMode ? "كشف_حساب_تفصيلي_للعميل.pdf" : "التقرير_المالي_التفصيلي_للعملاء.pdf"
       );
     } else if (reportTarget === "client" && reportMode === "summary") {
-      const columns = [
-        { header: "اسم العميل", key: "client_name" },
-        { header: "عدد الطلبات", key: "orders_count" },
-        { header: "الرصيد الافتتاحي", key: "opening_balance" },
-        { header: "إجمالي العقود", key: "total_contract_value" },
-        { header: "إجمالي المستحق", key: "total_due" },
-        { header: "المحصل", key: "total_collected" },
-        { header: "المتبقي", key: "total_outstanding" },
-        { header: "حالة التحصيل", key: "payment_status" },
-      ];
+      const columns = createTableExportColumns(
+        defaultClientSummaryColumns,
+        "financial_client_summary_columns",
+        {
+          index: (_client, rowIndex) => rowIndex + 1,
+          payment_status: (client) => getPaymentStatusLabel(client.payment_status),
+        },
+      );
       exportToPDF(
-        filteredClients,
+        sortedClients,
         columns,
         isStatementMode ? "كشف_حساب_إجمالي_للعميل.pdf" : "التقرير_المالي_الإجمالي_للعملاء.pdf"
       );
     } else if (reportTarget === "marketer" && reportMode === "summary") {
-      const columns = [
-        { header: "المسوق", key: "employee_name" },
-        { header: "المكتب", key: "office_name" },
-        { header: "عدد الطلبات", key: "orders_count" },
-        { header: "إجمالي العقود", key: "total_contract_value" },
-        { header: "المحصل", key: "total_collected" },
-        { header: "المتبقي", key: "total_outstanding" },
-        { header: "حالة التحصيل", key: "payment_status" },
-      ];
+      const columns = createTableExportColumns(
+        defaultMarketerSummaryColumns,
+        "financial_marketer_summary_columns",
+        {
+          index: (_marketer, rowIndex) => rowIndex + 1,
+          payment_status: (marketer) =>
+            getPaymentStatusLabel(marketer.payment_status),
+        },
+      );
       exportToPDF(
-        filteredMarketers,
+        sortedMarketers,
         columns,
         isStatementMode ? "كشف_حساب_إجمالي_للمسوق.pdf" : "التقرير_المالي_الإجمالي_للمسوقين.pdf"
       );
@@ -843,21 +918,17 @@ const FinancialCollectionsReport = () => {
             remaining_amount: o.remaining_amount,
             payment_status: o.payment_status,
             latest_transaction_time: o.latest_transaction_time || "-",
+            created_at: o.created_at,
           });
         });
       });
       const columns = [
-        { header: "المسوق", key: "marketer_name" },
-        { header: "الطلب", key: "id" },
-        { header: "العميل", key: "client_name" },
-        { header: "المكتب السعودي", key: "saudi_office_name" },
-        { header: "الجنسية", key: "nationality" },
-        { header: "التأشيرة", key: "visa_number" },
-        ...(!hideOrderStatus ? [{ header: "الحالة", key: "order_status" }] : []),
-        { header: "إجمالي العقد", key: "total_price" },
-        { header: "المحصل", key: "paid_amount" },
-        { header: "المتبقي", key: "remaining_amount" },
-        { header: "وقت إضافة الحوالة", key: "latest_transaction_time" },
+        { header: "اسم المسوق / الموظف", key: "marketer_name" },
+        ...createTableExportColumns(
+          defaultClientDetailedColumns,
+          "financial_client_detailed_columns",
+          detailedExportOverrides,
+        ),
       ];
       exportToPDF(
         flatList,
@@ -2321,15 +2392,27 @@ const FinancialCollectionsReport = () => {
             )}
 
             {/* Pagination Component */}
-            {totalPages > 1 && (
-              <div className="p-3 border-top bg-light">
-                <PaginationComponent
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
-              </div>
-            )}
+            <div className="p-3 border-top bg-light">
+              <PaginationComponent
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={
+                  isDetailedOrders ? reportMeta.total : currentDataset.length
+                }
+                pageSize={itemsPerPage}
+                onPageSizeChange={(size) => {
+                  setItemsPerPage(size);
+                  setCurrentPage(1);
+                  if (isDetailedOrders) {
+                    fetchData({ page: 1, per_page: size });
+                  }
+                }}
+                onPageChange={(page) => {
+                  setCurrentPage(page);
+                  if (isDetailedOrders) fetchData({ page });
+                }}
+              />
+            </div>
           </Card.Body>
         </Card>
 

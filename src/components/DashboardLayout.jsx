@@ -1,28 +1,46 @@
-import React, { useState } from "react";
-import { Button, Card } from "react-bootstrap";
+import React, { lazy, Suspense, useEffect, useState } from "react";
+import { Button, Card, Placeholder, Spinner } from "react-bootstrap";
+import NProgress from "nprogress";
+import "nprogress/nprogress.css";
 import Sidebar from "./Sidebar";
-import ClientsPage from "../pages/ClientsPage";
-import SaudiOfficesPage from "../pages/SaudiOfficesPage";
-import ExternalOfficesPage from "../pages/ExternalOfficesPage";
-import OrdersPage from "../pages/OrdersPage";
-import CompletedOrdersPage from "../pages/CompletedOrdersPage";
-import ReachedOrdersPage from "../pages/ReachedOrdersPage";
-import EmployeesPage from "../pages/EmployeesPage";
-import DashboardPage from "../pages/DashboardPage";
-import TrackingPage from "../pages/TrackingPage";
-import FinancePage from "../pages/FinancePage";
-import SettingsPage from "../pages/SettingsPage";
-import MarketingPage from "../pages/MarketingPage";
-import WhatsAppTemplatePage from "../pages/WhatsAppTemplatePage";
-import OrderFollowUpReport from "../pages/reports/OrderFollowUpReport";
-import CompletedOrdersReport from "../pages/reports/CompletedOrdersReport";
-import OfficesPerformanceReport from "../pages/reports/OfficesPerformanceReport";
-import FinancialCollectionsReport from "../pages/reports/FinancialCollectionsReport";
-import EmployeesPerformanceReport from "../pages/reports/EmployeesPerformanceReport";
+import ErrorBoundary from "./common/ErrorBoundary";
+
+const ClientsPage = lazy(() => import("../pages/ClientsPage"));
+const SaudiOfficesPage = lazy(() => import("../pages/SaudiOfficesPage"));
+const ExternalOfficesPage = lazy(() => import("../pages/ExternalOfficesPage"));
+const OrdersPage = lazy(() => import("../pages/OrdersPage"));
+const CompletedOrdersPage = lazy(() => import("../pages/CompletedOrdersPage"));
+const ReachedOrdersPage = lazy(() => import("../pages/ReachedOrdersPage"));
+const EmployeesPage = lazy(() => import("../pages/EmployeesPage"));
+const DashboardPage = lazy(() => import("../pages/DashboardPage"));
+const TrackingPage = lazy(() => import("../pages/TrackingPage"));
+const FinancePage = lazy(() => import("../pages/FinancePage"));
+const SettingsPage = lazy(() => import("../pages/SettingsPage"));
+const MarketingPage = lazy(() => import("../pages/MarketingPage"));
+const WhatsAppTemplatePage = lazy(() => import("../pages/WhatsAppTemplatePage"));
+const OrderFollowUpReport = lazy(() => import("../pages/reports/OrderFollowUpReport"));
+const CompletedOrdersReport = lazy(() => import("../pages/reports/CompletedOrdersReport"));
+const OfficesPerformanceReport = lazy(() => import("../pages/reports/OfficesPerformanceReport"));
+const FinancialCollectionsReport = lazy(() => import("../pages/reports/FinancialCollectionsReport"));
+const EmployeesPerformanceReport = lazy(() => import("../pages/reports/EmployeesPerformanceReport"));
 
 const DashboardLayout = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    NProgress.start();
+    const timer = window.setTimeout(() => NProgress.done(), 250);
+    return () => window.clearTimeout(timer);
+  }, [activeTab]);
+
+  useEffect(() => {
+    const updateScrollButton = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener("scroll", updateScrollButton, { passive: true });
+    updateScrollButton();
+    return () => window.removeEventListener("scroll", updateScrollButton);
+  }, []);
 
   const isAdmin = user?.role === "admin";
   const hasPermission = (permission) => {
@@ -146,6 +164,26 @@ const DashboardLayout = ({ user, onLogout }) => {
     }
   };
 
+  const pageLoader = (
+    <div className="page-container py-4" aria-label="جاري تحميل الصفحة">
+      <Placeholder as="div" animation="glow" className="mb-4">
+        <Placeholder xs={4} size="lg" />
+      </Placeholder>
+      <Card className="border-0 shadow-sm rounded-4">
+        <Card.Body className="p-4">
+          <div className="d-flex justify-content-center py-4">
+            <Spinner animation="border" role="status" aria-label="جاري التحميل" />
+          </div>
+          <Placeholder as="div" animation="glow">
+            <Placeholder xs={12} className="mb-3" />
+            <Placeholder xs={10} className="mb-3" />
+            <Placeholder xs={11} />
+          </Placeholder>
+        </Card.Body>
+      </Card>
+    </div>
+  );
+
   return (
     <div
       className={`dashboard-container ${isSidebarOpen ? "sidebar-open" : ""}`}
@@ -173,8 +211,21 @@ const DashboardLayout = ({ user, onLogout }) => {
           <div className="fw-bold text-primary fs-5">السراج</div>
           <div style={{ width: "24px" }}></div> {/* Spacer */}
         </div>
-        {renderContent()}
+        <ErrorBoundary key={activeTab}>
+          <Suspense fallback={pageLoader}>{renderContent()}</Suspense>
+        </ErrorBoundary>
       </main>
+      {showScrollTop && (
+        <Button
+          variant="primary"
+          className="scroll-to-top"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          aria-label="العودة إلى أعلى الصفحة"
+          title="العودة إلى أعلى الصفحة"
+        >
+          <i className="fa-solid fa-arrow-up" />
+        </Button>
+      )}
 
       {/* Overlay for mobile */}
       {isSidebarOpen && (

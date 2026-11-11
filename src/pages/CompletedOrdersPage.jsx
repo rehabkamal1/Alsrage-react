@@ -25,6 +25,7 @@ import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
 import { showWhatsAppNotificationModal } from "../utils/whatsappHelper";
+import { useDebounce } from "../hooks/useDebounce";
 
 const CompletedOrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -41,6 +42,7 @@ const CompletedOrdersPage = () => {
   const [submitError, setSubmitError] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 400);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [filters, setFilters] = useState({
@@ -51,7 +53,7 @@ const CompletedOrdersPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
-  const itemsPerPage = 15;
+  const [itemsPerPage, setItemsPerPage] = useState(15);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const displayedOrders = orders.slice(startIndex, startIndex + itemsPerPage);
 
@@ -61,7 +63,11 @@ const CompletedOrdersPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [filters, searchQuery, fromDate, toDate]);
+  }, [filters, debouncedSearch, fromDate, toDate]);
+
+  useEffect(() => {
+    setTotalPages(Math.ceil(orders.length / itemsPerPage));
+  }, [orders, itemsPerPage]);
 
   const fetchInitialData = async () => {
     try {
@@ -73,8 +79,8 @@ const CompletedOrdersPage = () => {
         orderProcessStatusesRes,
         serviceTypesRes,
       ] = await Promise.all([
-        getSaudiOffices({ all: 1, per_page: 500 }),
-        getExternalOffices({ all: 1, per_page: 500 }),
+        getSaudiOffices({ all: 1, per_page: 100 }),
+        getExternalOffices({ all: 1, per_page: 100 }),
         fetchAllPages(getEmployees),
         getSettingsOrderStatuses(),
         getSettingsOrderProcessStatuses(),
@@ -119,7 +125,7 @@ const CompletedOrdersPage = () => {
     setLoading(true);
     try {
       const params = {
-        search: searchQuery,
+        search: debouncedSearch,
         ...filters,
         tracking_status: "certified",
       };
@@ -251,15 +257,25 @@ const CompletedOrdersPage = () => {
 
   const handleExport = () => {
     const columns = [
-      { header: "رقم الطلب", key: "id" },
+      { header: "#", key: "id" },
+      { header: "المكتب السعودي", format: (order) => order.saudi_office?.name || "-" },
+      {
+        header: "المندوب",
+        format: (order) => [order.client?.name, order.client?.phone].filter(Boolean).join(" - ") || "-",
+      },
+      { header: "الموظف", format: (order) => order.employee?.name || "-" },
       { header: "صاحب التأشيرة", key: "visa_holder_name" },
       { header: "هاتف صاحب التأشيرة", key: "visa_holder_phone" },
       { header: "رقم التأشيرة", key: "visa_number" },
       { header: "نوع الخدمة", key: "service_type" },
-      { header: "رقم الهوية", key: "id_number" },
       { header: "رقم عقد مساند", key: "musaned_contract_number" },
-      { header: "إجمالي السعر", key: "total_price" },
-      { header: "الرصيد المتبقي", key: "price_difference" },
+      {
+        header: "المرفقات",
+        format: (order) => order.attachments?.length ? `${order.attachments.length} مرفقات` : "-",
+      },
+      { header: "إجمالي السعر (ر.س)", key: "total_price" },
+      { header: "سداد مساند (ر.س)", key: "musaned_paid" },
+      { header: "الرصيد المتبقي (ر.س)", key: "price_difference" },
       {
         header: "حالة الطلب",
         format: (o) =>
@@ -276,25 +292,32 @@ const CompletedOrdersPage = () => {
           o.status ||
           "-",
       },
-      {
-        header: "التاريخ",
-        format: (o) => new Date(o.created_at).toLocaleDateString("ar-SA"),
-      },
+      { header: "التاريخ", key: "created_at" },
     ];
     exportToExcel(orders, columns, "الطلبات_المكتملة.xlsx");
   };
 
   const handleExportPDF = () => {
     const columns = [
-      { header: "رقم الطلب", key: "id" },
+      { header: "#", key: "id" },
+      { header: "المكتب السعودي", format: (order) => order.saudi_office?.name || "-" },
+      {
+        header: "المندوب",
+        format: (order) => [order.client?.name, order.client?.phone].filter(Boolean).join(" - ") || "-",
+      },
+      { header: "الموظف", format: (order) => order.employee?.name || "-" },
       { header: "صاحب التأشيرة", key: "visa_holder_name" },
       { header: "هاتف صاحب التأشيرة", key: "visa_holder_phone" },
       { header: "رقم التأشيرة", key: "visa_number" },
       { header: "نوع الخدمة", key: "service_type" },
-      { header: "رقم الهوية", key: "id_number" },
       { header: "رقم عقد مساند", key: "musaned_contract_number" },
-      { header: "إجمالي السعر", key: "total_price" },
-      { header: "الرصيد المتبقي", key: "price_difference" },
+      {
+        header: "المرفقات",
+        format: (order) => order.attachments?.length ? `${order.attachments.length} مرفقات` : "-",
+      },
+      { header: "إجمالي السعر (ر.س)", key: "total_price" },
+      { header: "سداد مساند (ر.س)", key: "musaned_paid" },
+      { header: "الرصيد المتبقي (ر.س)", key: "price_difference" },
       {
         header: "حالة الطلب",
         format: (o) =>
@@ -311,10 +334,7 @@ const CompletedOrdersPage = () => {
           o.status ||
           "-",
       },
-      {
-        header: "التاريخ",
-        format: (o) => new Date(o.created_at).toLocaleDateString("ar-SA"),
-      },
+      { header: "التاريخ", key: "created_at" },
     ];
     exportToPDF(orders, columns, "الطلبات_المكتملة.pdf");
   };
@@ -438,15 +458,19 @@ const CompletedOrdersPage = () => {
                   orderStatusOptions={orderProcessStatuses}
                   serviceTypeOptions={serviceTypes}
                 />
-                {totalPages > 1 && (
-                  <div className="p-3 border-top bg-light bg-opacity-50">
-                    <PaginationComponent
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={setCurrentPage}
-                    />
-                  </div>
-                )}
+                <div className="p-3 border-top bg-light bg-opacity-50">
+                  <PaginationComponent
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    totalItems={orders.length}
+                    pageSize={itemsPerPage}
+                    onPageSizeChange={(size) => {
+                      setItemsPerPage(size);
+                      setCurrentPage(1);
+                    }}
+                  />
+                </div>
               </>
             )}
           </Card.Body>

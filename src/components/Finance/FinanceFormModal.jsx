@@ -37,8 +37,19 @@ const FinanceFormModal = ({
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [validated, setValidated] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
+  const submissionKeyRef = useRef(null);
 
   const lastLoadedId = useRef(null);
+
+  useEffect(() => {
+    if (show) {
+      submissionKeyRef.current = null;
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
+  }, [show]);
 
   const formatDateForInput = (dateString) => {
     if (!dateString) return "";
@@ -234,8 +245,9 @@ const FinanceFormModal = ({
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmittingRef.current || loading) return;
     const form = e.currentTarget;
     setValidated(true);
     const errors = {};
@@ -247,7 +259,18 @@ const FinanceFormModal = ({
       setFieldErrors((prev) => ({ ...prev, ...errors }));
       return;
     }
-    onSubmit(formData);
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    submissionKeyRef.current ??= window.crypto.randomUUID();
+    try {
+      const result = await onSubmit(formData, submissionKeyRef.current);
+      if (result?.idempotencyConflict) {
+        submissionKeyRef.current = null;
+      }
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   const getFieldError = (fieldName) => {
@@ -322,8 +345,18 @@ const FinanceFormModal = ({
   };
 
   return (
-    <Modal show={show} onHide={onHide} centered size="xl" dir="rtl">
-      <Modal.Header closeButton className="border-0 pt-4 px-4">
+    <Modal
+      show={show}
+      onHide={() => {
+        if (!isSubmittingRef.current) onHide();
+      }}
+      backdrop={isSubmitting ? "static" : true}
+      keyboard={!isSubmitting}
+      centered
+      size="xl"
+      dir="rtl"
+    >
+      <Modal.Header closeButton={!isSubmitting} className="border-0 pt-4 px-4">
         <Modal.Title className="fw-bold fs-5">
           {isEdit ? "✏️ تعديل الحوالة" : "➕ إضافة حوالة جديدة"}
         </Modal.Title>
@@ -331,6 +364,10 @@ const FinanceFormModal = ({
 
       <Form onSubmit={handleSubmit} noValidate validated={validated}>
         <Modal.Body className="px-4">
+          <fieldset
+            disabled={isSubmitting}
+            className="border-0 p-0 m-0 w-100"
+          >
           <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
@@ -739,19 +776,27 @@ const FinanceFormModal = ({
               {getFieldError("notes")}
             </Form.Control.Feedback>
           </Form.Group>
+          </fieldset>
         </Modal.Body>
 
         <Modal.Footer className="border-0 pb-4 px-4">
-          <Button variant="light" onClick={onHide} className="px-4 rounded-3">
+          <Button
+            variant="light"
+            onClick={() => {
+              if (!isSubmitting) onHide();
+            }}
+            disabled={isSubmitting}
+            className="px-4 rounded-3"
+          >
             إلغاء
           </Button>
           <Button
             type="submit"
             variant="dark"
-            disabled={loading}
+            disabled={loading || isSubmitting}
             className="px-4 rounded-3"
           >
-            {loading ? (
+            {loading || isSubmitting ? (
               <>
                 <span className="spinner-border spinner-border-sm me-2" />
                 جاري الحفظ...

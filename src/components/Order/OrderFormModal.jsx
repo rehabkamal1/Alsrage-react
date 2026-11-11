@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Modal,
   Button,
@@ -12,12 +12,14 @@ import {
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
 import { showSuccess, showError } from "../../utils/swalHelper";
+import { useDebounce } from "../../hooks/useDebounce";
 import {
   getSaudiOffices,
   getExternalOffices,
   createSaudiOffice,
   createExternalOffice,
   getClients,
+  searchClients,
   getEmployees,
   createEmployee,
   getSettingsNationalities,
@@ -109,6 +111,16 @@ const OrderFormModal = ({
     !String(formData.musaned_contract_number || "").trim();
 
   const [showQuickEmployee, setShowQuickEmployee] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
+  const submissionKeyRef = useRef(null);
+  useEffect(() => {
+    if (show) {
+      submissionKeyRef.current = null;
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
+  }, [show]);
   const [newEmpName, setNewEmpName] = useState("");
   const [newEmpPhone, setNewEmpPhone] = useState("");
   const [newEmpUsername, setNewEmpUsername] = useState("");
@@ -118,7 +130,7 @@ const OrderFormModal = ({
 
   useEffect(() => {
     if (show) {
-      getSaudiOffices({ all: 1, per_page: 500 })
+      getSaudiOffices({ all: 1, per_page: 100 })
         .then((res) => {
           const list = res.data?.data || res.data || [];
           if (Array.isArray(list) && list.length > 0) {
@@ -247,6 +259,9 @@ const OrderFormModal = ({
   const [validated, setValidated] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   const [searchQuery, setSearchQuery] = useState("");
+  const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const debouncedClientSearch = useDebounce(clientSearchTerm, 400);
+  const clientSearchVersion = useRef(0);
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -276,6 +291,7 @@ const OrderFormModal = ({
 
   useEffect(() => {
     if (initialData) {
+      clientSearchVersion.current += 1;
       setFormData({
         client_id: initialData.client_id || "",
         employee_id: initialData.employee_id || "",
@@ -304,6 +320,7 @@ const OrderFormModal = ({
         contract_image: null,
       });
       setPreviewImages({});
+      setClientSearchTerm("");
       if (initialData.client) {
         setSearchQuery(
           `${initialData.client.phone} (${initialData.client.name || "بدون اسم"})`,
@@ -315,6 +332,7 @@ const OrderFormModal = ({
         }
       }
     } else {
+      clientSearchVersion.current += 1;
       setFormData({
         client_id: "",
         employee_id: "",
@@ -344,6 +362,7 @@ const OrderFormModal = ({
       });
       setPreviewImages({});
       setSearchQuery("");
+      setClientSearchTerm("");
     }
     setAttachmentRows([{ title: "", file: null }]);
     setValidated(false);
@@ -358,6 +377,42 @@ const OrderFormModal = ({
       }
     }
   }, [error]);
+
+  useEffect(() => {
+    let active = true;
+    const searchVersion = clientSearchVersion.current;
+    const search = async () => {
+      if (debouncedClientSearch.trim().length < 2) {
+        setSearchResults([]);
+        setShowSearchResults(false);
+        setSearching(false);
+        return;
+      }
+
+      setSearching(true);
+      try {
+        const response = await searchClients(debouncedClientSearch);
+        if (active && searchVersion === clientSearchVersion.current) {
+          setSearchResults(response.data?.data || []);
+          setShowSearchResults(true);
+        }
+      } catch (err) {
+        if (active && searchVersion === clientSearchVersion.current) {
+          console.error("Search error:", err);
+          setSearchResults([]);
+        }
+      } finally {
+        if (active && searchVersion === clientSearchVersion.current) {
+          setSearching(false);
+        }
+      }
+    };
+
+    void search();
+    return () => {
+      active = false;
+    };
+  }, [debouncedClientSearch]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -399,34 +454,27 @@ const OrderFormModal = ({
   };
 
   const selectClient = (client) => {
+    clientSearchVersion.current += 1;
     setFormData((prev) => ({
       ...prev,
       client_id: client.id,
     }));
     setSearchQuery(`${client.phone} (${client.name || "بدون اسم"})`);
+    setClientSearchTerm("");
     setShowSearchResults(false);
     if (fieldErrors.client_id) {
       setFieldErrors((prev) => ({ ...prev, client_id: undefined }));
     }
   };
 
-  const handleClientSearch = async (value) => {
+  const handleClientSearch = (value) => {
+    clientSearchVersion.current += 1;
     setSearchQuery(value);
-    if (value.length >= 2) {
-      setSearching(true);
-      try {
-        const response = await searchClients(value);
-        setSearchResults(response.data?.data || []);
-        setShowSearchResults(true);
-      } catch (err) {
-        console.error("Search error:", err);
-        setSearchResults([]);
-      } finally {
-        setSearching(false);
-      }
-    } else {
+    setClientSearchTerm(value);
+    setSearching(false);
+    setShowSearchResults(false);
+    if (value.trim().length < 2) {
       setSearchResults([]);
-      setShowSearchResults(false);
     }
   };
 
@@ -676,12 +724,14 @@ const OrderFormModal = ({
     return null;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmittingRef.current || loading) return;
     const form = e.currentTarget;
     setValidated(true);
     if (form.checkValidity() === false || !formData.saudi_office_id) {
       e.stopPropagation();
+      return;
     }
 
     const submitData = new FormData();
@@ -714,7 +764,18 @@ const OrderFormModal = ({
       }
     });
 
-    onSubmit(submitData);
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    submissionKeyRef.current ??= window.crypto.randomUUID();
+    try {
+      const result = await onSubmit(submitData, submissionKeyRef.current);
+      if (result?.idempotencyConflict) {
+        submissionKeyRef.current = null;
+      }
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   const updateAttachmentRow = (index, field, value) => {
@@ -743,13 +804,17 @@ const OrderFormModal = ({
     <>
       <Modal
         show={show}
-        onHide={onHide}
+        onHide={() => {
+          if (!isSubmittingRef.current) onHide();
+        }}
+        backdrop={isSubmitting ? "static" : true}
+        keyboard={!isSubmitting}
         centered
         size="xl"
         dialogClassName="order-modal-xl"
         dir="rtl"
       >
-        <Modal.Header closeButton className="border-0 pt-4 px-4">
+        <Modal.Header closeButton={!isSubmitting} className="border-0 pt-4 px-4">
           <Modal.Title className="fw-bold fs-5">
             {isEdit ? "✏️ تعديل الطلب" : "➕ إضافة طلب جديد"}
           </Modal.Title>
@@ -757,6 +822,10 @@ const OrderFormModal = ({
 
         <Form onSubmit={handleSubmit} noValidate validated={validated}>
           <Modal.Body className="px-4">
+            <fieldset
+              disabled={isSubmitting}
+              className="border-0 p-0 m-0 w-100"
+            >
             <Tabs
               activeKey={activeTab}
               onSelect={(k) => setActiveTab(k)}
@@ -1871,12 +1940,16 @@ const OrderFormModal = ({
                 </div>
               </Tab>
             </Tabs>
+            </fieldset>
           </Modal.Body>
 
           <Modal.Footer className="border-0 pb-4 px-4">
             <Button
               variant="light"
-              onClick={onHide}
+              onClick={() => {
+                if (!isSubmitting) onHide();
+              }}
+              disabled={isSubmitting}
               className="px-4 rounded-3"
               style={{ border: "1px solid #dee2e6" }}
             >
@@ -1885,10 +1958,10 @@ const OrderFormModal = ({
             <Button
               type="submit"
               variant="dark"
-              disabled={loading}
+              disabled={loading || isSubmitting}
               className="px-4 rounded-3"
             >
-              {loading ? (
+              {loading || isSubmitting ? (
                 <>
                   <span className="spinner-border spinner-border-sm me-2" />
                   جاري الحفظ...

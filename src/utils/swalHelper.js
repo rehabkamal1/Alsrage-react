@@ -17,9 +17,12 @@ export const showSuccess = (title, text = "") => {
     title,
     text,
     icon: "success",
-    confirmButtonText: "ممتاز",
-    confirmButtonColor: "#10b981",
-    timer: 2000,
+    toast: true,
+    position: "top",
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    customClass: { popup: "swal-toast swal-toast-success" },
   });
 };
 
@@ -28,10 +31,31 @@ export const showError = (title, text = "حدث خطأ ما، يرجى المح�
     title,
     text,
     icon: "error",
-    confirmButtonText: "إغلاق",
+    toast: true,
+    position: "top",
+    showConfirmButton: false,
+    showCloseButton: true,
     confirmButtonColor: "#ef4444",
+    customClass: { popup: "swal-toast swal-toast-error" },
   });
 };
+
+export const showRetryableError = (message, onRetry) =>
+  Swal.fire({
+    title: "تعذر إكمال الطلب",
+    text: message,
+    icon: "error",
+    toast: true,
+    position: "top",
+    showConfirmButton: Boolean(onRetry),
+    confirmButtonText: "إعادة المحاولة",
+    confirmButtonColor: "#ef4444",
+    showCloseButton: true,
+    customClass: { popup: "swal-toast swal-toast-error" },
+  }).then((result) => {
+    if (result.isConfirmed && onRetry) return onRetry();
+    return undefined;
+  });
 
 const validationFieldLabels = {
   name: "الاسم",

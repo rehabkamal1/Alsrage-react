@@ -21,6 +21,7 @@ import TableSkeleton from "../components/common/TableSkeleton";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
 import { getUser } from "../services/authService";
+import { useDebounce } from "../hooks/useDebounce";
 
 const ClientsPage = () => {
   const [clients, setClients] = useState([]);
@@ -32,6 +33,7 @@ const ClientsPage = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [editingClient, setEditingClient] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 400);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [fromDate, setFromDate] = useState("");
@@ -41,7 +43,7 @@ const ClientsPage = () => {
     sort_by: "created_at",
     sort_dir: "desc",
   });
-  const itemsPerPage = 8;
+  const [itemsPerPage, setItemsPerPage] = useState(8);
 
   const user = getUser();
   const isAdmin = user?.role === "admin";
@@ -53,7 +55,11 @@ const ClientsPage = () => {
   useEffect(() => {
     fetchClients();
     fetchSettings();
-  }, [searchQuery, filters, fromDate, toDate]);
+  }, [debouncedSearch, filters, fromDate, toDate]);
+
+  useEffect(() => {
+    setTotalPages(Math.ceil(clients.length / itemsPerPage));
+  }, [clients, itemsPerPage]);
 
   const fetchSettings = async () => {
     try {
@@ -72,7 +78,7 @@ const ClientsPage = () => {
     }
     try {
       const params = {
-        search: searchQuery || undefined,
+        search: debouncedSearch || undefined,
         client_type: filters.client_type || undefined,
         sort_by: filters.sort_by,
         sort_dir: filters.sort_dir,
@@ -182,6 +188,7 @@ const ClientsPage = () => {
 
   const handleExport = () => {
     const columns = [
+      { header: "#", key: "id" },
       {
         header: "نوع العميل",
         key: "client_type",
@@ -202,12 +209,14 @@ const ClientsPage = () => {
         key: "opening_balance",
         format: (client) => Number(client.opening_balance || 0).toLocaleString(),
       },
+      { header: "تاريخ التسجيل", key: "created_at" },
     ];
     exportToExcel(clients, columns, "العملاء.xlsx");
   };
 
   const handleExportPDF = () => {
     const columns = [
+      { header: "#", key: "id" },
       {
         header: "نوع العميل",
         key: "client_type",
@@ -228,6 +237,7 @@ const ClientsPage = () => {
         key: "opening_balance",
         format: (client) => Number(client.opening_balance || 0).toLocaleString(),
       },
+      { header: "تاريخ التسجيل", key: "created_at" },
     ];
     exportToPDF(clients, columns, "العملاء.pdf");
   };
@@ -345,6 +355,12 @@ const ClientsPage = () => {
                   currentPage={currentPage}
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
+                  totalItems={clients.length}
+                  pageSize={itemsPerPage}
+                  onPageSizeChange={(size) => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1);
+                  }}
                 />
               </>
             )}

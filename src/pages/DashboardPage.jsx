@@ -26,6 +26,7 @@ import {
 import RefreshButton from "../components/common/RefreshButton";
 import DateFilterBar from "../components/common/DateFilterBar";
 import useAutoRefresh from "../hooks/useAutoRefresh";
+import EmptyState from "../components/common/EmptyState";
 import {
   getClients,
   getOrders,
@@ -83,6 +84,7 @@ const DashboardPage = ({ onNavigate }) => {
     musaned_paid: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -235,6 +237,7 @@ const DashboardPage = ({ onNavigate }) => {
           clients: calcGrowth(monthlyClientsData),
           orders: calcGrowth(monthlyOrdersData),
         });
+        setLastUpdated(new Date());
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -248,7 +251,7 @@ const DashboardPage = ({ onNavigate }) => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  useAutoRefresh(fetchDashboardData, 12000);
+  useAutoRefresh(fetchDashboardData, 60000);
 
   const handleDateFilterChange = ({ fromDate, toDate, preset }) => {
     setFromDate(fromDate);
@@ -426,6 +429,14 @@ const DashboardPage = ({ onNavigate }) => {
         </div>
 
         <div className="d-flex align-items-center gap-3">
+          <span className="text-white-50 small">
+            {lastUpdated
+              ? `آخر تحديث: ${lastUpdated.toLocaleTimeString("ar-EG", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}`
+              : "لم يتم التحديث بعد"}
+          </span>
           <RefreshButton onClick={fetchDashboardData} loading={loading} />
 
           <Button
@@ -446,6 +457,13 @@ const DashboardPage = ({ onNavigate }) => {
         initialPreset="all"
         size="md"
       />
+
+      {!loading && stats.clients === 0 && stats.orders === 0 && (
+        <div className="alert alert-info d-flex align-items-center gap-2" role="status">
+          <i className="fa-solid fa-circle-info" aria-hidden="true" />
+          لا توجد بيانات في الفترة المحددة. جرّب توسيع نطاق التاريخ.
+        </div>
+      )}
 
       <Row className="g-4 mb-4">
         <Col xs={12} md={4}>
@@ -564,7 +582,16 @@ const DashboardPage = ({ onNavigate }) => {
               </span>
             </div>
             <div style={{ height: "230px" }}>
-              <Line data={lineData} options={chartOptions} />
+              {monthlyOrders.data.some((value) => value > 0) ? (
+                <Line data={lineData} options={chartOptions} />
+              ) : (
+                <EmptyState
+                  title="لا توجد بيانات"
+                  suggestion="لا توجد طلبات في الفترة المحددة."
+                  actionLabel="تعديل الفلاتر"
+                  icon="fa-solid fa-chart-line"
+                />
+              )}
             </div>
           </div>
         </Col>
@@ -581,7 +608,16 @@ const DashboardPage = ({ onNavigate }) => {
               </span>
             </div>
             <div style={{ height: "230px" }}>
-              <Bar data={barData} options={chartOptions} />
+              {monthlyClients.data.some((value) => value > 0) ? (
+                <Bar data={barData} options={chartOptions} />
+              ) : (
+                <EmptyState
+                  title="لا توجد بيانات"
+                  suggestion="لا يوجد عملاء جدد في الفترة المحددة."
+                  actionLabel="تعديل الفلاتر"
+                  icon="fa-solid fa-chart-column"
+                />
+              )}
             </div>
           </div>
         </Col>
@@ -600,18 +636,21 @@ const DashboardPage = ({ onNavigate }) => {
               </span>
             </div>
             <div style={{ height: "180px" }} className="position-relative">
-              <Doughnut data={doughnutData} options={doughnutOptions} />
-              <div className="position-absolute top-50 start-50 translate-middle text-center pointer-events-none">
-                <span className="d-block display-7 fw-bold text-dark">
-                  {stats.orders}
-                </span>
-                <span
-                  className="text-muted small"
-                  style={{ fontSize: "0.75rem" }}
-                >
-                  طلب
-                </span>
-              </div>
+              {stats.orders > 0 ? (
+                <>
+                  <Doughnut data={doughnutData} options={doughnutOptions} />
+                  <div className="position-absolute top-50 start-50 translate-middle text-center pointer-events-none">
+                    <span className="d-block display-7 fw-bold text-dark">
+                      {stats.orders}
+                    </span>
+                    <span className="text-muted small" style={{ fontSize: "0.75rem" }}>
+                      طلب
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <EmptyState title="لا توجد بيانات" suggestion="لا توجد طلبات ضمن الفترة المحددة." icon="fa-solid fa-chart-pie" />
+              )}
             </div>
             <div className="d-flex flex-wrap justify-content-center gap-2 mt-3 pt-2 border-top">
               {doughnutLegend.map((st, i) => (

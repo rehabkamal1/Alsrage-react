@@ -73,7 +73,7 @@ const OfficesPerformanceReport = () => {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -257,11 +257,11 @@ const OfficesPerformanceReport = () => {
   };
 
   const handleExportExcel = () => {
-    const data = (key === "saudi" ? saudiOffices : externalOffices).map((o) => ({
+    const data = currentOfficesList.map((o) => ({
       name: o.name,
       location: key === "saudi" ? o.city : o.country,
       total_orders: o.total_orders,
-      status_summary: (o.status_counts || []).map((s) => `${s.label}: ${s.count}`).join(" | "),
+      status_distribution: (o.status_counts || []).map((s) => `${s.label}: ${s.count}`).join(" | "),
       completion_rate: `${o.completion_rate}%`,
       total_revenue: o.total_revenue,
     }));
@@ -269,19 +269,19 @@ const OfficesPerformanceReport = () => {
       { header: "اسم المكتب", key: "name" },
       { header: key === "saudi" ? "المدينة" : "الدولة", key: "location" },
       { header: "إجمالي الطلبات", key: "total_orders" },
-      { header: "توزيع الحالات", key: "status_summary" },
-      { header: "نسبة الإنجاز %", key: "completion_rate" },
-      { header: "إجمالي المبالغ (ر.س)", key: "total_revenue" },
+      { header: "توزيع جميع الحالات المختارة وعددهم 📊", key: "status_distribution" },
+      { header: "نسبة الإنجاز", key: "completion_rate" },
+      { header: "إجمالي الإيرادات", key: "total_revenue" },
     ];
     exportToExcel(data, columns, `تقرير_أداء_المكاتب_${key}.xlsx`);
   };
 
   const handleExportPDF = () => {
-    const data = (key === "saudi" ? saudiOffices : externalOffices).map((o) => ({
+    const data = currentOfficesList.map((o) => ({
       name: o.name,
       location: key === "saudi" ? o.city : o.country,
       total_orders: o.total_orders,
-      status_summary: (o.status_counts || []).map((s) => `${s.label}: ${s.count}`).join(" | "),
+      status_distribution: (o.status_counts || []).map((s) => `${s.label}: ${s.count}`).join(" | "),
       completion_rate: `${o.completion_rate}%`,
       total_revenue: o.total_revenue,
     }));
@@ -289,9 +289,9 @@ const OfficesPerformanceReport = () => {
       { header: "اسم المكتب", key: "name" },
       { header: key === "saudi" ? "المدينة" : "الدولة", key: "location" },
       { header: "إجمالي الطلبات", key: "total_orders" },
-      { header: "توزيع الحالات", key: "status_summary" },
-      { header: "نسبة الإنجاز %", key: "completion_rate" },
-      { header: "إجمالي المبالغ (ر.س)", key: "total_revenue" },
+      { header: "توزيع جميع الحالات المختارة وعددهم 📊", key: "status_distribution" },
+      { header: "نسبة الإنجاز", key: "completion_rate" },
+      { header: "إجمالي الإيرادات", key: "total_revenue" },
     ];
     exportToPDF(data, columns, `تقرير_أداء_المكاتب_${key}.pdf`);
   };
@@ -921,6 +921,12 @@ const OfficesPerformanceReport = () => {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
+              totalItems={currentOfficesList.length}
+              pageSize={itemsPerPage}
+              onPageSizeChange={(size) => {
+                setItemsPerPage(size);
+                setCurrentPage(1);
+              }}
             />
           </Card.Body>
         </Card>

@@ -154,7 +154,7 @@ const OrderFollowUpReport = () => {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -189,24 +189,19 @@ const OrderFollowUpReport = () => {
   // Export handlers
   const handleExportExcel = () => {
     const columns = [
-      { header: "رقم الطلب", key: "order_number" },
+      { header: "رقم الطلب", format: (order) => order.order_number || order.id },
+      { header: "العميل", format: (order) => order.client?.name || order.client_name || "-" },
       { header: "رقم التأشيرة", key: "visa_number" },
-      { header: "العميل", format: (o) => o.client?.name || o.client_name || "-" },
-      { header: "المسوق / الموظف", format: (o) => o.employee?.name || o.employee_name || "-" },
-      { header: "حالة الطلب", format: (o) => o.status?.name || o.status_name || o.status || "-" },
-      { header: "حالة التوثيق", format: (o) => o.authentication_status || "-" },
-      { header: "المكتب الداخلي", key: "saudi_office" },
-      { header: "المكتب الخارجي", key: "external_office" },
-      { header: "تاريخ العقد", key: "contract_date" },
+      { header: "حالة الطلب", format: (order) => order.status?.name || order.status_name || order.status || "-" },
+      { header: "حالة التوثيق", key: "authentication_status" },
+      { header: "المسوق / الموظف", format: (order) => order.employee?.name || order.employee_name || "-" },
+      { header: "المكتب الداخلي", format: (order) => order.saudi_office?.name || order.saudi_office || "-" },
+      { header: "المكتب الخارجي", format: (order) => order.external_office?.name || order.external_office || "-" },
       { header: "آخر تحديث", key: "last_update_date" },
       { header: "أيام التأخير", key: "delay_days" },
       {
         header: "حالة SLA",
-        format: (o) => (o.exceeded_sla ? "مخالف لـ SLA" : "ضمن المدة"),
-      },
-      {
-        header: "المتابعة",
-        format: (o) => (o.is_without_followup ? "بدون متابعة" : "تمت المتابعة"),
+        format: (order) => (order.exceeded_sla ? "مخالف لـ SLA" : "ضمن المدة"),
       },
     ];
     exportToExcel(sortedOrders, columns, "تقرير_متابعة_الطلبات_SLA.xlsx");
@@ -214,16 +209,19 @@ const OrderFollowUpReport = () => {
 
   const handleExportPDF = () => {
     const columns = [
-      { header: "رقم الطلب", key: "order_number" },
-      { header: "العميل", format: (o) => o.client?.name || o.client_name || "-" },
-      { header: "المسوق / الموظف", format: (o) => o.employee?.name || o.employee_name || "-" },
-      { header: "حالة الطلب", format: (o) => o.status?.name || o.status_name || o.status || "-" },
-      { header: "حالة التوثيق", format: (o) => o.authentication_status || "-" },
+      { header: "رقم الطلب", format: (order) => order.order_number || order.id },
+      { header: "العميل", format: (order) => order.client?.name || order.client_name || "-" },
+      { header: "رقم التأشيرة", key: "visa_number" },
+      { header: "حالة الطلب", format: (order) => order.status?.name || order.status_name || order.status || "-" },
+      { header: "حالة التوثيق", key: "authentication_status" },
+      { header: "المسوق / الموظف", format: (order) => order.employee?.name || order.employee_name || "-" },
+      { header: "المكتب الداخلي", format: (order) => order.saudi_office?.name || order.saudi_office || "-" },
+      { header: "المكتب الخارجي", format: (order) => order.external_office?.name || order.external_office || "-" },
       { header: "آخر تحديث", key: "last_update_date" },
       { header: "أيام التأخير", key: "delay_days" },
       {
         header: "حالة SLA",
-        format: (o) => (o.exceeded_sla ? "مخالف لـ SLA" : "ضمن المدة"),
+        format: (order) => (order.exceeded_sla ? "مخالف لـ SLA" : "ضمن المدة"),
       },
     ];
     exportToPDF(sortedOrders, columns, "تقرير_متابعة_الطلبات_SLA.pdf");
@@ -781,6 +779,12 @@ const OrderFollowUpReport = () => {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
+              totalItems={sortedOrders.length}
+              pageSize={itemsPerPage}
+              onPageSizeChange={(size) => {
+                setItemsPerPage(size);
+                setCurrentPage(1);
+              }}
             />
           </Card.Body>
         </Card>

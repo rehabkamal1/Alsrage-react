@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useDebounce } from '../../hooks/useDebounce';
 
 const SearchableDropdown = ({ options, placeholder, onSelect, value }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [filteredOptions, setFilteredOptions] = useState([]);
   const dropdownRef = useRef(null);
 
@@ -20,10 +22,10 @@ const SearchableDropdown = ({ options, placeholder, onSelect, value }) => {
 
   useEffect(() => {
     const results = options.filter(option =>
-      option.name.toLowerCase().includes(searchTerm.toLowerCase())
+      option.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
     );
     setFilteredOptions(results);
-  }, [searchTerm, options]);
+  }, [debouncedSearchTerm, options]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

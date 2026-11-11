@@ -1,8 +1,30 @@
 import axios from "axios";
-import { showValidationErrors } from "../utils/swalHelper";
+import {
+  fetchCachedSettings,
+  invalidateSettingsCache,
+} from "../hooks/useSettings";
+import {
+  showRetryableError,
+  showValidationErrors,
+} from "../utils/swalHelper";
 
 const getToken = () => localStorage.getItem("auth_token");
 const API_URL = import.meta.env.VITE_API_URL;
+const SETTINGS_CACHE_KEYS = {
+  "/settings/priority-levels": "settings:priority_levels",
+  "/settings/passport-statuses": "settings:passport_statuses",
+  "/settings/transfer-statuses": "settings:transfer_statuses",
+  "/settings/payment-methods": "settings:payment_methods",
+  "/settings/bank-names": "settings:bank_names",
+  "/settings/order-statuses": "settings:order_statuses",
+  "/settings/order-process-statuses": "settings:order_process_statuses",
+  "/settings/service-types": "settings:service_types",
+  "/settings/authentication-statuses": "settings:authentication_statuses",
+  "/settings/authorization-statuses": "settings:authorization_statuses",
+  "/settings/nationalities": "settings:nationalities",
+  "/settings/professions": "settings:professions",
+  "/settings/arrival-destinations": "settings:arrival_destinations",
+};
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -57,16 +79,55 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 422 && error.response.data?.errors) {
+  (response) => {
+    if (response.config.method?.toLowerCase() !== "get") {
+      const requestPath = response.config.url?.split("?")[0];
+      for (const [path, cacheKey] of Object.entries(SETTINGS_CACHE_KEYS)) {
+        if (requestPath === path || requestPath?.startsWith(`${path}/`)) {
+          invalidateSettingsCache(cacheKey);
+          break;
+        }
+      }
+    }
+
+    return response;
+  },
+  async (error) => {
+    const status = error.response?.status;
+
+    if (status === 422 && error.response.data?.errors) {
       showValidationErrors(error.response.data.errors);
     }
-    if (error.response && error.response.status === 401) {
+
+    if ((status >= 500 || !error.response) && error.config && !error.config._manualRetry) {
+      const requestConfig = error.config;
+      const message = status >= 500
+        ? "حدثت مشكلة في الخادم. يمكنك المحاولة مرة أخرى."
+        : "تعذر الاتصال بالخادم. تحقق من اتصال الإنترنت ثم أعد المحاولة.";
+
+      return showRetryableError(message, () => {
+        requestConfig._manualRetry = true;
+        return api.request(requestConfig);
+      }).then(
+        (response) => response ?? Promise.reject(error),
+        () => Promise.reject(error),
+      );
+    }
+
+    if (status === 401) {
+      const requestConfig = error.config;
+      const token = getToken();
+
+      if (requestConfig && token && !requestConfig._retry) {
+        requestConfig._retry = true;
+        return api.request(requestConfig);
+      }
+
       localStorage.removeItem("auth_token");
       localStorage.removeItem("auth_user");
-      window.location.href = "/";
+      window.dispatchEvent(new CustomEvent("session-expired"));
     }
+
     return Promise.reject(error);
   },
 );
@@ -102,7 +163,10 @@ export const deleteExternalOffice = (id) =>
 // =============== Orders ===============
 export const getOrders = (params = {}) => api.get("/orders", { params });
 export const getOrder = (id) => api.get(`/orders/${id}`);
-export const createOrder = (data) => api.post("/orders", data);
+export const createOrder = (data, idempotencyKey) =>
+  api.post("/orders", data, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
 export const updateOrder = (id, data) =>
   api.post(`/orders/${id}?_method=PUT`, data);
 export const deleteOrder = (id) => api.delete(`/orders/${id}`);
@@ -134,7 +198,10 @@ export const deleteOrderTracking = (id) => api.delete(`/order-tracking/${id}`);
 // =============== Transactions ===============
 export const getTransactions = (params) => api.get("/transactions", { params });
 export const getTransaction = (id) => api.get(`/transactions/${id}`);
-export const createTransaction = (data) => api.post("/transactions", data);
+export const createTransaction = (data, idempotencyKey) =>
+  api.post("/transactions", data, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
 export const updateTransaction = (id, data) =>
   api.put(`/transactions/${id}`, data);
 export const deleteTransaction = (id) => api.delete(`/transactions/${id}`);
@@ -145,55 +212,68 @@ export const getOrdersByClient = (clientId) =>
 
 // =============== Settings ===============
 export const getSettingsPriorityLevels = () =>
-  api.get("/settings/priority-levels");
+  fetchCachedSettings("settings:priority_levels", () => api.get("/settings/priority-levels"));
 export const getSettingsPassportStatuses = () =>
-  api.get("/settings/passport-statuses");
+  fetchCachedSettings("settings:passport_statuses", () => api.get("/settings/passport-statuses"));
 export const getSettingsTransferStatuses = () =>
-  api.get("/settings/transfer-statuses");
+  fetchCachedSettings("settings:transfer_statuses", () => api.get("/settings/transfer-statuses"));
 export const getSettingsPaymentMethods = () =>
-  api.get("/settings/payment-methods");
-export const getSettingsBankNames = () => api.get("/settings/bank-names");
+  fetchCachedSettings("settings:payment_methods", () => api.get("/settings/payment-methods"));
+export const getSettingsBankNames = () =>
+  fetchCachedSettings("settings:bank_names", () => api.get("/settings/bank-names"));
 export const getSettingsOrderStatuses = () =>
-  api.get("/settings/order-statuses");
+  fetchCachedSettings("settings:order_statuses", () => api.get("/settings/order-statuses"));
 export const getSettingsOrderProcessStatuses = () =>
-  api.get("/settings/order-process-statuses");
+  fetchCachedSettings("settings:order_process_statuses", () => api.get("/settings/order-process-statuses"));
 export const getSettingsServiceTypes = () =>
-  api.get("/settings/service-types").catch((err) => {
-    console.warn(
-      "Service types route not available on remote server yet:",
-      err,
-    );
-    return { data: { data: [] } };
-  });
+  fetchCachedSettings("settings:service_types", () =>
+    api.get("/settings/service-types").catch((err) => {
+      console.warn(
+        "Service types route not available on remote server yet:",
+        err,
+      );
+      return { data: { data: [] } };
+    }),
+  );
 export const getSettingsAuthenticationStatuses = () =>
-  api.get("/settings/authentication-statuses").catch((err) => {
-    console.warn("Authentication statuses route not available yet:", err);
-    return { data: { data: [] } };
-  });
+  fetchCachedSettings("settings:authentication_statuses", () =>
+    api.get("/settings/authentication-statuses").catch((err) => {
+      console.warn("Authentication statuses route not available yet:", err);
+      return { data: { data: [] } };
+    }),
+  );
 export const getSettingsAuthorizationStatuses = () =>
-  api.get("/settings/authorization-statuses").catch((err) => {
-    console.warn("Authorization statuses route not available yet:", err);
-    return { data: { data: [] } };
-  });
+  fetchCachedSettings("settings:authorization_statuses", () =>
+    api.get("/settings/authorization-statuses").catch((err) => {
+      console.warn("Authorization statuses route not available yet:", err);
+      return { data: { data: [] } };
+    }),
+  );
 
 // =============== Settings - Nationalities & Professions ===============
 export const getSettingsNationalities = () =>
-  api.get("/settings/nationalities").catch((err) => {
-    console.warn("Nationalities route not available yet:", err);
-    return { data: { data: [] } };
-  });
+  fetchCachedSettings("settings:nationalities", () =>
+    api.get("/settings/nationalities").catch((err) => {
+      console.warn("Nationalities route not available yet:", err);
+      return { data: { data: [] } };
+    }),
+  );
 
 export const getSettingsProfessions = () =>
-  api.get("/settings/professions").catch((err) => {
-    console.warn("Professions route not available yet:", err);
-    return { data: { data: [] } };
-  });
+  fetchCachedSettings("settings:professions", () =>
+    api.get("/settings/professions").catch((err) => {
+      console.warn("Professions route not available yet:", err);
+      return { data: { data: [] } };
+    }),
+  );
 
 export const getSettingsArrivalDestinations = () =>
-  api.get("/settings/arrival-destinations").catch((err) => {
-    console.warn("Arrival destinations route not available yet:", err);
-    return { data: { data: [] } };
-  });
+  fetchCachedSettings("settings:arrival_destinations", () =>
+    api.get("/settings/arrival-destinations").catch((err) => {
+      console.warn("Arrival destinations route not available yet:", err);
+      return { data: { data: [] } };
+    }),
+  );
 
 export const updateSettingsNationalities = (data) =>
   api.post("/settings/nationalities", data);

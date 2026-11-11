@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./styles/global.css";
 import "./styles/auth.css";
 import "bootstrap/dist/css/bootstrap.min.css";
+import "./styles/ux.css";
 import App from "./App";
 import { showRequiredFields } from "./utils/swalHelper";
 
@@ -36,16 +37,61 @@ const getFieldLabel = (field) => {
 
 const blockInvalidFormSubmit = (event) => {
   const form = event.target?.closest?.("form") || event.target;
-  if (!(form instanceof HTMLFormElement) || form.checkValidity()) return;
+  if (!(form instanceof HTMLFormElement)) return;
+
+  const invalidControls = [...form.querySelectorAll("input, select, textarea")]
+    .filter((control) => !control.disabled && !control.checkValidity());
+  invalidControls.forEach(markControlValidity);
+  if (invalidControls.length === 0) return;
 
   event.preventDefault();
   event.stopPropagation();
-  const invalidFields = [...form.querySelectorAll(":invalid")].map(
-    getFieldLabel,
-  );
+  const invalidFields = invalidControls.map(getFieldLabel);
   showRequiredFields(invalidFields);
 };
 
+const markControlValidity = (control) => {
+  const valid = control.checkValidity();
+  const value = control.value?.trim?.() ?? control.value;
+  const status = valid ? (value ? "valid" : "") : "invalid";
+  control.dataset.uxValidation = status;
+  control.removeAttribute("aria-invalid");
+
+  const wrapper = control.closest(".input-group") || control;
+  let message = wrapper.parentElement?.querySelector(
+    `:scope > .ux-field-error[data-for="${CSS.escape(control.name || control.id || "")}"]`,
+  );
+  if (!valid) {
+    control.setAttribute("aria-invalid", "true");
+    if (!message) {
+      message = document.createElement("div");
+      message.className = "ux-field-error";
+      message.dataset.for = control.name || control.id || "";
+      message.setAttribute("role", "alert");
+      wrapper.insertAdjacentElement("afterend", message);
+    }
+    message.textContent = control.validity.valueMissing
+      ? "هذا الحقل مطلوب."
+      : control.validity.typeMismatch
+        ? "يرجى إدخال قيمة بصيغة صحيحة."
+        : "يرجى التحقق من القيمة المدخلة.";
+  } else {
+    message?.remove();
+  }
+};
+
+const validateControlOnBlur = (event) => {
+  const control = event.target;
+  if (
+    control instanceof HTMLInputElement ||
+    control instanceof HTMLSelectElement ||
+    control instanceof HTMLTextAreaElement
+  ) {
+    markControlValidity(control);
+  }
+};
+
+document.addEventListener("focusout", validateControlOnBlur, true);
 document.addEventListener("submit", blockInvalidFormSubmit, true);
 
 createRoot(document.getElementById("root")).render(

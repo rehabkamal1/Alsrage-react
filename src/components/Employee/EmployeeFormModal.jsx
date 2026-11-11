@@ -43,11 +43,27 @@ const PERMISSION_GROUPS = [
     ],
   },
   {
-    module: "أخرى",
+    module: "الموظفون",
     icon: "⚙️",
     permissions: [
-      { id: "view_reports", label: "التقارير" },
-      { id: "manage_employees", label: "الموظفين" },
+      { id: "manage_employees", label: "عرض صفحة الموظفين" },
+      { id: "create_employees", label: "إنشاء موظف" },
+      { id: "edit_employees", label: "تعديل موظف" },
+      { id: "delete_employees", label: "حذف موظف" },
+    ],
+  },
+  {
+    module: "أخرى",
+    icon: "📊",
+    permissions: [{ id: "view_reports", label: "التقارير" }],
+  },
+  {
+    module: "متابعة الطلبات",
+    icon: "📍",
+    permissions: [
+      { id: "create_tracking", label: "إنشاء متابعة" },
+      { id: "edit_tracking", label: "تعديل متابعة" },
+      { id: "delete_tracking", label: "حذف متابعة" },
     ],
   },
   {
@@ -418,8 +434,12 @@ const EmployeeFormModal = ({
             disabled={loading}
             className="px-4 rounded-3"
           >
-            {loading
-              ? "جاري الحفظ..."
+            {loading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" />
+                جاري الحفظ...
+              </>
+            )
               : isEdit
                 ? "💾 حفظ التغييرات"
                 : "➕ إضافة موظف"}

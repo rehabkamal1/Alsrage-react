@@ -68,7 +68,7 @@ const OrdersPage = ({
     is_paid_by_office: "",
   });
   const [submitError, setSubmitError] = useState(null);
-  const itemsPerPage = 8;
+  const [itemsPerPage, setItemsPerPage] = useState(8);
 
   const user = getUser();
   const isAdmin = user?.role === "admin";
@@ -80,6 +80,10 @@ const OrdersPage = ({
   useEffect(() => {
     fetchAllData();
   }, [debouncedSearch, filters, fromDate, toDate]);
+
+  useEffect(() => {
+    setTotalPages(Math.ceil(orders.length / itemsPerPage));
+  }, [orders, itemsPerPage]);
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -112,8 +116,8 @@ const OrdersPage = ({
       ] = await Promise.allSettled([
         fetchAllPages(getOrders, params),
         fetchAllPages(getClients, { sort_by: "name", sort_dir: "asc" }),
-        getSaudiOffices({ all: 1, per_page: 500 }),
-        getExternalOffices({ all: 1, per_page: 500 }),
+        getSaudiOffices({ all: 1, per_page: 100 }),
+        getExternalOffices({ all: 1, per_page: 100 }),
         fetchAllPages(getEmployees, {
           sort_by: "name",
           sort_dir: "asc",
@@ -352,7 +356,7 @@ const OrdersPage = ({
     }
   };
 
-  const handleSubmit = async (formData) => {
+  const handleSubmit = async (formData, idempotencyKey) => {
     setLoading(true);
     setSubmitError(null);
     try {
@@ -381,7 +385,7 @@ const OrdersPage = ({
         };
         handleWhatsAppNotification(updatedOrder, updatedOrder.status);
       } else {
-        const response = await createOrder(formData);
+        const response = await createOrder(formData, idempotencyKey);
         showSuccess("تمت الإضافة!", "تم إضافة الطلب بنجاح");
         if (newStatus) {
           const createdOrder = response.data?.data || {
@@ -401,6 +405,7 @@ const OrdersPage = ({
     } catch (error) {
       const errorData = error.response?.data;
       setSubmitError(errorData);
+      return { idempotencyConflict: error.response?.status === 409 };
     } finally {
       setLoading(false);
     }
@@ -424,15 +429,25 @@ const OrdersPage = ({
 
   const handleExport = () => {
     const columns = [
-      { header: "رقم الطلب", key: "id" },
+      { header: "#", key: "id" },
+      { header: "المكتب السعودي", format: (order) => order.saudi_office?.name || "-" },
+      {
+        header: "المندوب",
+        format: (order) => [order.client?.name, order.client?.phone].filter(Boolean).join(" - ") || "-",
+      },
+      { header: "الموظف", format: (order) => order.employee?.name || "-" },
       { header: "صاحب التأشيرة", key: "visa_holder_name" },
       { header: "هاتف صاحب التأشيرة", key: "visa_holder_phone" },
       { header: "رقم التأشيرة", key: "visa_number" },
       { header: "نوع الخدمة", key: "service_type" },
-      { header: "رقم الهوية", key: "id_number" },
       { header: "رقم عقد مساند", key: "musaned_contract_number" },
-      { header: "إجمالي السعر", key: "total_price" },
-      { header: "الرصيد المتبقي", key: "price_difference" },
+      {
+        header: "المرفقات",
+        format: (order) => order.attachments?.length ? `${order.attachments.length} مرفقات` : "-",
+      },
+      { header: "إجمالي السعر (ر.س)", key: "total_price" },
+      { header: "سداد مساند (ر.س)", key: "musaned_paid" },
+      { header: "الرصيد المتبقي (ر.س)", key: "price_difference" },
       {
         header: "السداد من المكتب",
         format: (order) => (order.is_paid_by_office ? "نعم" : "لا"),
@@ -453,8 +468,7 @@ const OrdersPage = ({
       },
       {
         header: "التاريخ",
-        format: (order) =>
-          new Date(order.created_at).toLocaleDateString("ar-SA"),
+        key: "created_at",
       },
     ];
     exportToExcel(orders, columns, "الطلبات.xlsx");
@@ -462,15 +476,25 @@ const OrdersPage = ({
 
   const handleExportPDF = () => {
     const columns = [
-      { header: "رقم الطلب", key: "id" },
+      { header: "#", key: "id" },
+      { header: "المكتب السعودي", format: (order) => order.saudi_office?.name || "-" },
+      {
+        header: "المندوب",
+        format: (order) => [order.client?.name, order.client?.phone].filter(Boolean).join(" - ") || "-",
+      },
+      { header: "الموظف", format: (order) => order.employee?.name || "-" },
       { header: "صاحب التأشيرة", key: "visa_holder_name" },
       { header: "هاتف صاحب التأشيرة", key: "visa_holder_phone" },
       { header: "رقم التأشيرة", key: "visa_number" },
       { header: "نوع الخدمة", key: "service_type" },
-      { header: "رقم الهوية", key: "id_number" },
       { header: "رقم عقد مساند", key: "musaned_contract_number" },
-      { header: "إجمالي السعر", key: "total_price" },
-      { header: "الرصيد المتبقي", key: "price_difference" },
+      {
+        header: "المرفقات",
+        format: (order) => order.attachments?.length ? `${order.attachments.length} مرفقات` : "-",
+      },
+      { header: "إجمالي السعر (ر.س)", key: "total_price" },
+      { header: "سداد مساند (ر.س)", key: "musaned_paid" },
+      { header: "الرصيد المتبقي (ر.س)", key: "price_difference" },
       {
         header: "السداد من المكتب",
         format: (order) => (order.is_paid_by_office ? "نعم" : "لا"),
@@ -491,8 +515,7 @@ const OrdersPage = ({
       },
       {
         header: "التاريخ",
-        format: (order) =>
-          new Date(order.created_at).toLocaleDateString("ar-SA"),
+        key: "created_at",
       },
     ];
     exportToPDF(orders, columns, "الطلبات.pdf");
@@ -626,13 +649,17 @@ const OrdersPage = ({
                   canDelete={hasPermission("delete_orders")}
                 />
 
-                {totalPages > 1 && (
-                  <PaginationComponent
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                )}
+                <PaginationComponent
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={orders.length}
+                  pageSize={itemsPerPage}
+                  onPageSizeChange={(size) => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1);
+                  }}
+                />
               </>
             )}
           </Card.Body>

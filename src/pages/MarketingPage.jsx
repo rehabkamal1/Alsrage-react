@@ -26,6 +26,7 @@ import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
+import { useDebounce } from "../hooks/useDebounce";
 
 const MarketingPage = () => {
   const [leads, setLeads] = useState([]);
@@ -42,6 +43,7 @@ const MarketingPage = () => {
   const [statuses, setStatuses] = useState([]);
   const [priorityLevels, setPriorityLevels] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 400);
   const [currentPage, setCurrentPage] = useState(1);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -52,7 +54,7 @@ const MarketingPage = () => {
   const [sortDirection, setSortDirection] = useState("desc");
   const [submitError, setSubmitError] = useState(null);
   const [addingOffice, setAddingOffice] = useState(false);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const types = [
     { value: "saudi_office", label: "مكتب سعودي" },
@@ -67,7 +69,7 @@ const MarketingPage = () => {
   useEffect(() => {
     fetchLeads();
   }, [
-    searchQuery,
+    debouncedSearch,
     filters,
     sortField,
     sortDirection,
@@ -102,7 +104,7 @@ const MarketingPage = () => {
     setLoading(true);
     try {
       const params = {
-        search: searchQuery,
+        search: debouncedSearch,
         type: filters.type,
         from_date: fromDate,
         to_date: toDate,
@@ -233,8 +235,9 @@ const MarketingPage = () => {
   };
 
   const handleExportExcel = () => {
-    const exportData = allLeads.length > 0 ? allLeads : leads;
+    const exportData = allLeads;
     const columns = [
+      { header: "#", key: "id" },
       { header: "اسم العميل", key: "name" },
       { header: "رقم الهاتف", key: "phone" },
       { header: "المصدر", key: "source_name" },
@@ -246,8 +249,9 @@ const MarketingPage = () => {
   };
 
   const handleExportPDF = () => {
-    const exportData = allLeads.length > 0 ? allLeads : leads;
+    const exportData = allLeads;
     const columns = [
+      { header: "#", key: "id" },
       { header: "اسم العميل", key: "name" },
       { header: "رقم الهاتف", key: "phone" },
       { header: "المصدر", key: "source_name" },
@@ -407,15 +411,17 @@ const MarketingPage = () => {
                     onDelete={handleDeleteLead}
                   />
                 </div>
-                {totalPages > 1 && (
-                  <div className="d-flex justify-content-center py-3">
-                    <PaginationComponent
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={setCurrentPage}
-                    />
-                  </div>
-                )}
+                <PaginationComponent
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={allLeads.length}
+                  pageSize={itemsPerPage}
+                  onPageSizeChange={(size) => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1);
+                  }}
+                />
               </>
             )}
           </Card.Body>

@@ -17,6 +17,7 @@ import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
+import { useDebounce } from "../hooks/useDebounce";
 
 const SaudiOfficesPage = ({ user }) => {
     const isAdmin = user?.role === "admin";
@@ -33,32 +34,33 @@ const SaudiOfficesPage = ({ user }) => {
     const [showModal, setShowModal] = useState(false);
     const [editingOffice, setEditingOffice] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const debouncedSearch = useDebounce(searchQuery, 400);
     const [currentPage, setCurrentPage] = useState(1);
     const [submitError, setSubmitError] = useState(null);
     const [activeTab, setActiveTab] = useState("offices");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
-    const itemsPerPage = 8;
+    const [itemsPerPage, setItemsPerPage] = useState(8);
 
     useEffect(() => {
         fetchOffices();
     }, [fromDate, toDate]);
 
     useEffect(() => {
-        if (searchQuery.trim()) {
+        if (debouncedSearch.trim()) {
             const filtered = offices.filter((office) => {
                 const nameMatch = office.name
                     ?.toLowerCase()
-                    .includes(searchQuery.toLowerCase());
+                    .includes(debouncedSearch.toLowerCase());
                 const employeeMatch = office.responsible_employee
                     ?.toLowerCase()
-                    .includes(searchQuery.toLowerCase());
+                    .includes(debouncedSearch.toLowerCase());
                 const destinationMatch = office.destination
                     ?.toLowerCase()
-                    .includes(searchQuery.toLowerCase());
+                    .includes(debouncedSearch.toLowerCase());
                 const cityMatch = office.city
                     ?.toLowerCase()
-                    .includes(searchQuery.toLowerCase());
+                    .includes(debouncedSearch.toLowerCase());
                 return (
                     nameMatch || employeeMatch || destinationMatch || cityMatch
                 );
@@ -68,7 +70,7 @@ const SaudiOfficesPage = ({ user }) => {
             setFilteredOffices(offices);
         }
         setCurrentPage(1);
-    }, [searchQuery, offices]);
+    }, [debouncedSearch, offices]);
 
     const fetchOffices = async () => {
         setInitialLoading(true);
@@ -159,30 +161,36 @@ const SaudiOfficesPage = ({ user }) => {
 
     const handleExport = () => {
         const columns = [
+            { header: "#", format: (_, index) => index + 1 },
             { header: "اسم المكتب", key: "name" },
             { header: "جهة الوصول", key: "destination" },
             { header: "المدينة", key: "city" },
             { header: "الموظف المسؤول", key: "responsible_employee" },
+            { header: "إجمالي التفويض", key: "total_authorization" },
+            { header: "السعر ع مساند", key: "musaned_price" },
             { header: "رقم الجوال", key: "mobile" },
-            { header: "رقم الهاتف", key: "phone" },
-            { header: "العنوان", key: "address" },
             { header: "ملاحظات", key: "notes" },
+            { header: "العنوان", key: "address" },
+            { header: "جروب الواتساب", key: "whatsapp_link" },
         ];
-        exportToExcel(filteredOffices, columns, "المكاتب_السعودية.xlsx");
+        exportToExcel(currentTabOffices, columns, "المكاتب_السعودية.xlsx");
     };
 
     const handleExportPDF = () => {
         const columns = [
+            { header: "#", format: (_, index) => index + 1 },
             { header: "اسم المكتب", key: "name" },
             { header: "جهة الوصول", key: "destination" },
             { header: "المدينة", key: "city" },
             { header: "الموظف المسؤول", key: "responsible_employee" },
+            { header: "إجمالي التفويض", key: "total_authorization" },
+            { header: "السعر ع مساند", key: "musaned_price" },
             { header: "رقم الجوال", key: "mobile" },
-            { header: "رقم الهاتف", key: "phone" },
-            { header: "العنوان", key: "address" },
             { header: "ملاحظات", key: "notes" },
+            { header: "العنوان", key: "address" },
+            { header: "جروب الواتساب", key: "whatsapp_link" },
         ];
-        exportToPDF(filteredOffices, columns, "المكاتب_السعودية.pdf");
+        exportToPDF(currentTabOffices, columns, "المكاتب_السعودية.pdf");
     };
 
     const currentTabOffices = filteredOffices.filter((o) =>
@@ -326,13 +334,17 @@ const SaudiOfficesPage = ({ user }) => {
                                     }
                                     rowNumberOffset={startIndex}
                                 />
-                                {totalPages > 1 && (
-                                    <PaginationComponent
-                                        currentPage={currentPage}
-                                        totalPages={totalPages}
-                                        onPageChange={setCurrentPage}
-                                    />
-                                )}
+                                <PaginationComponent
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={setCurrentPage}
+                                    totalItems={currentTabOffices.length}
+                                    pageSize={itemsPerPage}
+                                    onPageSizeChange={(size) => {
+                                        setItemsPerPage(size);
+                                        setCurrentPage(1);
+                                    }}
+                                />
                             </>
                         )}
                     </Card.Body>

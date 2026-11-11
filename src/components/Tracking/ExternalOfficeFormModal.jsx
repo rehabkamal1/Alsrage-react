@@ -193,7 +193,14 @@ const ExternalOfficeFormModal = ({ show, onHide, onSubmit, loading }) => {
             disabled={loading}
             className="px-4 rounded-3"
           >
-            {loading ? "جاري الحفظ..." : "➕ إضافة مكتب"}
+            {loading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" />
+                جاري الحفظ...
+              </>
+            ) : (
+              "➕ إضافة مكتب"
+            )}
           </Button>
         </Modal.Footer>
       </Form>

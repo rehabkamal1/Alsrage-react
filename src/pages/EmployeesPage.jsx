@@ -17,6 +17,7 @@ import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
 import { exportToExcel } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
+import { useDebounce } from "../hooks/useDebounce";
 
 const EmployeesPage = () => {
   const [employees, setEmployees] = useState([]);
@@ -25,6 +26,7 @@ const EmployeesPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 400);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [fromDate, setFromDate] = useState("");
@@ -34,11 +36,15 @@ const EmployeesPage = () => {
     sort_dir: "desc",
   });
   const [submitError, setSubmitError] = useState(null);
-  const itemsPerPage = 8;
+  const [itemsPerPage, setItemsPerPage] = useState(8);
 
   useEffect(() => {
     fetchEmployees();
-  }, [searchQuery, filters, fromDate, toDate]);
+  }, [debouncedSearch, filters, fromDate, toDate]);
+
+  useEffect(() => {
+    setTotalPages(Math.ceil(employees.length / itemsPerPage));
+  }, [employees, itemsPerPage]);
 
   const fetchEmployees = async () => {
     if (initialLoading) {
@@ -48,7 +54,7 @@ const EmployeesPage = () => {
     }
     try {
       const params = {
-        search: searchQuery || undefined,
+        search: debouncedSearch || undefined,
         sort_by: filters.sort_by,
         sort_dir: filters.sort_dir,
       };
@@ -151,24 +157,36 @@ const EmployeesPage = () => {
 
   const handleExport = () => {
     const columns = [
+      { header: "#", format: (_, index) => index + 1 },
       { header: "الاسم", key: "name" },
+      { header: "اسم المستخدم", key: "username" },
       { header: "رقم الجوال", key: "phone" },
       { header: "المنصب", key: "position" },
-      { header: "رقم الهوية", key: "id_number" },
-      { header: "البريد الإلكتروني", key: "email" },
-      { header: "العنوان", key: "address" },
+      {
+        header: "الصلاحيات",
+        format: (employee) =>
+          employee.permissions?.length
+            ? `${employee.permissions.length} صلاحيات`
+            : "-",
+      },
     ];
     exportToExcel(employees, columns, "الموظفين.xlsx");
   };
 
   const handleExportPDF = () => {
     const columns = [
+      { header: "#", format: (_, index) => index + 1 },
       { header: "الاسم", key: "name" },
+      { header: "اسم المستخدم", key: "username" },
       { header: "رقم الجوال", key: "phone" },
       { header: "المنصب", key: "position" },
-      { header: "رقم الهوية", key: "id_number" },
-      { header: "البريد الإلكتروني", key: "email" },
-      { header: "العنوان", key: "address" },
+      {
+        header: "الصلاحيات",
+        format: (employee) =>
+          employee.permissions?.length
+            ? `${employee.permissions.length} صلاحيات`
+            : "-",
+      },
     ];
     exportToPDF(employees, columns, "الموظفين.pdf");
   };
@@ -282,13 +300,17 @@ const EmployeesPage = () => {
                   onDelete={handleDeleteEmployee}
                   rowNumberOffset={(currentPage - 1) * itemsPerPage}
                 />
-                {totalPages > 1 && (
-                  <PaginationComponent
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                )}
+                <PaginationComponent
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={employees.length}
+                  pageSize={itemsPerPage}
+                  onPageSizeChange={(size) => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1);
+                  }}
+                />
               </>
             )}
           </Card.Body>
