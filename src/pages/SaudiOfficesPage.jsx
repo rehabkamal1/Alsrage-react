@@ -240,7 +240,10 @@ const SaudiOfficesPage = ({ user }) => {
             <Container fluid>
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                     <h1 className="h3 mb-0 fw-bold">المكاتب السعودية</h1>
-                    <div className="d-flex gap-2">
+                    <div
+                        className="d-flex flex-wrap gap-2 justify-content-md-end"
+                        style={{ width: "100%" }}
+                    >
                         <RefreshButton
                             onClick={fetchOffices}
                             loading={loading}
@@ -293,12 +296,13 @@ const SaudiOfficesPage = ({ user }) => {
                 />
 
                 <div
-                    className="d-flex bg-white rounded-3 p-1 mb-4 shadow-sm border"
-                    style={{ width: "fit-content" }}
+                    className="d-flex flex-wrap align-items-center gap-2 bg-white rounded-3 p-1 mb-4 shadow-sm border"
+                    style={{ width: "100%", maxWidth: "100%", overflowX: "auto" }}
                 >
                     <Button
                         variant={activeTab === "offices" ? "dark" : "white"}
-                        className={`rounded-3 border-0 px-4 py-2 fw-semibold ${activeTab !== "offices" ? "text-secondary" : ""}`}
+                        className={`rounded-3 border-0 px-3 px-md-4 py-2 fw-semibold ${activeTab !== "offices" ? "text-secondary" : ""}`}
+                        style={{ whiteSpace: "nowrap", flex: "0 0 auto" }}
                         onClick={() => {
                             setActiveTab("offices");
                             setCurrentPage(1);
@@ -308,7 +312,8 @@ const SaudiOfficesPage = ({ user }) => {
                     </Button>
                     <Button
                         variant={activeTab === "suppliers" ? "dark" : "white"}
-                        className={`rounded-3 border-0 px-4 py-2 fw-semibold ${activeTab !== "suppliers" ? "text-secondary" : ""}`}
+                        className={`rounded-3 border-0 px-3 px-md-4 py-2 fw-semibold ${activeTab !== "suppliers" ? "text-secondary" : ""}`}
+                        style={{ whiteSpace: "nowrap", flex: "0 0 auto" }}
                         onClick={() => {
                             setActiveTab("suppliers");
                             setCurrentPage(1);

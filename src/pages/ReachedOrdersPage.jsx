@@ -351,14 +351,20 @@ const ReachedOrdersPage = () => {
   return (
     <div className="page-container">
       <Container fluid>
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div>
+        <div
+          className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4"
+          style={{ minWidth: 0 }}
+        >
+          <div className="w-100" style={{ minWidth: 0 }}>
             <h1 className="h3 mb-1 fw-bold">📥 تم الوصول</h1>
             <p className="text-muted small mb-0">
               إجمالي الطلبات التي تم الوصول إليها: {totalOrders}
             </p>
           </div>
-          <div className="d-flex gap-2">
+          <div
+            className="d-flex flex-wrap gap-2 justify-content-md-end w-100 w-md-auto"
+            style={{ minWidth: 0, flex: "1 1 auto" }}
+          >
             <RefreshButton
               onClick={fetchOrders}
               loading={loading}
