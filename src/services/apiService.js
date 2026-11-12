@@ -227,52 +227,31 @@ export const getSettingsOrderProcessStatuses = () =>
   fetchCachedSettings("settings:order_process_statuses", () => api.get("/settings/order-process-statuses"));
 export const getSettingsServiceTypes = () =>
   fetchCachedSettings("settings:service_types", () =>
-    api.get("/settings/service-types").catch((err) => {
-      console.warn(
-        "Service types route not available on remote server yet:",
-        err,
-      );
-      return { data: { data: [] } };
-    }),
+    api.get("/settings/service-types"),
   );
 export const getSettingsAuthenticationStatuses = () =>
   fetchCachedSettings("settings:authentication_statuses", () =>
-    api.get("/settings/authentication-statuses").catch((err) => {
-      console.warn("Authentication statuses route not available yet:", err);
-      return { data: { data: [] } };
-    }),
+    api.get("/settings/authentication-statuses"),
   );
 export const getSettingsAuthorizationStatuses = () =>
   fetchCachedSettings("settings:authorization_statuses", () =>
-    api.get("/settings/authorization-statuses").catch((err) => {
-      console.warn("Authorization statuses route not available yet:", err);
-      return { data: { data: [] } };
-    }),
+    api.get("/settings/authorization-statuses"),
   );
 
 // =============== Settings - Nationalities & Professions ===============
 export const getSettingsNationalities = () =>
   fetchCachedSettings("settings:nationalities", () =>
-    api.get("/settings/nationalities").catch((err) => {
-      console.warn("Nationalities route not available yet:", err);
-      return { data: { data: [] } };
-    }),
+    api.get("/settings/nationalities"),
   );
 
 export const getSettingsProfessions = () =>
   fetchCachedSettings("settings:professions", () =>
-    api.get("/settings/professions").catch((err) => {
-      console.warn("Professions route not available yet:", err);
-      return { data: { data: [] } };
-    }),
+    api.get("/settings/professions"),
   );
 
 export const getSettingsArrivalDestinations = () =>
   fetchCachedSettings("settings:arrival_destinations", () =>
-    api.get("/settings/arrival-destinations").catch((err) => {
-      console.warn("Arrival destinations route not available yet:", err);
-      return { data: { data: [] } };
-    }),
+    api.get("/settings/arrival-destinations"),
   );
 
 export const updateSettingsNationalities = (data) =>

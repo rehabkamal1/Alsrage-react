@@ -1617,7 +1617,7 @@ const OrderFormModal = ({
                           placeholder={
                             orderStatusOptions.length
                               ? "اختر حالة الطلب..."
-                              : "أضيفي حالات الطلب من الإعدادات أولاً"
+                              : "أضيف حالات الطلب من الإعدادات أولاً"
                           }
                           isClearable
                           isDisabled={orderStatusOptions.length === 0}

@@ -116,7 +116,7 @@ const DashboardLayout = ({ user, onLogout }) => {
         );
       case "tracking":
         return hasPermission("view_orders") ? (
-          <TrackingPage />
+          <TrackingPage user={user} />
         ) : (
           renderAccessDenied()
         );

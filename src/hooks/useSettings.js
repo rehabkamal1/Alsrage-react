@@ -25,18 +25,31 @@ export const setCachedSettings = (key, value, ttl = DEFAULT_TTL) => {
 };
 
 export const invalidateSettingsCache = (key) => {
-  SETTINGS_CACHE.delete(key);
+  for (const cacheKey of Array.from(SETTINGS_CACHE.keys())) {
+    const isSettingsKey = cacheKey.startsWith("settings:") || cacheKey.startsWith("settings:v2:");
+    if (!key) {
+      if (isSettingsKey) {
+        SETTINGS_CACHE.delete(cacheKey);
+      }
+      continue;
+    }
+
+    if (isSettingsKey && cacheKey === key) {
+      SETTINGS_CACHE.delete(cacheKey);
+    }
+  }
 };
 
 export const fetchCachedSettings = async (key, requestFn, ttl = DEFAULT_TTL) => {
   const cachedValue = getCachedSettings(key);
-  if (cachedValue && cachedValue.length !== undefined) {
-    return cachedValue;
+  if (Array.isArray(cachedValue) && cachedValue.length > 0) {
+    return { data: { data: cachedValue } };
   }
 
   const response = await requestFn();
   const payload = response?.data?.data ?? response?.data ?? [];
-  return setCachedSettings(key, payload, ttl);
+  setCachedSettings(key, payload, ttl);
+  return response;
 };
 
 export const useSettings = (key, requestFn, ttl = DEFAULT_TTL) => {
