@@ -61,8 +61,15 @@ const SaudiOfficesPage = ({ user }) => {
                 const cityMatch = office.city
                     ?.toLowerCase()
                     .includes(debouncedSearch.toLowerCase());
+                const licenseMatch = office.license_number
+                    ?.toLowerCase()
+                    .includes(debouncedSearch.toLowerCase());
                 return (
-                    nameMatch || employeeMatch || destinationMatch || cityMatch
+                    nameMatch ||
+                    employeeMatch ||
+                    destinationMatch ||
+                    cityMatch ||
+                    licenseMatch
                 );
             });
             setFilteredOffices(filtered);
@@ -163,6 +170,7 @@ const SaudiOfficesPage = ({ user }) => {
         const columns = [
             { header: "#", format: (_, index) => index + 1 },
             { header: "اسم المكتب", key: "name" },
+            { header: "رقم الترخيص", key: "license_number" },
             { header: "جهة الوصول", key: "destination" },
             { header: "المدينة", key: "city" },
             { header: "الموظف المسؤول", key: "responsible_employee" },
@@ -180,6 +188,7 @@ const SaudiOfficesPage = ({ user }) => {
         const columns = [
             { header: "#", format: (_, index) => index + 1 },
             { header: "اسم المكتب", key: "name" },
+            { header: "رقم الترخيص", key: "license_number" },
             { header: "جهة الوصول", key: "destination" },
             { header: "المدينة", key: "city" },
             { header: "الموظف المسؤول", key: "responsible_employee" },

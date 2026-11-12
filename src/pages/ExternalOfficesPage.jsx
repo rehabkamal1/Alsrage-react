@@ -71,7 +71,10 @@ const ExternalOfficesPage = ({ user }) => {
                 const countryMatch = office.country
                     ?.toLowerCase()
                     .includes(debouncedSearch.toLowerCase());
-                return nameMatch || countryMatch;
+                const licenseMatch = office.license_number
+                    ?.toLowerCase()
+                    .includes(debouncedSearch.toLowerCase());
+                return nameMatch || countryMatch || licenseMatch;
             });
             setFilteredOffices(filtered);
         } else {
@@ -181,6 +184,7 @@ const ExternalOfficesPage = ({ user }) => {
             },
             { header: "الدولة", key: "country" },
             { header: "اسم المكتب", key: "name" },
+            { header: "رقم الترخيص", key: "license_number" },
             {
                 header: "اسم الموظف",
                 format: (office) =>
@@ -207,6 +211,7 @@ const ExternalOfficesPage = ({ user }) => {
             },
             { header: "الدولة", key: "country" },
             { header: "اسم المكتب", key: "name" },
+            { header: "رقم الترخيص", key: "license_number" },
             {
                 header: "اسم الموظف",
                 format: (office) =>

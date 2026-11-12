@@ -8,6 +8,7 @@ const MarketingAddOfficeModal = ({
   type,
   loading,
   initialData,
+  error,
 }) => {
   const [formData, setFormData] = useState({});
   const [validated, setValidated] = useState(false);
@@ -19,6 +20,7 @@ const MarketingAddOfficeModal = ({
     } else if (type === "saudi") {
       setFormData({
         name: "",
+        license_number: "",
         destination: "",
         city: "",
         responsible_employee: "",
@@ -32,6 +34,7 @@ const MarketingAddOfficeModal = ({
     } else if (type === "external") {
       setFormData({
         name: "",
+        license_number: "",
         country: "",
         nationality: "",
         responsible_employee: "",
@@ -52,6 +55,12 @@ const MarketingAddOfficeModal = ({
     setValidated(false);
     setFieldErrors({});
   }, [initialData, show, type]);
+
+  useEffect(() => {
+    if (error?.errors) {
+      setFieldErrors(error.errors);
+    }
+  }, [error]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -205,6 +214,28 @@ const MarketingAddOfficeModal = ({
       </Row>
 
       <Row>
+        <Col md={12}>
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary">
+              رقم الترخيص <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Control
+              type="text"
+              name="license_number"
+              value={formData.license_number || ""}
+              onChange={handleChange}
+              required
+              isInvalid={!!getFieldError("license_number")}
+              className="rounded-3"
+            />
+            <Form.Control.Feedback type="invalid">
+              {getFieldError("license_number") || "يرجى إدخال رقم الترخيص"}
+            </Form.Control.Feedback>
+          </Form.Group>
+        </Col>
+      </Row>
+
+      <Row>
         <Col md={6}>
           <Form.Group className="mb-3">
             <Form.Label className="fw-semibold small text-secondary">
@@ -301,6 +332,28 @@ const MarketingAddOfficeModal = ({
             />
             <Form.Control.Feedback type="invalid">
               {getFieldError("name") || "يرجى إدخال اسم المكتب"}
+            </Form.Control.Feedback>
+          </Form.Group>
+        </Col>
+      </Row>
+
+      <Row>
+        <Col md={12}>
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary">
+              رقم الترخيص <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Control
+              type="text"
+              name="license_number"
+              value={formData.license_number || ""}
+              onChange={handleChange}
+              required
+              isInvalid={!!getFieldError("license_number")}
+              className="rounded-3"
+            />
+            <Form.Control.Feedback type="invalid">
+              {getFieldError("license_number") || "يرجى إدخال رقم الترخيص"}
             </Form.Control.Feedback>
           </Form.Group>
         </Col>

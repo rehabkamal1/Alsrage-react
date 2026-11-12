@@ -273,12 +273,14 @@ const OrderFormModal = ({
 
   const [showQuickSaudiOffice, setShowQuickSaudiOffice] = useState(false);
   const [newSaudiOfficeName, setNewSaudiOfficeName] = useState("");
+  const [newSaudiOfficeLicense, setNewSaudiOfficeLicense] = useState("");
   const [newSaudiOfficeCity, setNewSaudiOfficeCity] = useState("");
   const [newSaudiOfficePhone, setNewSaudiOfficePhone] = useState("");
   const [quickSaudiOfficeLoading, setQuickSaudiOfficeLoading] = useState(false);
 
   const [showQuickExternalOffice, setShowQuickExternalOffice] = useState(false);
   const [newExternalOfficeName, setNewExternalOfficeName] = useState("");
+  const [newExternalOfficeLicense, setNewExternalOfficeLicense] = useState("");
   const [newExternalOfficeCountry, setNewExternalOfficeCountry] = useState("");
   const [newExternalOfficePhone, setNewExternalOfficePhone] = useState("");
   const [quickExternalOfficeLoading, setQuickExternalOfficeLoading] =
@@ -522,10 +524,15 @@ const OrderFormModal = ({
       showError("خطأ", "يرجى إدخال اسم المكتب السعودي");
       return;
     }
+    if (!newSaudiOfficeLicense.trim()) {
+      showError("خطأ", "يرجى إدخال رقم ترخيص المكتب السعودي");
+      return;
+    }
     setQuickSaudiOfficeLoading(true);
     try {
       const res = await createSaudiOffice({
         name: newSaudiOfficeName.trim(),
+        license_number: newSaudiOfficeLicense.trim(),
         city: newSaudiOfficeCity.trim(),
         phone: newSaudiOfficePhone.trim(),
       });
@@ -547,10 +554,12 @@ const OrderFormModal = ({
       );
       setShowQuickSaudiOffice(false);
       setNewSaudiOfficeName("");
+      setNewSaudiOfficeLicense("");
       setNewSaudiOfficeCity("");
       setNewSaudiOfficePhone("");
     } catch (err) {
       const errorMsg =
+        err.response?.data?.errors?.license_number?.[0] ||
         err.response?.data?.message || "حدث خطأ أثناء إضافة المكتب السعودي";
       showError("خطأ", errorMsg);
     } finally {
@@ -563,10 +572,15 @@ const OrderFormModal = ({
       showError("خطأ", "يرجى إدخال اسم المكتب الخارجي");
       return;
     }
+    if (!newExternalOfficeLicense.trim()) {
+      showError("خطأ", "يرجى إدخال رقم ترخيص المكتب الخارجي");
+      return;
+    }
     setQuickExternalOfficeLoading(true);
     try {
       const res = await createExternalOffice({
         name: newExternalOfficeName.trim(),
+        license_number: newExternalOfficeLicense.trim(),
         country: newExternalOfficeCountry.trim(),
         phone: newExternalOfficePhone.trim() || "0",
       });
@@ -588,10 +602,12 @@ const OrderFormModal = ({
       );
       setShowQuickExternalOffice(false);
       setNewExternalOfficeName("");
+      setNewExternalOfficeLicense("");
       setNewExternalOfficeCountry("");
       setNewExternalOfficePhone("");
     } catch (err) {
       const errorMsg =
+        err.response?.data?.errors?.license_number?.[0] ||
         err.response?.data?.message || "حدث خطأ أثناء إضافة المكتب الخارجي";
       showError("خطأ", errorMsg);
     } finally {
@@ -2084,6 +2100,19 @@ const OrderFormModal = ({
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label className="fw-semibold small text-secondary">
+              رقم الترخيص <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Control
+              type="text"
+              value={newSaudiOfficeLicense}
+              onChange={(e) => setNewSaudiOfficeLicense(e.target.value)}
+              placeholder="أدخل رقم الترخيص"
+              required
+              className="rounded-3"
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary">
               المدينة
             </Form.Label>
             <Form.Control
@@ -2148,6 +2177,19 @@ const OrderFormModal = ({
               value={newExternalOfficeName}
               onChange={(e) => setNewExternalOfficeName(e.target.value)}
               placeholder="أدخل اسم المكتب الخارجي"
+              className="rounded-3"
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label className="fw-semibold small text-secondary">
+              رقم الترخيص <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Control
+              type="text"
+              value={newExternalOfficeLicense}
+              onChange={(e) => setNewExternalOfficeLicense(e.target.value)}
+              placeholder="أدخل رقم الترخيص"
+              required
               className="rounded-3"
             />
           </Form.Group>

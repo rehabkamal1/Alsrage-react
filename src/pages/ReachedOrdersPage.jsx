@@ -22,7 +22,7 @@ import OrderTable from "../components/Order/OrderTable";
 import OrderSearchBar from "../components/Order/OrderSearchBar";
 import TableSkeleton from "../components/common/TableSkeleton";
 import PaginationComponent from "../components/common/Pagination";
-import { exportToExcel } from "../utils/excelHelper";
+import { exportToExcel, normalizePhoneValue } from "../utils/excelHelper";
 import { exportToPDF } from "../utils/pdfHelper";
 import { showWhatsAppNotificationModal } from "../utils/whatsappHelper";
 import { useDebounce } from "../hooks/useDebounce";
@@ -260,7 +260,14 @@ const ReachedOrdersPage = () => {
       { header: "المكتب السعودي", format: (order) => order.saudi_office?.name || "-" },
       {
         header: "المندوب",
-        format: (order) => [order.client?.name, order.client?.phone].filter(Boolean).join(" - ") || "-",
+        width: 30,
+        wrapText: false,
+        format: (order) => {
+          const phone = normalizePhoneValue(order.client?.phone);
+          return [order.client?.name, phone !== "-" ? phone : null]
+            .filter(Boolean)
+            .join(" - ") || "-";
+        },
       },
       { header: "الموظف", format: (order) => order.employee?.name || "-" },
       { header: "صاحب التأشيرة", key: "visa_holder_name" },

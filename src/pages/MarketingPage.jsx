@@ -53,6 +53,7 @@ const MarketingPage = () => {
   const [sortField, setSortField] = useState("id");
   const [sortDirection, setSortDirection] = useState("desc");
   const [submitError, setSubmitError] = useState(null);
+  const [addOfficeError, setAddOfficeError] = useState(null);
   const [addingOffice, setAddingOffice] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -210,6 +211,7 @@ const MarketingPage = () => {
 
   const handleAddOffice = async (formData) => {
     setAddingOffice(true);
+    setAddOfficeError(null);
     try {
       if (addOfficeType === "saudi") {
         await createMarketingSaudiOffice(formData);
@@ -225,9 +227,12 @@ const MarketingPage = () => {
       setAddOfficeType(null);
       await fetchAllData();
     } catch (error) {
+      setAddOfficeError(error.response?.data);
       showError(
         "خطأ",
-        error.response?.data?.message || "حدث خطأ أثناء الإضافة",
+        error.response?.data?.errors?.license_number?.[0] ||
+          error.response?.data?.message ||
+          "حدث خطأ أثناء الإضافة",
       );
     } finally {
       setAddingOffice(false);
@@ -452,10 +457,12 @@ const MarketingPage = () => {
         onHide={() => {
           setShowAddOfficeModal(false);
           setAddOfficeType(null);
+          setAddOfficeError(null);
         }}
         onSubmit={handleAddOffice}
         type={addOfficeType}
         loading={addingOffice}
+        error={addOfficeError}
       />
     </div>
   );

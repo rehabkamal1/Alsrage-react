@@ -1,6 +1,7 @@
 export const defaultColumns = [
     { id: "index", label: "#", width: "50px" },
     { id: "name", label: "اسم المكتب", width: "150px" },
+    { id: "license_number", label: "رقم الترخيص", width: "130px" },
     { id: "destination", label: "جهة الوصول", width: "120px" },
     { id: "city", label: "المدينة", width: "100px" },
     { id: "responsible_employee", label: "الموظف المسؤول", width: "130px" },

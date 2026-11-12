@@ -14,6 +14,7 @@ const ExternalOfficeFormModal = ({
 }) => {
   const [formData, setFormData] = useState({
     name: "",
+    license_number: "",
     country: "",
     contacts: [{ name: "", phone: "", commission: "" }],
     phone: "",
@@ -60,6 +61,7 @@ const ExternalOfficeFormModal = ({
     if (initialData) {
       setFormData({
         name: initialData.name || "",
+        license_number: initialData.license_number || "",
         country: initialData.country || "",
         contacts:
           initialData.contacts && initialData.contacts.length > 0
@@ -72,6 +74,7 @@ const ExternalOfficeFormModal = ({
     } else {
       setFormData({
         name: "",
+        license_number: "",
         country: "",
         contacts: [{ name: "", phone: "", commission: "" }],
         phone: "",
@@ -221,6 +224,28 @@ const ExternalOfficeFormModal = ({
                 />
                 <Form.Control.Feedback type="invalid">
                   {getFieldError("name") || "يرجى إدخال اسم المكتب"}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label className="fw-semibold small text-secondary">
+                  رقم الترخيص <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="license_number"
+                  value={formData.license_number}
+                  onChange={handleChange}
+                  required
+                  isInvalid={!!getFieldError("license_number")}
+                  className="rounded-3"
+                />
+                <Form.Control.Feedback type="invalid">
+                  {getFieldError("license_number") || "يرجى إدخال رقم الترخيص"}
                 </Form.Control.Feedback>
               </Form.Group>
             </Col>

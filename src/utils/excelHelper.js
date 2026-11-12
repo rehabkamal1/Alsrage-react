@@ -9,6 +9,29 @@ const isCurrencyColumn = (column) =>
     `${column.key || ""} ${column.header || ""}`,
   );
 
+const DIRECTIONAL_MARKS = /[\u00ad\u061c\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/g;
+
+export const isPhoneColumn = (column) =>
+  /phone|mobile|telephone|tel|cell|جوال|هاتف|موبايل/i.test(
+    `${column.key || ""} ${column.header || ""}`,
+  );
+
+export const normalizePhoneValue = (value) => {
+  const normalized = String(value ?? "")
+    .normalize("NFKC")
+    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, "")
+    .replace(DIRECTIONAL_MARKS, "")
+    .trim();
+  const phone = normalized.replace(/[^\d+]/g, "");
+  if (!phone) return "-";
+
+  return phone.startsWith("+")
+    ? `+${phone.slice(1).replace(/\+/g, "")}`
+    : phone.replace(/\+/g, "");
+};
+
 const downloadWorkbook = async (workbook, filename) => {
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
@@ -51,12 +74,13 @@ export const exportToExcel = (
       return {
         header: column.header || column.label || "",
         key: column.key || column.header,
-        width: Math.max(10, Math.min(width, 48)),
+        width: Math.max(isPhoneColumn(column) ? 20 : 10, Math.min(width, 48)),
         style: {
+          numFmt: isPhoneColumn(column) ? "@" : undefined,
           alignment: {
             horizontal: "center",
             vertical: "middle",
-            wrapText: true,
+            wrapText: column.wrapText ?? !isPhoneColumn(column),
           },
         },
       };
@@ -64,14 +88,25 @@ export const exportToExcel = (
 
     exportData.forEach((item, rowIndex) => {
       const row = worksheet.addRow(
-        columns.map((column) => getExportCellValue(item, column, rowIndex)),
+        columns.map((column) => {
+          const value = getExportCellValue(item, column, rowIndex);
+          if (isPhoneColumn(column)) {
+            return normalizePhoneValue(value);
+          }
+          return typeof value === "string"
+            ? value.replace(DIRECTIONAL_MARKS, "")
+            : value;
+        }),
       );
       row.eachCell((cell, columnIndex) => {
         const column = columns[columnIndex - 1];
+        if (isPhoneColumn(column)) {
+          cell.numFmt = "@";
+        }
         cell.alignment = {
           horizontal: "center",
           vertical: "middle",
-          wrapText: true,
+          wrapText: column.wrapText ?? !isPhoneColumn(column),
         };
         cell.border = {
           top: { style: "thin", color: { argb: "FFD7DEE8" } },

@@ -24,6 +24,9 @@ const ExternalOfficeTable = ({
             case "name":
                 return <td className="fw-semibold text-dark">{office.name}</td>;
 
+            case "license_number":
+                return <td>{office.license_number || "-"}</td>;
+
             case "contacts":
                 return (
                     <td>

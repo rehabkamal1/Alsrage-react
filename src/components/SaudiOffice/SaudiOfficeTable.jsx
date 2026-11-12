@@ -23,6 +23,9 @@ const SaudiOfficeTable = ({
             case "name":
                 return <td className="fw-semibold">{office.name}</td>;
 
+            case "license_number":
+                return <td>{office.license_number || "-"}</td>;
+
             case "destination":
                 return <td>{office.destination || "-"}</td>;
 
