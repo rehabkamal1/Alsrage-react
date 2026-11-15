@@ -16,6 +16,11 @@ const SettingsCard = ({
   showNationality = false,
   nationalityOptions = [],
 }) => {
+  const hasNewItems = items.some((item) => item.isNew);
+  const hasValidNewItem = items.some(
+    (item) => item.isNew && item.label?.trim(),
+  );
+
   const handleDelete = async (id, isNew, idx, label) => {
     const result = await showConfirm(
       "هل أنت متأكد؟",
@@ -158,15 +163,17 @@ const SettingsCard = ({
             ))
           )}
         </div>
-        <Button
-          variant="dark"
-          onClick={onSave}
-          disabled={saving}
-          className="w-100 mt-3"
-          size="sm"
-        >
-          {saving ? "جاري الحفظ..." : "حفظ"}
-        </Button>
+        {hasNewItems && (
+          <Button
+            variant="dark"
+            onClick={onSave}
+            disabled={saving || !hasValidNewItem}
+            className="w-100 mt-3"
+            size="sm"
+          >
+            {saving ? "جاري الحفظ..." : "حفظ"}
+          </Button>
+        )}
       </Card.Body>
     </Card>
   );

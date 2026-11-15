@@ -206,8 +206,16 @@ const SettingsPage = () => {
     apiUrl,
     dataKey,
     successMessage,
-    includeTargetDays = true,
+    includeTargetDays = false,
   ) => {
+    const hasValidNewItem = items.some(
+      (item) => item.isNew && item.label?.trim(),
+    );
+    if (!hasValidNewItem) {
+      showError("تنبيه", "أدخل اسم العنصر الجديد قبل الحفظ");
+      return;
+    }
+
     setSaving(true);
     try {
       const dataToSend = items
@@ -394,15 +402,14 @@ const SettingsPage = () => {
 
         <SectionTitle
           title="حالات الطلب وسداد مساند"
-          subtitle="إدارة كل حالة بشكل مستقل، مع المدد المستهدفة لمراحل سداد مساند"
+          subtitle="إدارة حالات سداد مساند"
           icon="🔄"
         />
         <Row className="g-4">
           <Col xs={12} lg={6}>
             <SettingsCard
-              title="حالات سداد مساند (المراحل المستهدفة بالأيام)"
+              title="حالات سداد مساند"
               items={orderStatuses}
-              showTargetDays={true}
               onAdd={() => addItem(setOrderStatuses)}
               onUpdate={(idx, field, val) =>
                 updateItem(setOrderStatuses, idx, field, val)
@@ -422,7 +429,7 @@ const SettingsPage = () => {
                   orderStatuses,
                   "/settings/order-statuses",
                   "statuses",
-                  "تم حفظ حالات سداد مساند والمدد المستهدفة بنجاح",
+                  "تم حفظ حالات سداد مساند بنجاح",
                 )
               }
               saving={saving}
@@ -658,8 +665,9 @@ const SettingsPage = () => {
           </Col>
           <Col xs={12} lg={4}>
             <SettingsCard
-              title="حالات التوثيق"
+              title="حالات التوثيق "
               items={authenticationStatuses}
+              showTargetDays
               onAdd={() => addItem(setAuthenticationStatuses)}
               onUpdate={(idx, field, val) =>
                 updateItem(setAuthenticationStatuses, idx, field, val)
@@ -680,6 +688,7 @@ const SettingsPage = () => {
                   "/settings/authentication-statuses",
                   "statuses",
                   "تم حفظ حالات التوثيق بنجاح",
+                  true,
                 )
               }
               saving={saving}

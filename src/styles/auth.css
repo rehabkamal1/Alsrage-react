@@ -28,6 +28,13 @@ body {
   padding: 24px 16px;
 }
 
+.auth-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 900px;
+}
+
 /* ── Card ── */
 .auth-split-card {
   display: flex;
@@ -362,6 +369,11 @@ body {
 
 /* ── Responsive ── */
 @media (max-width: 720px) {
+  .auth-page {
+    align-items: flex-start;
+    padding: 16px 12px;
+  }
+
   .auth-split-card {
     flex-direction: column;
     border-radius: 28px;

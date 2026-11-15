@@ -1,7 +1,7 @@
 const AuthLayout = ({ children }) => {
   return (
     <div className="auth-page">
-      {children}
+      <main className="auth-content">{children}</main>
     </div>
   );
 };
