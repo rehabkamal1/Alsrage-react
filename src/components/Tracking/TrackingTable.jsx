@@ -16,6 +16,7 @@ const TrackingTable = ({
   authenticationStatuses = [],
   authorizationStatuses = [],
   onWhatsAppUpdate,
+  rowNumberOffset = 0,
 }) => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -478,6 +479,7 @@ const TrackingTable = ({
         storageKey="tracking_columns_order"
         renderCell={renderCell}
         getRowProps={getRowProps}
+        rowNumberOffset={rowNumberOffset}
         emptyMessage="لا توجد متابعات"
         tableClassName="text-center tracking-table"
       />

@@ -769,6 +769,7 @@ const OrderFollowUpReport = () => {
                 columns={tableColumns}
                 storageKey="order_follow_up_report_columns"
                 renderCell={renderCell}
+                rowNumberOffset={(currentPage - 1) * itemsPerPage}
                 sortConfig={sortConfig}
                 onRequestSort={requestSort}
                 emptyMessage="لا توجد طلبات تطابق الفلاتر المحددة."

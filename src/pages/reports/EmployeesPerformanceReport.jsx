@@ -599,6 +599,7 @@ const EmployeesPerformanceReport = () => {
                 columns={tableColumns}
                 storageKey="employees_performance_report_columns"
                 renderCell={renderCell}
+                rowNumberOffset={(currentPage - 1) * itemsPerPage}
                 sortConfig={sortConfig}
                 onRequestSort={requestSort}
                 emptyMessage="لا توجد بيانات موظفين مطابقة للفلاتر المحددة"
@@ -734,7 +735,7 @@ const EmployeesPerformanceReport = () => {
                       <tbody>
                         {sortedModalOrders.map((order, i) => (
                           <tr key={order.id || i}>
-                            <td className="fw-bold">#{order.id}</td>
+                            <td className="fw-bold">#{i + 1}</td>
                             <td className="fw-semibold text-dark">
                               {order.client_name}
                             </td>

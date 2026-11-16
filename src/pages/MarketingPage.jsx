@@ -50,8 +50,8 @@ const MarketingPage = () => {
   const [filters, setFilters] = useState({
     type: "",
   });
-  const [sortField, setSortField] = useState("id");
-  const [sortDirection, setSortDirection] = useState("desc");
+  const [sortField, setSortField] = useState("");
+  const [sortDirection, setSortDirection] = useState("asc");
   const [submitError, setSubmitError] = useState(null);
   const [addOfficeError, setAddOfficeError] = useState(null);
   const [addingOffice, setAddingOffice] = useState(false);
@@ -109,8 +109,9 @@ const MarketingPage = () => {
         type: filters.type,
         from_date: fromDate,
         to_date: toDate,
-        sort_field: sortField,
-        sort_direction: sortDirection,
+        ...(sortField
+          ? { sort_field: sortField, sort_direction: sortDirection }
+          : {}),
       };
       const leadsData = await fetchAllPages(getMarketingLeads, params);
       setAllLeads(leadsData);
@@ -412,6 +413,7 @@ const MarketingPage = () => {
                 <div className="table-responsive">
                   <MarketingTable
                     leads={currentData}
+                    rowNumberOffset={startIndex}
                     onEdit={handleEditLead}
                     onDelete={handleDeleteLead}
                   />

@@ -3,7 +3,7 @@ import { Button } from "react-bootstrap";
 import SortableTable from "../common/SortableTable";
 import { defaultColumns } from "../../constants/marketingColumns";
 
-const MarketingTable = ({ leads, onEdit, onDelete }) => {
+const MarketingTable = ({ leads, onEdit, onDelete, rowNumberOffset = 0 }) => {
     const formatDate = (dateString) => {
         if (!dateString) return "-";
         const date = new Date(dateString);
@@ -115,6 +115,7 @@ const MarketingTable = ({ leads, onEdit, onDelete }) => {
             columns={defaultColumns}
             storageKey="marketing_columns_order"
             renderCell={renderCell}
+            rowNumberOffset={rowNumberOffset}
             emptyMessage="لا توجد بيانات تسويقية"
             tableClassName="text-center"
         />

@@ -208,12 +208,13 @@ const SettingsPage = () => {
     successMessage,
     includeTargetDays = false,
   ) => {
+    const hasNewItems = items.some((item) => item.isNew);
     const hasValidNewItem = items.some(
       (item) => item.isNew && item.label?.trim(),
     );
-    if (!hasValidNewItem) {
+    if (hasNewItems && !hasValidNewItem) {
       showError("تنبيه", "أدخل اسم العنصر الجديد قبل الحفظ");
-      return;
+      return false;
     }
 
     setSaving(true);
@@ -227,9 +228,10 @@ const SettingsPage = () => {
           sort_order: item.sort_order || 0,
           ...(includeTargetDays
             ? {
-                target_days: item.target_days
-                  ? parseInt(item.target_days, 10)
-                  : 60,
+                target_days:
+                  item.target_days !== "" && item.target_days != null
+                    ? parseInt(item.target_days, 10)
+                    : 60,
               }
             : {}),
           is_active: item.is_active !== undefined ? item.is_active : true,
@@ -241,11 +243,13 @@ const SettingsPage = () => {
       await api.post(apiUrl, { [dataKey]: dataToSend });
       showSuccess("تم", successMessage);
       await fetchSettings();
+      return true;
     } catch (error) {
       showError(
         "خطأ",
         error.response?.data?.message || "حدث خطأ أثناء حفظ الإعدادات",
       );
+      return false;
     } finally {
       setSaving(false);
     }

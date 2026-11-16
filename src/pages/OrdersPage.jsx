@@ -63,7 +63,7 @@ const OrdersPage = ({
     order_status: "",
     service_type: "",
     nationality: "",
-    sort_by: "id",
+    sort_by: "",
     sort_dir: "desc",
     is_paid_by_office: "",
   });
@@ -93,8 +93,9 @@ const OrdersPage = ({
         status: filters.status || undefined,
         order_status: filters.order_status || undefined,
         service_type: filters.service_type || undefined,
-        sort_by: filters.sort_by,
-        sort_dir: filters.sort_dir,
+        ...(filters.sort_by
+          ? { sort_by: filters.sort_by, sort_dir: filters.sort_dir }
+          : {}),
         is_paid_by_office: filters.is_paid_by_office || undefined,
         nationality: filters.nationality || undefined,
         tracking_status: trackingStatus || undefined,
@@ -263,7 +264,7 @@ const OrdersPage = ({
       order_status: "",
       service_type: "",
       nationality: "",
-      sort_by: "id",
+      sort_by: "",
       sort_dir: "desc",
       is_paid_by_office: "",
     });
@@ -643,6 +644,7 @@ const OrdersPage = ({
               <>
                 <OrderTable
                   orders={displayedOrders}
+                  rowNumberOffset={startIndex}
                   onEdit={handleEditOrder}
                   onDelete={handleDeleteOrder}
                   onStatusChange={handleStatusChange}

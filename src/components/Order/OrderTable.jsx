@@ -16,6 +16,7 @@ const OrderTable = ({
   serviceTypeOptions = [],
   canEdit = true,
   canDelete = true,
+  rowNumberOffset = 0,
 }) => {
   const getStatusColor = (value, options) => {
     const found = options.find((s) => String(s.key || s.id) === String(value));
@@ -409,6 +410,7 @@ const OrderTable = ({
         storageKey="order_columns_order"
         renderCell={renderCell}
         getRowProps={getRowProps}
+        rowNumberOffset={rowNumberOffset}
         emptyMessage="لا يوجد طلبات"
         tableClassName="text-center order-table"
       />

@@ -547,7 +547,15 @@ const TrackingFormModal = ({
                     onChange={(opt) =>
                       handleSelectChange("priority_level", opt)
                     }
-                    placeholder="-- اختر --"
+                    placeholder={
+                      priorityOptions.length
+                        ? "-- اختر --"
+                        : "أضف درجات الأهمية من الإعدادات أولاً"
+                    }
+                    noOptionsMessage={() =>
+                      "أضف درجة الأهمية من الإعدادات أولاً"
+                    }
+                    isDisabled={priorityOptions.length === 0}
                     isClearable
                     isRtl
                   />
@@ -575,7 +583,15 @@ const TrackingFormModal = ({
                     onChange={(opt) =>
                       handleSelectChange("transfer_status", opt)
                     }
-                    placeholder="-- اختر --"
+                    placeholder={
+                      transferOptions.length
+                        ? "-- اختر --"
+                        : "أضف حالات التحويل من الإعدادات أولاً"
+                    }
+                    noOptionsMessage={() =>
+                      "أضف حالة التحويل من الإعدادات أولاً"
+                    }
+                    isDisabled={transferOptions.length === 0}
                     isClearable
                     isRtl
                   />
@@ -600,7 +616,15 @@ const TrackingFormModal = ({
                     onChange={(opt) =>
                       handleSelectChange("passport_status", opt)
                     }
-                    placeholder="-- اختر --"
+                    placeholder={
+                      passportOptions.length
+                        ? "-- اختر --"
+                        : "أضف حالات ترشيح الجواز من الإعدادات أولاً"
+                    }
+                    noOptionsMessage={() =>
+                      "أضف حالة ترشيح الجواز من الإعدادات أولاً"
+                    }
+                    isDisabled={passportOptions.length === 0}
                     isClearable
                     isRtl
                   />
@@ -643,7 +667,15 @@ const TrackingFormModal = ({
                         authentication_status: opt ? opt.value : "",
                       }))
                     }
-                    placeholder="-- اختر حالة التوثيق --"
+                    placeholder={
+                      authenticationStatuses?.length
+                        ? "-- اختر حالة التوثيق --"
+                        : "أضف حالات التوثيق من الإعدادات أولاً"
+                    }
+                    noOptionsMessage={() =>
+                      "أضف حالة التوثيق من الإعدادات أولاً"
+                    }
+                    isDisabled={!authenticationStatuses?.length}
                     isClearable
                     isRtl
                   />
@@ -678,7 +710,15 @@ const TrackingFormModal = ({
                         authorization_status: opt ? opt.value : "",
                       }))
                     }
-                    placeholder="-- اختر حالة التفويض --"
+                    placeholder={
+                      authorizationStatuses?.length
+                        ? "-- اختر حالة التفويض --"
+                        : "أضف حالات التفويض من الإعدادات أولاً"
+                    }
+                    noOptionsMessage={() =>
+                      "أضف حالة التفويض من الإعدادات أولاً"
+                    }
+                    isDisabled={!authorizationStatuses?.length}
                     isClearable
                     isRtl
                   />

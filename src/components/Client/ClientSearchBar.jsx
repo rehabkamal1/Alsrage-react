@@ -77,20 +77,20 @@ const ClientSearchBar = ({
         <div className="flex-grow-1" style={{ minWidth: "160px" }}>
           <Select
             options={[
+              { value: "", label: "ترتيب الصفحة" },
               { value: "created_at", label: "ترتيب حسب تاريخ الإضافة" },
               { value: "name", label: "ترتيب حسب المندوب" },
               { value: "phone", label: "ترتيب حسب هاتف المندوب" },
             ]}
-            value={{
-              value: filters.sort_by,
-              label:
-                filters.sort_by === "created_at"
-                  ? "ترتيب حسب تاريخ الإضافة"
-                  : filters.sort_by === "name"
-                  ? "ترتيب حسب المندوب"
-                  : "ترتيب حسب هاتف المندوب",
-            }}
-            onChange={(opt) => onFilterChange("sort_by", opt ? opt.value : "created_at")}
+            value={
+              [
+                { value: "", label: "ترتيب الصفحة" },
+                { value: "created_at", label: "ترتيب حسب تاريخ الإضافة" },
+                { value: "name", label: "ترتيب حسب المندوب" },
+                { value: "phone", label: "ترتيب حسب هاتف المندوب" },
+              ].find((option) => option.value === filters.sort_by) || null
+            }
+            onChange={(opt) => onFilterChange("sort_by", opt ? opt.value : "")}
             styles={customStyles}
             isRtl
           />

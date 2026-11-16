@@ -10,6 +10,7 @@ const FinanceTable = ({
     onUpdateField,
     paymentMethods,
     bankNames,
+    rowNumberOffset = 0,
 }) => {
     const formatDate = (dateString) => {
         if (!dateString) return "-";
@@ -281,6 +282,7 @@ const FinanceTable = ({
             columns={defaultColumns}
             storageKey="finance_columns_order"
             renderCell={renderCell}
+            rowNumberOffset={rowNumberOffset}
             emptyMessage="لا توجد حوالات"
             tableClassName="finance-table text-center"
             rowClassName="finance-row"

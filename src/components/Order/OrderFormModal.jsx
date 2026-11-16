@@ -247,6 +247,20 @@ const OrderFormModal = ({
   const nationalityExternalOffices = effectiveExternalOffices.filter((office) =>
     externalOfficeCountries.includes(String(office.country || "").trim()),
   );
+  const serviceTypeSelectOptions = serviceTypeOptions.map((serviceType) => ({
+    value: serviceType.key || serviceType.label,
+    label: serviceType.label,
+  }));
+  const arrivalDestinationSelectOptions = arrivalDestinationOptions
+    .filter(
+      (destination) =>
+        !formData.nationality ||
+        destination.nationality_key === formData.nationality,
+    )
+    .map((destination) => ({
+      value: destination.key,
+      label: destination.label,
+    }));
   const effectiveClients = localClients.length > 0 ? localClients : clients;
   const effectiveEmployees =
     localEmployees.length > 0 ? localEmployees : employees;
@@ -1251,10 +1265,7 @@ const OrderFormModal = ({
                         <Select
                           className="react-select-container"
                           classNamePrefix="react-select"
-                          options={serviceTypeOptions.map((st) => ({
-                            value: st.key || st.label,
-                            label: st.label,
-                          }))}
+                          options={serviceTypeSelectOptions}
                           value={
                             formData.service_type
                               ? {
@@ -1274,7 +1285,15 @@ const OrderFormModal = ({
                               service_type: option ? option.value : "",
                             }))
                           }
-                          placeholder="اختر نوع الخدمة..."
+                          placeholder={
+                            serviceTypeSelectOptions.length
+                              ? "اختر نوع الخدمة..."
+                              : "أضف أنواع الخدمات من الإعدادات أولاً"
+                          }
+                          noOptionsMessage={() =>
+                            "أضف نوع الخدمة من الإعدادات أولاً"
+                          }
+                          isDisabled={serviceTypeSelectOptions.length === 0}
                           isClearable
                           isRtl
                           styles={{
@@ -1351,7 +1370,15 @@ const OrderFormModal = ({
                               }));
                             }
                           }}
-                          placeholder="اختر أو ابحث عن الجنسية..."
+                          placeholder={
+                            nationalityOptions.length
+                              ? "اختر أو ابحث عن الجنسية..."
+                              : "أضف الجنسيات من الإعدادات أولاً"
+                          }
+                          noOptionsMessage={() =>
+                            "أضف الجنسية من الإعدادات أولاً"
+                          }
+                          isDisabled={nationalityOptions.length === 0}
                           isClearable
                           isSearchable
                           isRtl
@@ -1378,17 +1405,7 @@ const OrderFormModal = ({
                         </Form.Label>
                         <Select
                           classNamePrefix="react-select"
-                          options={arrivalDestinationOptions
-                            .filter(
-                              (destination) =>
-                                !formData.nationality ||
-                                destination.nationality_key ===
-                                  formData.nationality,
-                            )
-                            .map((destination) => ({
-                              value: destination.key,
-                              label: destination.label,
-                            }))}
+                          options={arrivalDestinationSelectOptions}
                           value={
                             arrivalDestinationOptions.find(
                               (destination) =>
@@ -1417,10 +1434,18 @@ const OrderFormModal = ({
                           }
                           placeholder={
                             formData.nationality
-                              ? "اختر جهة القدوم..."
+                              ? arrivalDestinationSelectOptions.length
+                                ? "اختر جهة القدوم..."
+                                : "أضف جهة القدوم لهذه الجنسية من الإعدادات أولاً"
                               : "اختر الجنسية أولاً..."
                           }
-                          isDisabled={!formData.nationality}
+                          noOptionsMessage={() =>
+                            "أضف جهة القدوم لهذه الجنسية من الإعدادات أولاً"
+                          }
+                          isDisabled={
+                            !formData.nationality ||
+                            arrivalDestinationSelectOptions.length === 0
+                          }
                           isClearable
                           isRtl
                         />
@@ -1455,7 +1480,15 @@ const OrderFormModal = ({
                               profession: option ? option.value : "",
                             }))
                           }
-                          placeholder="اختر أو ابحث عن المهنة..."
+                          placeholder={
+                            professionOptions.length
+                              ? "اختر أو ابحث عن المهنة..."
+                              : "أضف المهن من الإعدادات أولاً"
+                          }
+                          noOptionsMessage={() =>
+                            "أضف المهنة من الإعدادات أولاً"
+                          }
+                          isDisabled={professionOptions.length === 0}
                           isClearable
                           isSearchable
                           isRtl
@@ -1571,7 +1604,15 @@ const OrderFormModal = ({
                               status: option ? option.value : "",
                             }))
                           }
-                          placeholder="اختر الحالة..."
+                          placeholder={
+                            statusOptions.length
+                              ? "اختر الحالة..."
+                              : "أضف حالات سداد مساند من الإعدادات أولاً"
+                          }
+                          noOptionsMessage={() =>
+                            "أضف حالة سداد مساند من الإعدادات أولاً"
+                          }
+                          isDisabled={statusOptions.length === 0}
                           isClearable
                           isRtl
                           styles={{

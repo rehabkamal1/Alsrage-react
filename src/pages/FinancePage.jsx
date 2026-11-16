@@ -48,8 +48,8 @@ const FinancePage = () => {
     payment_method: "",
     is_reviewed: "",
   });
-  const [sortField, setSortField] = useState("id");
-  const [sortDirection, setSortDirection] = useState("desc");
+  const [sortField, setSortField] = useState("");
+  const [sortDirection, setSortDirection] = useState("asc");
   const [allTransactions, setAllTransactions] = useState([]);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -121,10 +121,11 @@ const FinancePage = () => {
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      const params = {
-        sort_field: sortField,
-        sort_direction: sortDirection,
-      };
+      const params = {};
+      if (sortField) {
+        params.sort_field = sortField;
+        params.sort_direction = sortDirection;
+      }
       if (debouncedSearch) params.search = debouncedSearch;
       if (filters.type) params.type = filters.type;
       if (filters.payment_method) {
@@ -425,6 +426,7 @@ const FinancePage = () => {
                 <div className="table-responsive">
                   <FinanceTable
                     transactions={currentData}
+                    rowNumberOffset={startIndex}
                     onEdit={handleEditTransaction}
                     onDelete={handleDeleteTransaction}
                     onUpdateField={handleUpdateField}

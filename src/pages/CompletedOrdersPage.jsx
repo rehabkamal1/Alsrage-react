@@ -47,8 +47,6 @@ const CompletedOrdersPage = () => {
   const [toDate, setToDate] = useState("");
   const [filters, setFilters] = useState({
     service_type: "",
-    sort_by: "id",
-    sort_dir: "desc",
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -455,6 +453,7 @@ const CompletedOrdersPage = () => {
               <>
                 <OrderTable
                   orders={displayedOrders}
+                  rowNumberOffset={startIndex}
                   onEdit={handleEditOrder}
                   onDelete={handleDeleteOrder}
                   onStatusChange={handleStatusChange}

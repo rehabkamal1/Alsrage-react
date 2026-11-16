@@ -118,10 +118,10 @@ const ClientOrdersModal = ({ show, onHide, client, orderStatuses = [] }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {orders.map((order) => (
+                                {orders.map((order, index) => (
                                     <tr key={order.id}>
                                         <td className="fw-semibold">
-                                            #{order.id}
+                                            #{index + 1}
                                         </td>
                                         <td>{order.visa_holder_name || "-"}</td>
                                         <td>

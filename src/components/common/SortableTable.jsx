@@ -170,6 +170,12 @@ const SortableTable = ({
                         column.id,
                         rowNumberOffset + index,
                       );
+                      if (column.label?.trim().startsWith("#")) {
+                        const rowNumber = `#${rowNumberOffset + index + 1}`;
+                        return React.isValidElement(cell)
+                          ? React.cloneElement(cell, { key: column.id }, rowNumber)
+                          : <td key={column.id}>{rowNumber}</td>;
+                      }
                       return React.isValidElement(cell)
                         ? React.cloneElement(cell, {
                             key: column.id,

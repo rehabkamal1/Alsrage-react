@@ -672,19 +672,19 @@ const FinancialCollectionsReport = () => {
     items: sortedOrders,
     requestSort: requestOrderSort,
     sortConfig: orderSortConfig,
-  } = useSortableData(filteredOrders, { key: "id", direction: "desc" });
+  } = useSortableData(filteredOrders);
 
   const {
     items: sortedClients,
     requestSort: requestClientSort,
     sortConfig: clientSortConfig,
-  } = useSortableData(filteredClients, { key: "total_outstanding", direction: "desc" });
+  } = useSortableData(filteredClients);
 
   const {
     items: sortedMarketers,
     requestSort: requestMarketerSort,
     sortConfig: marketerSortConfig,
-  } = useSortableData(filteredMarketers, { key: "total_outstanding", direction: "desc" });
+  } = useSortableData(filteredMarketers);
 
   // Active dataset for pagination
   const currentDataset = useMemo(() => {
@@ -2097,6 +2097,7 @@ const FinancialCollectionsReport = () => {
                       columns={defaultClientDetailedColumns}
                       storageKey="financial_client_detailed_columns"
                       renderCell={renderClientDetailedCell}
+                      rowNumberOffset={(currentPage - 1) * itemsPerPage}
                       renderFooter={renderClientDetailedFooter}
                       sortConfig={orderSortConfig}
                       onRequestSort={requestOrderSort}
@@ -2117,6 +2118,7 @@ const FinancialCollectionsReport = () => {
                     columns={defaultClientSummaryColumns}
                     storageKey="financial_client_summary_columns"
                     renderCell={renderClientSummaryCell}
+                    rowNumberOffset={(currentPage - 1) * itemsPerPage}
                     renderFooter={renderClientSummaryFooter}
                     sortConfig={clientSortConfig}
                     onRequestSort={requestClientSort}
@@ -2136,6 +2138,7 @@ const FinancialCollectionsReport = () => {
                     columns={defaultMarketerSummaryColumns}
                     storageKey="financial_marketer_summary_columns"
                     renderCell={renderMarketerSummaryCell}
+                    rowNumberOffset={(currentPage - 1) * itemsPerPage}
                     renderFooter={renderMarketerSummaryFooter}
                     sortConfig={marketerSortConfig}
                     onRequestSort={requestMarketerSort}

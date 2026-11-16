@@ -245,12 +245,12 @@ const OrderSearchBar = ({
                                 { value: "order_status", label: "حالة الطلب" },
                                 { value: "status", label: "حالة سداد مساند" },
                             ].find((opt) => opt.value === filters.sort_by) || {
-                                value: "id",
-                                label: "رقم الطلب",
+                                value: "",
+                                label: "ترتيب الصفحة",
                             }
                         }
                         onChange={(opt) =>
-                            onFilterChange("sort_by", opt ? opt.value : "id")
+                            onFilterChange("sort_by", opt ? opt.value : "")
                         }
                         styles={customStyles}
                         isRtl

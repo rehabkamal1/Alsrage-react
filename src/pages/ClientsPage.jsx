@@ -40,7 +40,7 @@ const ClientsPage = () => {
   const [toDate, setToDate] = useState("");
   const [filters, setFilters] = useState({
     client_type: "",
-    sort_by: "created_at",
+    sort_by: "",
     sort_dir: "desc",
   });
   const [itemsPerPage, setItemsPerPage] = useState(8);
@@ -80,8 +80,9 @@ const ClientsPage = () => {
       const params = {
         search: debouncedSearch || undefined,
         client_type: filters.client_type || undefined,
-        sort_by: filters.sort_by,
-        sort_dir: filters.sort_dir,
+        ...(filters.sort_by
+          ? { sort_by: filters.sort_by, sort_dir: filters.sort_dir }
+          : {}),
       };
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
@@ -112,7 +113,7 @@ const ClientsPage = () => {
     setSearchQuery("");
     setFilters({
       client_type: "",
-      sort_by: "created_at",
+      sort_by: "",
       sort_dir: "desc",
     });
     setFromDate("");
@@ -344,6 +345,7 @@ const ClientsPage = () => {
               <>
                 <ClientTable
                   clients={displayedClients}
+                  rowNumberOffset={startIndex}
                   onEdit={handleEditClient}
                   onDelete={handleDeleteClient}
                   onViewOrders={handleShowOrders}

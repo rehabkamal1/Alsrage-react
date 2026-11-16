@@ -388,6 +388,7 @@ const CompletedOrdersReport = () => {
                 columns={tableColumns}
                 storageKey="completed_orders_report_columns"
                 renderCell={renderCell}
+                rowNumberOffset={(currentPage - 1) * itemsPerPage}
                 sortConfig={sortConfig}
                 onRequestSort={requestSort}
                 emptyMessage="لا توجد طلبات مكتملة تطابق فلاتر البحث"

@@ -910,6 +910,7 @@ const OfficesPerformanceReport = () => {
                 columns={tableColumns}
                 storageKey={`offices_performance_report_${key}_columns`}
                 renderCell={renderCell}
+                rowNumberOffset={(currentPage - 1) * itemsPerPage}
                 sortConfig={sortConfig}
                 onRequestSort={requestSort}
                 emptyMessage="لا توجد مكاتب تطابق الفلاتر المحددة"

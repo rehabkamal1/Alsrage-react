@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, Button, Form, Row, Col, Badge } from "react-bootstrap";
 import Select from "react-select";
 import { showConfirm } from "../../utils/swalHelper";
@@ -20,6 +20,14 @@ const SettingsCard = ({
   const hasValidNewItem = items.some(
     (item) => item.isNew && item.label?.trim(),
   );
+  const [targetDaysChanged, setTargetDaysChanged] = useState(false);
+
+  const handleSave = async () => {
+    const saved = await onSave();
+    if (saved) {
+      setTargetDaysChanged(false);
+    }
+  };
 
   const handleDelete = async (id, isNew, idx, label) => {
     const result = await showConfirm(
@@ -86,9 +94,10 @@ const SettingsCard = ({
                         title="الفترة الزمنية المسموحة بالأيام لهذه المرحلة"
                         size="sm"
                         value={item.target_days ?? 60}
-                        onChange={(e) =>
-                          onUpdate(idx, "target_days", e.target.value)
-                        }
+                        onChange={(e) => {
+                          setTargetDaysChanged(true);
+                          onUpdate(idx, "target_days", e.target.value);
+                        }}
                         style={{ fontSize: "12px" }}
                       />
                     </Col>
@@ -163,13 +172,14 @@ const SettingsCard = ({
             ))
           )}
         </div>
-        {hasNewItems && (
+        {(hasNewItems || (showTargetDays && targetDaysChanged)) && (
           <Button
             variant="dark"
-            onClick={onSave}
-            disabled={saving || !hasValidNewItem}
+            onClick={handleSave}
+            disabled={saving || (hasNewItems && !hasValidNewItem)}
             className="w-100 mt-3"
             size="sm"
+            style={{ position: "sticky", bottom: "8px", zIndex: 2 }}
           >
             {saving ? "جاري الحفظ..." : "حفظ"}
           </Button>

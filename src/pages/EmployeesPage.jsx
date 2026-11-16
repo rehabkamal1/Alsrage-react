@@ -32,7 +32,7 @@ const EmployeesPage = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [filters, setFilters] = useState({
-    sort_by: "created_at",
+    sort_by: "",
     sort_dir: "desc",
   });
   const [submitError, setSubmitError] = useState(null);
@@ -55,8 +55,9 @@ const EmployeesPage = () => {
     try {
       const params = {
         search: debouncedSearch || undefined,
-        sort_by: filters.sort_by,
-        sort_dir: filters.sort_dir,
+        ...(filters.sort_by
+          ? { sort_by: filters.sort_by, sort_dir: filters.sort_dir }
+          : {}),
       };
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
@@ -86,7 +87,7 @@ const EmployeesPage = () => {
   const handleClearSearch = () => {
     setSearchQuery("");
     setFilters({
-      sort_by: "created_at",
+      sort_by: "",
       sort_dir: "desc",
     });
     setFromDate("");

@@ -12,6 +12,7 @@ const ClientTable = ({
     canDelete = true,
     sortConfig,
     onSort,
+    rowNumberOffset = 0,
 }) => {
     const renderCell = (client, columnId) => {
         switch (columnId) {
@@ -107,6 +108,7 @@ const ClientTable = ({
             columns={defaultColumns}
             storageKey="client_columns_order"
             renderCell={renderCell}
+            rowNumberOffset={rowNumberOffset}
             emptyMessage="لا يوجد عملاء"
             tableClassName="text-center"
             sortConfig={sortConfig}

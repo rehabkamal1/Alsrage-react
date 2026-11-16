@@ -69,23 +69,22 @@ const EmployeeSearchBar = ({
         <div style={{ minWidth: "180px" }}>
           <Select
             options={[
+              { value: "", label: "ترتيب الصفحة" },
               { value: "created_at", label: "ترتيب حسب التاريخ" },
               { value: "name", label: "ترتيب حسب الاسم" },
               { value: "position", label: "ترتيب حسب المنصب" },
               { value: "username", label: "ترتيب حسب اسم المستخدم" },
             ]}
-            value={{
-              value: filters.sort_by,
-              label:
-                filters.sort_by === "created_at"
-                  ? "ترتيب حسب التاريخ"
-                  : filters.sort_by === "name"
-                  ? "ترتيب حسب الاسم"
-                  : filters.sort_by === "position"
-                  ? "ترتيب حسب المنصب"
-                  : "ترتيب حسب اسم المستخدم",
-            }}
-            onChange={(opt) => onFilterChange("sort_by", opt ? opt.value : "created_at")}
+            value={
+              [
+                { value: "", label: "ترتيب الصفحة" },
+                { value: "created_at", label: "ترتيب حسب التاريخ" },
+                { value: "name", label: "ترتيب حسب الاسم" },
+                { value: "position", label: "ترتيب حسب المنصب" },
+                { value: "username", label: "ترتيب حسب اسم المستخدم" },
+              ].find((option) => option.value === filters.sort_by) || null
+            }
+            onChange={(opt) => onFilterChange("sort_by", opt ? opt.value : "")}
             styles={customStyles}
             isRtl
           />

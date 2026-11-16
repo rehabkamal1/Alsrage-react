@@ -67,8 +67,8 @@ const TrackingPage = ({ user }) => {
     client_id: "",
     employee_id: "",
   });
-  const [sortField, setSortField] = useState("id");
-  const [sortDirection, setSortDirection] = useState("desc");
+  const [sortField, setSortField] = useState("created_at");
+  const [sortDirection, setSortDirection] = useState("asc");
   const [allTrackingData, setAllTrackingData] = useState([]);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -237,8 +237,9 @@ const TrackingPage = ({ user }) => {
         employee_id: filters.employee_id,
         from_date: fromDate,
         to_date: toDate,
-        sort_field: sortField,
-        sort_direction: sortDirection,
+        ...(sortField
+          ? { sort_field: sortField, sort_direction: sortDirection }
+          : {}),
       };
       const trackingData = await fetchAllPages(getOrderTracking, params);
 
@@ -544,6 +545,7 @@ const TrackingPage = ({ user }) => {
                 <div className="table-responsive">
                   <TrackingTable
                     tracking={currentData}
+                    rowNumberOffset={startIndex}
                     onEdit={handleEditTracking}
                     onDelete={handleDeleteTracking}
                     onRefresh={fetchTracking}
